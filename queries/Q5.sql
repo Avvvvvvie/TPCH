@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Local Supplier Volume Query
+-- This query lists the revenue volume done through local suppliers.
+SELECT
     n_name,
     sum(l_extendedprice * (1 - l_discount)) AS revenue
 FROM customer, orders, lineitem, supplier, nation, region

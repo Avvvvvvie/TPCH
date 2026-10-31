@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Returned Item Reporting Query
+-- The query identifies customers who might be having problems with the parts that are shipped to them.
+SELECT
     c_custkey,
     c_name,
     sum(l_extendedprice * (1 - l_discount)) AS revenue,

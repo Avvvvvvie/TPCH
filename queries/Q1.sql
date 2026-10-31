@@ -1,3 +1,5 @@
+-- Pricing Summary Report Query
+-- This query reports the amount of business that was billed, shipped, and returned.
 SELECT
     l_returnflag,
     l_linestatus,

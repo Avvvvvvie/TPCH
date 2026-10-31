@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Suppliers Who Kept Orders Waiting Query
+-- This query identifies certain suppliers who were not able to ship required parts in a timely manner.
+SELECT
     s_name,
     count(*) AS numwait
 FROM supplier, lineitem AS l1, orders, nation

@@ -178,6 +178,30 @@ def get_active_tables(query_sql: str) -> list[str]:
     ]
 
 
+def parse_query_header(
+    query_number: int, query_sql: str
+) -> tuple[str, str, str]:
+    lines = query_sql.lstrip("\ufeff").splitlines()
+    header_comments = []
+    index = 0
+    while index < len(lines):
+        line = lines[index].strip()
+        if not line:
+            index += 1
+            continue
+        if not line.startswith("--"):
+            break
+        header_comments.append(line[2:].strip())
+        index += 1
+
+    title = header_comments[0] if header_comments else f"Q{query_number}"
+    description = "\n".join(
+        comment for comment in header_comments[1:] if comment
+    )
+    sql_body = "\n".join(lines[index:]).strip()
+    return title, description, sql_body
+
+
 def parse_plan(log_text: str) -> list[dict[str, object]]:
     plan = []
     for match in PLAN_RE.finditer(log_text):
@@ -835,16 +859,24 @@ def render_query(
 ) -> str:
     if benchmark_summary is None or benchmark_rows is None:
         raise ValueError(f"Benchmark data is required to render Q{query_number}")
+    query_title, query_description, sql_body = parse_query_header(
+        query_number, query_sql
+    )
     post_rules_ir = read_section(
         log_text, "-- IR (post-rules) --", "-- ExecPlan --"
     )
-    active_tables = ",".join(get_active_tables(query_sql))
+    active_tables = ",".join(get_active_tables(sql_body))
     diagram = SCHEMA_DIAGRAM.format(active_tables=active_tables)
     report_sections = [
-        f"# Q{query_number}",
-        "",
+        f"# Q{query_number} {query_title}",
+    ]
+    if query_description:
+        report_sections.extend(("", query_description))
+    report_sections.extend(
+        (
+            "",
         "```sql",
-        query_sql.strip(),
+        sql_body,
         "```",
         diagram,
         "",
@@ -857,7 +889,8 @@ def render_query(
         make_step_table(log_text, query_number, benchmark_summary, benchmark_rows),
         "",
         make_execution_graph(log_text),
-    ]
+        )
+    )
     note_text = make_notes(parse_plan(log_text), notes or [])
     if note_text:
         report_sections.extend(("", "## Notes", "", note_text))

@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Promotion Effect Query
+-- This query monitors the market response to a promotion such as TV advertisements or a special campaign.
+SELECT
     100.00 * sum(CASE
         WHEN p_type LIKE 'PROMO%'
             THEN l_extendedprice * (1 - l_discount)

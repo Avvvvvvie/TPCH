@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Shipping Modes and Order Priority Query
+-- This query determines whether selecting less expensive modes of shipping is negatively affecting the critical-priority orders by causing more parts to be received by customers after the committed date.
+SELECT
     l_shipmode,
     sum(CASE
         WHEN (o_orderpriority = '1-URGENT')

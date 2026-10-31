@@ -1,4 +1,6 @@
-﻿CREATE VIEW revenue0 AS
+﻿-- Top Supplier Query
+-- This query determines the top supplier so it can be rewarded, given more business, or identified for special recognition.
+CREATE VIEW revenue0 AS
     SELECT
         l_suppkey AS supplier_no,
         sum(l_extendedprice * (1 - l_discount)) AS total_revenue

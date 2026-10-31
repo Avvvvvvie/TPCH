@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Product Type Profit Measure Query
+-- This query determines how much profit is made on a given line of parts, broken out by supplier nation and year.
+SELECT
     nation,
     o_year,
     sum(amount) AS sum_profit

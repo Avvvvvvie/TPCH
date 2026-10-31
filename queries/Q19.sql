@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Discounted Revenue Query
+-- The Discounted Revenue Query reports the gross discounted revenue attributed to the sale of selected parts handled in a particular manner. This query is an example of code such as might be produced programmatically by a data mining tool.
+SELECT
     sum(l_extendedprice * (1 - l_discount)) AS revenue
 FROM lineitem, part
 WHERE (

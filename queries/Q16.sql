@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Parts/Supplier Relationship Query
+-- This query finds out how many suppliers can supply parts with given attributes. It might be used, for example, to determine whether there is a sufficient number of suppliers for heavily ordered parts.
+SELECT
     p_brand,
     p_type,
     p_size,

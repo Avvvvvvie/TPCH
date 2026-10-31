@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Global Sales Opportunity Query
+-- The Global Sales Opportunity Query identifies geographies where there are customers who may be likely to make a purchase.
+SELECT
     cntrycode,
     count(*) AS numcust,
     sum(c_acctbal) AS totacctbal

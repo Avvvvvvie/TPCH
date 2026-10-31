@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- National Market Share Query
+-- This query determines how the market share of a given nation within a given region has changed over two years for a given part type.
+SELECT
     o_year,
     sum(CASE
         WHEN nation = 'BRAZIL' THEN volume

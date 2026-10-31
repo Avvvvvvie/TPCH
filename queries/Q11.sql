@@ -1,6 +1,7 @@
-﻿-- The FRACTION parameter in the HAVING clause is 0.0001 / SF (spec section 2.4.11.3).
+﻿-- Important Stock Identification Query
+-- This query finds the most important subset of suppliers' stock in a given nation.
+-- The FRACTION parameter in the HAVING clause is 0.0001 / SF (spec section 2.4.11.3).
 -- Current value 0.0001 is for SF = 1. See the README (section Q11) for other scale factors.
-
 SELECT
     ps_partkey,
     sum(ps_supplycost * ps_availqty) AS value

@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Shipping Priority Query
+-- This query retrieves the 10 unshipped orders with the highest value.
+SELECT
     l_orderkey,
     sum(l_extendedprice * (1 - l_discount)) AS revenue,
     o_orderdate,

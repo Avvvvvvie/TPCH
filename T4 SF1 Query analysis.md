@@ -1,4 +1,6 @@
-# Q1
+# Q1 Pricing Summary Report Query
+
+This query reports the amount of business that was billed, shipped, and returned.
 
 ```sql
 SELECT
@@ -115,7 +117,7 @@ flowchart TD
 
 ![Q1 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q1.jpg)
 
-# Q2
+# Q2 Minimum Cost Supplier Query
 
 ```sql
 SELECT
@@ -416,7 +418,9 @@ flowchart TD
 
 ![Q2 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q2.jpg)
 
-# Q3
+# Q3 Shipping Priority Query
+
+This query retrieves the 10 unshipped orders with the highest value.
 
 ```sql
 SELECT
@@ -586,7 +590,9 @@ flowchart TD
 
 ![Q3 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q3.jpg)
 
-# Q4
+# Q4 Order Priority Checking Query
+
+This query determines how well the order priority system is working and gives an assessment of customer satisfaction.
 
 ```sql
 SELECT
@@ -710,7 +716,9 @@ flowchart TD
 
 ![Q4 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q4.jpg)
 
-# Q5
+# Q5 Local Supplier Volume Query
+
+This query lists the revenue volume done through local suppliers.
 
 ```sql
 SELECT
@@ -908,7 +916,9 @@ flowchart TD
 
 ![Q5 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q5.jpg)
 
-# Q6
+# Q6 Forecasting Revenue Change Query
+
+This query quantifies the amount of revenue increase that would have resulted from eliminating certain company-wide discounts in a given percentage range in a given year. Asking this type of "what if" query can be used to look for ways to increase revenues.
 
 ```sql
 SELECT
@@ -1001,7 +1011,9 @@ flowchart TD
 
 ![Q6 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q6.jpg)
 
-# Q7
+# Q7 Volume Shipping Query
+
+This query determines the value of goods shipped between certain nations to help in the re-negotiation of shipping contracts.
 
 ```sql
 SELECT
@@ -1225,7 +1237,9 @@ flowchart TD
 
 ![Q7 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q7.jpg)
 
-# Q8
+# Q8 National Market Share Query
+
+This query determines how the market share of a given nation within a given region has changed over two years for a given part type.
 
 ```sql
 SELECT
@@ -1485,7 +1499,9 @@ flowchart TD
 
 ![Q8 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q8.jpg)
 
-# Q9
+# Q9 Product Type Profit Measure Query
+
+This query determines how much profit is made on a given line of parts, broken out by supplier nation and year.
 
 ```sql
 SELECT
@@ -1686,7 +1702,9 @@ flowchart TD
 
 ![Q9 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q9.jpg)
 
-# Q10
+# Q10 Returned Item Reporting Query
+
+The query identifies customers who might be having problems with the parts that are shipped to them.
 
 ```sql
 SELECT
@@ -1868,12 +1886,13 @@ flowchart TD
 
 ![Q10 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q10.jpg)
 
-# Q11
+# Q11 Important Stock Identification Query
+
+This query finds the most important subset of suppliers' stock in a given nation.
+The FRACTION parameter in the HAVING clause is 0.0001 / SF (spec section 2.4.11.3).
+Current value 0.0001 is for SF = 1. See the README (section Q11) for other scale factors.
 
 ```sql
--- The FRACTION parameter in the HAVING clause is 0.0001 / SF (spec section 2.4.11.3).
--- Current value 0.0001 is for SF = 1. See the README (section Q11) for other scale factors.
-
 SELECT
     ps_partkey,
     sum(ps_supplycost * ps_availqty) AS value
@@ -2072,7 +2091,9 @@ flowchart TD
 
 ![Q11 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q11.jpg)
 
-# Q12
+# Q12 Shipping Modes and Order Priority Query
+
+This query determines whether selecting less expensive modes of shipping is negatively affecting the critical-priority orders by causing more parts to be received by customers after the committed date.
 
 ```sql
 SELECT
@@ -2212,7 +2233,9 @@ flowchart TD
 
 ![Q12 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q12.jpg)
 
-# Q13
+# Q13 Customer Distribution Query
+
+This query seeks relationships between customers and the size of their orders.
 
 ```sql
 SELECT
@@ -2374,7 +2397,9 @@ flowchart TD
 
 ![Q13 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q13.jpg)
 
-# Q14
+# Q14 Promotion Effect Query
+
+This query monitors the market response to a promotion such as TV advertisements or a special campaign.
 
 ```sql
 SELECT
@@ -2499,7 +2524,9 @@ flowchart TD
 
 ![Q14 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q14.jpg)
 
-# Q15
+# Q15 Top Supplier Query
+
+This query determines the top supplier so it can be rewarded, given more business, or identified for special recognition.
 
 ```sql
 CREATE VIEW revenue0 AS
@@ -2679,7 +2706,9 @@ flowchart TD
 
 ![Q15 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q15.jpg)
 
-# Q16
+# Q16 Parts/Supplier Relationship Query
+
+This query finds out how many suppliers can supply parts with given attributes. It might be used, for example, to determine whether there is a sufficient number of suppliers for heavily ordered parts.
 
 ```sql
 SELECT
@@ -2838,7 +2867,9 @@ flowchart TD
 
 ![Q16 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q16.jpg)
 
-# Q17
+# Q17 Small-Quantity-Order Revenue Query
+
+This query determines how much average yearly revenue would be lost if orders were no longer filled for small quantities of certain parts. This may reduce overhead expenses by concentrating sales on larger shipments.
 
 ```sql
 SELECT
@@ -2995,7 +3026,9 @@ flowchart TD
 
 ![Q17 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q17.jpg)
 
-# Q18
+# Q18 Large Volume Customer Query
+
+The Large Volume Customer Query ranks customers based on their having placed a large quantity order. Large quantity orders are defined as those orders whose total quantity is above a certain level.
 
 ```sql
 SELECT
@@ -3154,7 +3187,9 @@ flowchart TD
 
 ![Q18 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q18.jpg)
 
-# Q19
+# Q19 Discounted Revenue Query
+
+The Discounted Revenue Query reports the gross discounted revenue attributed to the sale of selected parts handled in a particular manner. This query is an example of code such as might be produced programmatically by a data mining tool.
 
 ```sql
 SELECT
@@ -3299,7 +3334,9 @@ flowchart TD
 
 ![Q19 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q19.jpg)
 
-# Q20
+# Q20 Potential Part Promotion Query
+
+The Potential Part Promotion Query identifies suppliers in a particular nation having selected parts that may be candidates for a promotional offer.
 
 ```sql
 SELECT
@@ -3590,7 +3627,9 @@ flowchart TD
 
 ![Q20 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q20.jpg)
 
-# Q21
+# Q21 Suppliers Who Kept Orders Waiting Query
+
+This query identifies certain suppliers who were not able to ship required parts in a timely manner.
 
 ```sql
 SELECT
@@ -3847,7 +3886,9 @@ flowchart TD
 
 ![Q21 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q21.jpg)
 
-# Q22
+# Q22 Global Sales Opportunity Query
+
+The Global Sales Opportunity Query identifies geographies where there are customers who may be likely to make a purchase.
 
 ```sql
 SELECT

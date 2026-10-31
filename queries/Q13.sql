@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Customer Distribution Query 
+-- This query seeks relationships between customers and the size of their orders.
+SELECT
     c_count,
     count(*) AS custdist
 FROM (

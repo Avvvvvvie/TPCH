@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Volume Shipping Query
+-- This query determines the value of goods shipped between certain nations to help in the re-negotiation of shipping contracts.
+SELECT
     supp_nation,
     cust_nation,
     l_year,

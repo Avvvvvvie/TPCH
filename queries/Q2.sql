@@ -1,3 +1,5 @@
+-- Minimum Cost Supplier Query
+
 SELECT
     s_acctbal,
     s_name,

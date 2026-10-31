@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Potential Part Promotion Query
+-- The Potential Part Promotion Query identifies suppliers in a particular nation having selected parts that may be candidates for a promotional offer.
+SELECT
     s_name,
     s_address
 FROM supplier, nation

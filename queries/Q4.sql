@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Order Priority Checking Query
+-- This query determines how well the order priority system is working and gives an assessment of customer satisfaction.
+SELECT
     o_orderpriority,
     count(*) AS order_count
 FROM orders

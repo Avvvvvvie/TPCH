@@ -1,4 +1,6 @@
-﻿SELECT
+﻿-- Large Volume Customer Query
+-- The Large Volume Customer Query ranks customers based on their having placed a large quantity order. Large quantity orders are defined as those orders whose total quantity is above a certain level.
+SELECT
     c_name,
     c_custkey,
     o_orderkey,
