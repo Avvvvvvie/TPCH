@@ -1,0 +1,220 @@
+== TPC-H Q18 (SF=10) via IR pipeline ==
+IR built: 6 output columns.
+ExecPlan: 12 steps, 3 sources.
+
+-- IR (pre-rules) --
+Limit(n=100)
+  Sort[o_totalprice DESC, o_orderdate ASC]
+    Project(c_name = c_name, c_custkey = c_custkey, o_orderkey = o_orderkey, o_orderdate = o_orderdate, o_totalprice = o_totalprice, sum_quantity = sum_qty)
+      InnerJoin(on=(o_custkey == c_custkey))
+        InnerJoin(on=(o_orderkey == l_orderkey))
+          Scan(orders [o_orderkey, o_custkey, o_orderdate, o_totalprice])
+          Filter((sum_qty > 300))
+            Aggregate(keys=[l_orderkey]; aggs=[sum(l_quantity) AS sum_qty])
+              Scan(lineitem [l_orderkey, l_quantity])
+        Scan(customer [c_custkey, c_name])
+
+
+-- IR (post-rules) --
+Limit(n=100)
+  Sort[o_totalprice DESC, o_orderdate ASC]
+    Project(c_name = c_name, c_custkey = c_custkey, o_orderkey = o_orderkey, o_orderdate = o_orderdate, o_totalprice = o_totalprice, sum_quantity = sum_qty)
+      InnerJoin(on=(o_custkey == c_custkey))
+        InnerJoin(on=(o_orderkey == l_orderkey))
+          Scan(orders [o_orderkey, o_custkey, o_orderdate, o_totalprice])
+          Filter((sum_qty > 300))
+            Aggregate(keys=[l_orderkey]; aggs=[sum(l_quantity) AS sum_qty])
+              Scan(lineitem [l_orderkey, l_quantity])
+        Scan(customer [c_custkey, c_name])
+
+
+-- ExecPlan --
+// required sources: orders lineitem customer
+v0 = SourceTable("orders" cols=[o_orderkey, o_custkey, o_orderdate, o_totalprice])
+v1 = SourceTable("lineitem" cols=[l_orderkey, l_quantity])
+v2 = Reorder(v1; ordinals=[0, 1])
+v3 = GroupBy(v2; n_keys=1, aggs=[sum(#0)])
+v4 = Filter(v3; predicate=<Predicate>)
+v5 = EqJoin(v0, v4; lkeys=[0], rkeys=[0])
+v6 = Reorder(v5; ordinals=[0, 1, 2, 3, 0, 4])
+v7 = SourceTable("customer" cols=[c_custkey, c_name])
+v8 = EqJoin(v6, v7; lkeys=[1], rkeys=[0])
+v9 = Reorder(v8; ordinals=[1, 0, 2, 3, 4, 5, 0, 6])
+v10 = Project(v9; #items=6 (tree=6, pred=0, substr=0))
+v11 = TopK(v10; k=100, keys=[#4 DESC, #3 ASC])
+return v11
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+Memory pool has initial size 14468710400 bytes.
+[step 0: SourceTable] -> 15000000 rows x 4 cols
+Table with 4 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+Col2 (type: type_id::INT32, size: 15000000)
+19960102 19961201 19931014 19951011 19940730 19920221 19960110 19950716 19931027 19980721
+Col3 (type: type_id::FLOAT64, size: 15000000)
+186600 66219.6 270742 41714.4 122444 50884 287535 129635 126999 55314.8
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 1: SourceTable] -> 59986052 rows x 2 cols
+Table with 2 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+
+[step 2: Reorder] -> 59986052 rows x 2 cols
+Table with 2 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+
+[GROUPBY DEBUG] rows=59986052 groups_upper_bound=9223372036854775807 algo=5
+[PARTITION DEBUG] input_rows=59986052 num_partitions=65536 num_units=65536 estimated_num_groups=59986052 max_work_units=65537
+[PARTITION DEBUG] sm_bytes=64032 bytes
+[PARTITION DEBUG] set attribute: no error
+[PARTITION DEBUG] launch: no error
+[PARTITION DEBUG] synchronize: no error
+[step 3: GroupBy] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+51871043 51871078 52536229 53053894 53378982 53462631 53745187 53996482 42785539 42866279
+Col1 (type: type_id::FLOAT64, size: 15000000)
+134 131 180 150 63 170 50 134 162 25
+
+[step 4: Filter] -> 624 rows x 2 cols
+Table with 2 columns and 624 rows:
+Col0 (type: type_id::INT64, size: 624)
+40449575 28916832 32766721 45053063 21213895 43416326 33026341 17361729 37282215 967334
+Col1 (type: type_id::FLOAT64, size: 624)
+303 301 306 309 327 308 308 303 312 301
+
+[step 5: EqJoin] -> 624 rows x 5 cols
+Table with 5 columns and 624 rows:
+Col0 (type: type_id::INT64, size: 624)
+28800353 34748294 6203745 32148069 38562980 16424550 15572326 41277440 26458949 36420615
+Col1 (type: type_id::INT64, size: 624)
+611278 1221100 786706 500569 554750 480784 514688 1168256 737744 1456564
+Col2 (type: type_id::INT32, size: 624)
+19980715 19971122 19970722 19970427 19961210 19940311 19950226 19970219 19970813 19980716
+Col3 (type: type_id::FLOAT64, size: 624)
+439321 533200 419615 409309 467356 512907 503146 454850 450089 442660
+Col4 (type: type_id::FLOAT64, size: 624)
+306 307 302 303 302 301 309 314 301 306
+
+[step 6: Reorder] -> 624 rows x 6 cols
+Table with 6 columns and 624 rows:
+Col0 (type: type_id::INT64, size: 624)
+28800353 34748294 6203745 32148069 38562980 16424550 15572326 41277440 26458949 36420615
+Col1 (type: type_id::INT64, size: 624)
+611278 1221100 786706 500569 554750 480784 514688 1168256 737744 1456564
+Col2 (type: type_id::INT32, size: 624)
+19980715 19971122 19970722 19970427 19961210 19940311 19950226 19970219 19970813 19980716
+Col3 (type: type_id::FLOAT64, size: 624)
+439321 533200 419615 409309 467356 512907 503146 454850 450089 442660
+Col4 (type: type_id::INT64, size: 624)
+28800353 34748294 6203745 32148069 38562980 16424550 15572326 41277440 26458949 36420615
+Col5 (type: type_id::FLOAT64, size: 624)
+306 307 302 303 302 301 309 314 301 306
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 7: SourceTable] -> 1500000 rows x 2 cols
+Table with 2 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 1500000)
+"Customer#000000001" "Customer#000000002" "Customer#000000003" "Customer#000000004" "Customer#000000005" "Customer#000000006" "Customer#000000007" "Customer#000000008" "Customer#000000009" "Customer#000000010" 
+
+[step 8: EqJoin] -> 624 rows x 7 cols
+Table with 7 columns and 624 rows:
+Col0 (type: type_id::INT64, size: 624)
+3307 3544 5743 8846 8782 10993 14110 18472 15127 24592
+Col1 (type: type_id::INT64, size: 624)
+6210853 48526950 47969124 39702437 29294434 41064486 12701702 22291718 34551296 38363558
+Col2 (type: type_id::INT32, size: 624)
+19970808 19951123 19920711 19951123 19930105 19931005 19970726 19920903 19980412 19940427
+Col3 (type: type_id::FLOAT64, size: 624)
+453807 437675 462173 475436 518141 460386 452517 500695 508442 434907
+Col4 (type: type_id::INT64, size: 624)
+6210853 48526950 47969124 39702437 29294434 41064486 12701702 22291718 34551296 38363558
+Col5 (type: type_id::FLOAT64, size: 624)
+303 304 306 321 322 311 311 306 312 307
+Col6 (type: type_id::STRING, size: 624)
+"Customer#000003307" "Customer#000003544" "Customer#000005743" "Customer#000008846" "Customer#000008782" "Customer#000010993" "Customer#000014110" "Customer#000018472" "Customer#000015127" "Customer#000024592" 
+
+[step 9: Reorder] -> 624 rows x 8 cols
+Table with 8 columns and 624 rows:
+Col0 (type: type_id::INT64, size: 624)
+6210853 48526950 47969124 39702437 29294434 41064486 12701702 22291718 34551296 38363558
+Col1 (type: type_id::INT64, size: 624)
+3307 3544 5743 8846 8782 10993 14110 18472 15127 24592
+Col2 (type: type_id::INT32, size: 624)
+19970808 19951123 19920711 19951123 19930105 19931005 19970726 19920903 19980412 19940427
+Col3 (type: type_id::FLOAT64, size: 624)
+453807 437675 462173 475436 518141 460386 452517 500695 508442 434907
+Col4 (type: type_id::INT64, size: 624)
+6210853 48526950 47969124 39702437 29294434 41064486 12701702 22291718 34551296 38363558
+Col5 (type: type_id::FLOAT64, size: 624)
+303 304 306 321 322 311 311 306 312 307
+Col6 (type: type_id::INT64, size: 624)
+3307 3544 5743 8846 8782 10993 14110 18472 15127 24592
+Col7 (type: type_id::STRING, size: 624)
+"Customer#000003307" "Customer#000003544" "Customer#000005743" "Customer#000008846" "Customer#000008782" "Customer#000010993" "Customer#000014110" "Customer#000018472" "Customer#000015127" "Customer#000024592" 
+
+[step 10: Project] -> 624 rows x 6 cols
+Table with 6 columns and 624 rows:
+Col0 (type: type_id::STRING, size: 624)
+"Customer#000003307" "Customer#000003544" "Customer#000005743" "Customer#000008846" "Customer#000008782" "Customer#000010993" "Customer#000014110" "Customer#000018472" "Customer#000015127" "Customer#000024592" 
+Col1 (type: type_id::INT64, size: 624)
+3307 3544 5743 8846 8782 10993 14110 18472 15127 24592
+Col2 (type: type_id::INT64, size: 624)
+6210853 48526950 47969124 39702437 29294434 41064486 12701702 22291718 34551296 38363558
+Col3 (type: type_id::INT32, size: 624)
+19970808 19951123 19920711 19951123 19930105 19931005 19970726 19920903 19980412 19940427
+Col4 (type: type_id::FLOAT64, size: 624)
+453807 437675 462173 475436 518141 460386 452517 500695 508442 434907
+Col5 (type: type_id::FLOAT64, size: 624)
+303 304 306 321 322 311 311 306 312 307
+
+[step 11: TopK] -> 100 rows x 6 cols
+Table with 6 columns and 100 rows:
+Col0 (type: type_id::STRING, size: 100)
+"Customer#001287812" "Customer#000644812" "Customer#001172513" "Customer#000399481" "Customer#000571654" "Customer#000667882" "Customer#001492954" "Customer#001471966" "Customer#001082018" "Customer#001114039" 
+Col1 (type: type_id::INT64, size: 100)
+1287812 644812 1172513 399481 571654 667882 1492954 1471966 1082018 1114039
+Col2 (type: type_id::INT64, size: 100)
+42290181 2745894 36667107 43906817 21213895 2199712 30332516 1263015 31018979 30417318
+Col3 (type: type_id::INT32, size: 100)
+19971126 19960704 19970606 19950406 19920103 19960930 19960310 19970202 19951206 19951031
+Col4 (type: type_id::FLOAT64, size: 100)
+558289 557665 550142 549432 549380 542154 541182 540477 537993 536420
+Col5 (type: type_id::FLOAT64, size: 100)
+318 304 322 312 327 327 310 320 304 305
+
+Executed in 4351 ms.
+Result: 100 rows × 6 columns (showing 20)
+Customer#001287812 | 1287812 | 42290181 | 19971126 | 558289.170000 | 318.000000
+Customer#000644812 | 644812 | 2745894 | 19960704 | 557664.530000 | 304.000000
+Customer#001172513 | 1172513 | 36667107 | 19970606 | 550142.180000 | 322.000000
+Customer#000399481 | 399481 | 43906817 | 19950406 | 549431.650000 | 312.000000
+Customer#000571654 | 571654 | 21213895 | 19920103 | 549380.080000 | 327.000000
+Customer#000667882 | 667882 | 2199712 | 19960930 | 542154.010000 | 327.000000
+Customer#001492954 | 1492954 | 30332516 | 19960310 | 541181.800000 | 310.000000
+Customer#001471966 | 1471966 | 1263015 | 19970202 | 540476.800000 | 320.000000
+Customer#001082018 | 1082018 | 31018979 | 19951206 | 537993.050000 | 304.000000
+Customer#001114039 | 1114039 | 30417318 | 19951031 | 536420.390000 | 305.000000
+Customer#000870061 | 870061 | 17812705 | 19920320 | 535422.020000 | 301.000000
+Customer#001221100 | 1221100 | 34748294 | 19971122 | 533199.980000 | 307.000000
+Customer#001101754 | 1101754 | 46794464 | 19920428 | 532623.900000 | 320.000000
+Customer#000253643 | 253643 | 58441889 | 19970830 | 532485.390000 | 308.000000
+Customer#000933919 | 933919 | 5200102 | 19970122 | 532057.450000 | 304.000000
+Customer#000555376 | 555376 | 22040514 | 19970922 | 527114.860000 | 308.000000
+Customer#001130668 | 1130668 | 18869634 | 19950110 | 525679.100000 | 310.000000
+Customer#000591466 | 591466 | 55799200 | 19960211 | 524209.450000 | 327.000000
+Customer#001296343 | 1296343 | 28346247 | 19921101 | 523740.150000 | 310.000000
+Customer#000406811 | 406811 | 47953029 | 19950114 | 523581.510000 | 303.000000
+VERIFY: comparing against /work/data/tpch//sf10/golden/q18.parquet
+VERIFY: OK

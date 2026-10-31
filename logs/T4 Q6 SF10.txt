@@ -1,0 +1,67 @@
+== TPC-H Q6 (SF=10) via IR pipeline ==
+IR built: 1 output columns.
+ExecPlan: 5 steps, 1 sources.
+
+-- IR (pre-rules) --
+Aggregate(aggs=[sum(revenue) AS total])
+  Project(revenue = (l_extendedprice * l_discount))
+    Filter((((((l_shipdate >= 19940101) && (l_shipdate < 19950101)) && (l_discount >= 0.05)) && (l_discount <= 0.07)) && (l_quantity < 24)))
+      Scan(lineitem [l_shipdate, l_extendedprice, l_discount, l_quantity])
+
+
+-- IR (post-rules) --
+Aggregate(aggs=[sum(revenue) AS total])
+  Project(revenue = (l_extendedprice * l_discount))
+    Filter((((((l_shipdate >= 19940101) && (l_shipdate < 19950101)) && (l_discount >= 0.05)) && (l_discount <= 0.07)) && (l_quantity < 24)))
+      Scan(lineitem [l_shipdate, l_extendedprice, l_discount, l_quantity])
+
+
+-- ExecPlan --
+// required sources: lineitem
+v0 = SourceTable("lineitem" cols=[l_shipdate, l_extendedprice, l_discount, l_quantity])
+v1 = Filter(v0; predicate=<Predicate>, out=[1, 2])
+v2 = Project(v1; #items=1 (tree=1, pred=0, substr=0))
+v3 = Reorder(v2; ordinals=[0])
+v4 = ScalarAgg(v3; aggs=[sum(#0)])
+return v4
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+Memory pool has initial size 14468710400 bytes.
+[step 0: SourceTable] -> 59986052 rows x 4 cols
+Table with 4 columns and 59986052 rows:
+Col0 (type: type_id::INT32, size: 59986052)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+Col1 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col2 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col3 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+
+[step 1: Filter] -> 1139264 rows x 2 cols
+Table with 2 columns and 1139264 rows:
+Col0 (type: type_id::FLOAT64, size: 1139264)
+30837.7 25852.7 20975 30371.9 14056.4 1639.66 33738.8 2430.32 30804.8 32940.2
+Col1 (type: type_id::FLOAT64, size: 1139264)
+0.05 0.05 0.06 0.06 0.05 0.07 0.06 0.05 0.05 0.05
+
+[step 2: Project] -> 1139264 rows x 1 cols
+Table with 1 columns and 1139264 rows:
+Col0 (type: type_id::FLOAT64, size: 1139264)
+1541.88 1292.63 1258.5 1822.31 702.821 114.776 2024.33 121.516 1540.24 1647.01
+
+[step 3: Reorder] -> 1139264 rows x 1 cols
+Table with 1 columns and 1139264 rows:
+Col0 (type: type_id::FLOAT64, size: 1139264)
+1541.88 1292.63 1258.5 1822.31 702.821 114.776 2024.33 121.516 1540.24 1647.01
+
+[step 4: ScalarAgg] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+1.23011e+09
+
+Executed in 5312 ms.
+Result: 1 rows × 1 columns (showing 1)
+1230113636.010100
+VERIFY: comparing against /work/data/tpch//sf10/golden/q06.parquet
+VERIFY: OK

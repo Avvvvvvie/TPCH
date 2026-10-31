@@ -1,0 +1,153 @@
+== TPC-H Q1 (SF=10) via IR pipeline ==
+IR built: 10 output columns.
+ExecPlan: 6 steps, 1 sources.
+
+-- IR (pre-rules) --
+Sort[l_returnflag ASC, l_linestatus ASC]
+  Aggregate(keys=[l_returnflag, l_linestatus]; aggs=[sum(l_quantity) AS sum_qty, sum(l_extendedprice) AS sum_base_price, sum(disc_price) AS sum_disc_price, sum(charge) AS sum_charge, avg(l_quantity) AS avg_qty, avg(l_extendedprice) AS avg_price, avg(l_discount) AS avg_disc, count_all(*) AS count_order])
+    Project(l_returnflag = l_returnflag, l_linestatus = l_linestatus, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount, disc_price = (l_extendedprice * (1 - l_discount)), charge = ((l_extendedprice * (1 - l_discount)) * (1 + l_tax)))
+      Filter((l_shipdate <= 19980902))
+        Scan(lineitem [l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax])
+
+
+-- IR (post-rules) --
+Sort[l_returnflag ASC, l_linestatus ASC]
+  Aggregate(keys=[l_returnflag, l_linestatus]; aggs=[sum(l_quantity) AS sum_qty, sum(l_extendedprice) AS sum_base_price, sum(disc_price) AS sum_disc_price, sum(charge) AS sum_charge, avg(l_quantity) AS avg_qty, avg(l_extendedprice) AS avg_price, avg(l_discount) AS avg_disc, count_all(*) AS count_order])
+    Project(l_returnflag = l_returnflag, l_linestatus = l_linestatus, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount, disc_price = (l_extendedprice * (1 - l_discount)), charge = ((l_extendedprice * (1 - l_discount)) * (1 + l_tax)))
+      Filter((l_shipdate <= 19980902))
+        Scan(lineitem [l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax])
+
+
+-- ExecPlan --
+// required sources: lineitem
+v0 = SourceTable("lineitem" cols=[l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax])
+v1 = Filter(v0; predicate=<Predicate>, out=[1, 2, 3, 4, 5, 6])
+v2 = Project(v1; #items=7 (tree=7, pred=0, substr=0))
+v3 = Reorder(v2; ordinals=[0, 1, 2, 3, 5, 6, 4])
+v4 = GroupBy(v3; n_keys=2, aggs=[sum(#0), sum(#1), sum(#2), sum(#3), avg(#0), avg(#1), avg(#4), ?(#-1)])
+v5 = Sort(v4; keys=[#0 ASC, #1 ASC])
+return v5
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+Memory pool has initial size 14468710400 bytes.
+[step 0: SourceTable] -> 59986052 rows x 7 cols
+Table with 7 columns and 59986052 rows:
+Col0 (type: type_id::INT32, size: 59986052)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+Col1 (type: type_id::STRING, size: 59986052)
+"N" "N" "N" "N" "N" "N" "N" "R" "R" "A" 
+Col2 (type: type_id::STRING, size: 59986052)
+"O" "O" "O" "O" "O" "O" "O" "F" "F" "F" 
+Col3 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+Col4 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col5 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col6 (type: type_id::FLOAT64, size: 59986052)
+0.02 0.06 0.02 0.06 0.04 0.02 0.05 0 0 0.07
+
+[step 1: Filter] -> 59142609 rows x 6 cols
+Table with 6 columns and 59142609 rows:
+Col0 (type: type_id::STRING, size: 59142609)
+"N" "N" "N" "N" "N" "N" "N" "R" "R" "A" 
+Col1 (type: type_id::STRING, size: 59142609)
+"O" "O" "O" "O" "O" "O" "O" "F" "F" "F" 
+Col2 (type: type_id::FLOAT64, size: 59142609)
+17 36 8 28 24 32 38 45 49 27
+Col3 (type: type_id::FLOAT64, size: 59142609)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col4 (type: type_id::FLOAT64, size: 59142609)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col5 (type: type_id::FLOAT64, size: 59142609)
+0.02 0.06 0.02 0.06 0.04 0.02 0.05 0 0 0.07
+
+[step 2: Project] -> 59142609 rows x 7 cols
+Table with 7 columns and 59142609 rows:
+Col0 (type: type_id::STRING, size: 59142609)
+"N" "N" "N" "N" "N" "N" "N" "R" "R" "A" 
+Col1 (type: type_id::STRING, size: 59142609)
+"O" "O" "O" "O" "O" "O" "O" "F" "F" "F" 
+Col2 (type: type_id::FLOAT64, size: 59142609)
+17 36 8 28 24 32 38 45 49 27
+Col3 (type: type_id::FLOAT64, size: 59142609)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col4 (type: type_id::FLOAT64, size: 59142609)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col5 (type: type_id::FLOAT64, size: 59142609)
+31755.8 34858.6 13931.7 31501.2 26076.6 41703.9 63066.3 80918.6 63739.9 37243.1
+Col6 (type: type_id::FLOAT64, size: 59142609)
+32390.9 36950.1 14210.3 33391.2 27119.7 42538 66219.6 80918.6 63739.9 39850.1
+
+[step 3: Reorder] -> 59142609 rows x 7 cols
+Table with 7 columns and 59142609 rows:
+Col0 (type: type_id::STRING, size: 59142609)
+"N" "N" "N" "N" "N" "N" "N" "R" "R" "A" 
+Col1 (type: type_id::STRING, size: 59142609)
+"O" "O" "O" "O" "O" "O" "O" "F" "F" "F" 
+Col2 (type: type_id::FLOAT64, size: 59142609)
+17 36 8 28 24 32 38 45 49 27
+Col3 (type: type_id::FLOAT64, size: 59142609)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col4 (type: type_id::FLOAT64, size: 59142609)
+31755.8 34858.6 13931.7 31501.2 26076.6 41703.9 63066.3 80918.6 63739.9 37243.1
+Col5 (type: type_id::FLOAT64, size: 59142609)
+32390.9 36950.1 14210.3 33391.2 27119.7 42538 66219.6 80918.6 63739.9 39850.1
+Col6 (type: type_id::FLOAT64, size: 59142609)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+
+[GROUPBY DEBUG] rows=59142609 groups_upper_bound=4 algo=1
+[step 4: GroupBy] -> 4 rows x 10 cols
+Table with 10 columns and 4 rows:
+Col0 (type: type_id::STRING, size: 4)
+"R" "A" "N" "N" 
+Col1 (type: type_id::STRING, size: 4)
+"F" "F" "O" "F" 
+Col2 (type: type_id::FLOAT64, size: 4)
+3.77733e+08 3.77518e+08 7.43125e+08 9.85161e+06
+Col3 (type: type_id::FLOAT64, size: 4)
+5.66431e+11 5.66066e+11 1.1143e+12 1.47674e+10
+Col4 (type: type_id::FLOAT64, size: 4)
+5.38111e+11 5.37759e+11 1.05858e+12 1.40288e+10
+Col5 (type: type_id::FLOAT64, size: 4)
+5.59635e+11 5.59277e+11 1.10094e+12 1.45905e+10
+Col6 (type: type_id::FLOAT64, size: 4)
+25.5084 25.501 25.4981 25.5224
+Col7 (type: type_id::FLOAT64, size: 4)
+38251.2 38237.2 38233.9 38257.8
+Col8 (type: type_id::FLOAT64, size: 4)
+0.0499968 0.0500066 0.0500008 0.0499734
+Col9 (type: type_id::INT64, size: 4)
+14808183 14804077 29144351 385998
+
+[step 5: Sort] -> 4 rows x 10 cols
+Table with 10 columns and 4 rows:
+Col0 (type: type_id::STRING, size: 4)
+"A" "N" "N" "R" 
+Col1 (type: type_id::STRING, size: 4)
+"F" "F" "O" "F" 
+Col2 (type: type_id::FLOAT64, size: 4)
+3.77518e+08 9.85161e+06 7.43125e+08 3.77733e+08
+Col3 (type: type_id::FLOAT64, size: 4)
+5.66066e+11 1.47674e+10 1.1143e+12 5.66431e+11
+Col4 (type: type_id::FLOAT64, size: 4)
+5.37759e+11 1.40288e+10 1.05858e+12 5.38111e+11
+Col5 (type: type_id::FLOAT64, size: 4)
+5.59277e+11 1.45905e+10 1.10094e+12 5.59635e+11
+Col6 (type: type_id::FLOAT64, size: 4)
+25.501 25.5224 25.4981 25.5084
+Col7 (type: type_id::FLOAT64, size: 4)
+38237.2 38257.8 38233.9 38251.2
+Col8 (type: type_id::FLOAT64, size: 4)
+0.0500066 0.0499734 0.0500008 0.0499968
+Col9 (type: type_id::INT64, size: 4)
+14804077 385998 29144351 14808183
+
+Executed in 6319 ms.
+Result: 4 rows × 10 columns (showing 4)
+A | F | 377518399.000000 | 566065727797.250122 | 537759104278.065918 | 559276670892.116699 | 25.500975 | 38237.151009 | 0.050007 | 14804077
+N | F | 9851614.000000 | 14767438399.170000 | 14028805792.211397 | 14590490998.366732 | 25.522448 | 38257.810660 | 0.049973 | 385998
+N | O | 743124873.000000 | 1114302286901.883057 | 1058580922144.963257 | 1100937000170.592041 | 25.498076 | 38233.902923 | 0.050001 | 29144351
+R | F | 377732830.000000 | 566431054976.000000 | 538110922664.768188 | 559634780885.086182 | 25.508385 | 38251.219274 | 0.049997 | 14808183
+VERIFY: comparing against /work/data/tpch//sf10/golden/q01.parquet
+VERIFY: OK

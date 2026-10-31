@@ -1,0 +1,350 @@
+== TPC-H Q5 (SF=10) via IR pipeline ==
+IR built: 2 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 23 steps, 6 sources.
+
+-- IR (pre-rules) --
+Sort[revenue DESC]
+  Aggregate(keys=[n_name]; aggs=[sum(disc_price) AS revenue])
+    Project(n_name = n_name, disc_price = (l_extendedprice * (1 - l_discount)))
+      InnerJoin(on=((l_suppkey == s_suppkey) && (c_nationkey == s_nationkey)))
+        InnerJoin(on=(o_orderkey == l_orderkey))
+          InnerJoin(on=(c_custkey == o_custkey))
+            Scan(customer [c_custkey, c_nationkey])
+            Filter(((o_orderdate >= 19940101) && (o_orderdate < 19950101)))
+              Scan(orders [o_orderkey, o_custkey, o_orderdate])
+          Scan(lineitem [l_orderkey, l_suppkey, l_extendedprice, l_discount])
+        InnerJoin(on=(n_nationkey == s_nationkey))
+          InnerJoin(on=(r_regionkey == n_regionkey))
+            Filter(str_eq(r_name, "ASIA"))
+              Scan(region [r_regionkey, r_name])
+            Scan(nation [n_nationkey, n_name, n_regionkey])
+          Scan(supplier [s_suppkey, s_nationkey])
+
+
+-- IR (post-rules) --
+Sort[revenue DESC]
+  Aggregate(keys=[n_name]; aggs=[sum(disc_price) AS revenue])
+    Project(n_name = n_name, disc_price = (l_extendedprice * (1 - l_discount)))
+      Filter((c_nationkey == s_nationkey))
+        InnerJoin(on=(l_suppkey == s_suppkey))
+          InnerJoin(on=(o_orderkey == l_orderkey))
+            InnerJoin(on=(c_custkey == o_custkey))
+              Scan(customer [c_custkey, c_nationkey])
+              Filter(((o_orderdate >= 19940101) && (o_orderdate < 19950101)))
+                Scan(orders [o_orderkey, o_custkey, o_orderdate])
+            Scan(lineitem [l_orderkey, l_suppkey, l_extendedprice, l_discount])
+          InnerJoin(on=(n_nationkey == s_nationkey))
+            InnerJoin(on=(r_regionkey == n_regionkey))
+              Filter(str_eq(r_name, "ASIA"))
+                Scan(region [r_regionkey, r_name])
+              Scan(nation [n_nationkey, n_name, n_regionkey])
+            Scan(supplier [s_suppkey, s_nationkey])
+
+
+-- ExecPlan --
+// required sources: customer orders lineitem region nation supplier
+v0 = SourceTable("customer" cols=[c_custkey, c_nationkey])
+v1 = SourceTable("orders" cols=[o_orderkey, o_custkey, o_orderdate])
+v2 = Filter(v1; predicate=<Predicate>, out=[0, 1])
+v3 = EqJoin(v0, v2; lkeys=[0], rkeys=[1])
+v4 = Reorder(v3; ordinals=[0, 1, 2, 0])
+v5 = SourceTable("lineitem" cols=[l_orderkey, l_suppkey, l_extendedprice, l_discount])
+v6 = EqJoin(v4, v5; lkeys=[2], rkeys=[0])
+v7 = Reorder(v6; ordinals=[1, 2, 0, 3, 0, 4, 5, 6])
+v8 = SourceTable("region" cols=[r_regionkey, r_name])
+v9 = Filter(v8; predicate=<Predicate>, out=[0])
+v10 = SourceTable("nation" cols=[n_nationkey, n_name, n_regionkey])
+v11 = EqJoin(v9, v10; lkeys=[0], rkeys=[2])
+v12 = Reorder(v11; ordinals=[0, 1, 2, 0])
+v13 = SourceTable("supplier" cols=[s_suppkey, s_nationkey])
+v14 = EqJoin(v12, v13; lkeys=[1], rkeys=[1])
+v15 = Reorder(v14; ordinals=[1, 0, 2, 3, 4, 0])
+v16 = EqJoin(v7, v15; lkeys=[5], rkeys=[4])
+v17 = Reorder(v16; ordinals=[1, 2, 3, 4, 5, 0, 6, 7, 8, 9, 10, 11, 0, 12])
+v18 = Filter(v17; predicate=<Predicate>, out=[6, 7, 10])
+v19 = Project(v18; #items=2 (tree=2, pred=0, substr=0))
+v20 = Reorder(v19; ordinals=[0, 1])
+v21 = GroupBy(v20; n_keys=1, aggs=[sum(#0)])
+v22 = Sort(v21; keys=[#1 DESC])
+return v22
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 0: SourceTable] -> 1500000 rows x 2 cols
+Table with 2 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 1500000)
+15 13 1 4 3 20 18 17 8 5
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 1: SourceTable] -> 15000000 rows x 3 cols
+Table with 3 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+Col2 (type: type_id::INT32, size: 15000000)
+19960102 19961201 19931014 19951011 19940730 19920221 19960110 19950716 19931027 19980721
+
+[step 2: Filter] -> 2275919 rows x 2 cols
+Table with 2 columns and 2275919 rows:
+Col0 (type: type_id::INT64, size: 2275919)
+5 64 66 69 96 98 99 131 161 224
+Col1 (type: type_id::INT64, size: 2275919)
+444848 321127 1291996 844865 1077778 1044797 889093 927487 166190 24742
+
+[step 3: EqJoin] -> 2275919 rows x 3 cols
+Table with 3 columns and 2275919 rows:
+Col0 (type: type_id::INT64, size: 2275919)
+722375 254569 531811 1071121 511049 198584 1207565 217117 255155 589970
+Col1 (type: type_id::INT32, size: 2275919)
+4 6 22 14 1 23 16 0 10 15
+Col2 (type: type_id::INT64, size: 2275919)
+24614 24644 24645 24647 24675 24676 24704 24737 24802 24805
+
+[step 4: Reorder] -> 2275919 rows x 4 cols
+Table with 4 columns and 2275919 rows:
+Col0 (type: type_id::INT64, size: 2275919)
+722375 254569 531811 1071121 511049 198584 1207565 217117 255155 589970
+Col1 (type: type_id::INT32, size: 2275919)
+4 6 22 14 1 23 16 0 10 15
+Col2 (type: type_id::INT64, size: 2275919)
+24614 24644 24645 24647 24675 24676 24704 24737 24802 24805
+Col3 (type: type_id::INT64, size: 2275919)
+722375 254569 531811 1071121 511049 198584 1207565 217117 255155 589970
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 5: SourceTable] -> 59986052 rows x 4 cols
+Table with 4 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+Col2 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col3 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+
+[step 6: EqJoin] -> 9103367 rows x 7 cols
+Table with 7 columns and 9103367 rows:
+Col0 (type: type_id::INT64, size: 9103367)
+1892 1895 2150 2150 1891 1891 1891 1892 1892 1892
+Col1 (type: type_id::INT64, size: 9103367)
+233459 65039 816748 816748 609046 609046 609046 233459 233459 233459
+Col2 (type: type_id::INT32, size: 9103367)
+13 4 24 24 11 11 11 13 13 13
+Col3 (type: type_id::INT64, size: 9103367)
+233459 65039 816748 816748 609046 609046 609046 233459 233459 233459
+Col4 (type: type_id::INT64, size: 9103367)
+94656 76961 24959 88305 60984 55922 71588 52782 95037 82804
+Col5 (type: type_id::FLOAT64, size: 9103367)
+23877.6 77994.7 65900.1 15207.6 91977.8 33008.6 24877.4 86290.6 33040 66959.3
+Col6 (type: type_id::FLOAT64, size: 9103367)
+0.06 0.09 0.01 0.09 0.07 0.06 0.03 0.02 0.04 0.1
+
+[step 7: Reorder] -> 9103367 rows x 8 cols
+Table with 8 columns and 9103367 rows:
+Col0 (type: type_id::INT64, size: 9103367)
+233459 65039 816748 816748 609046 609046 609046 233459 233459 233459
+Col1 (type: type_id::INT32, size: 9103367)
+13 4 24 24 11 11 11 13 13 13
+Col2 (type: type_id::INT64, size: 9103367)
+1892 1895 2150 2150 1891 1891 1891 1892 1892 1892
+Col3 (type: type_id::INT64, size: 9103367)
+233459 65039 816748 816748 609046 609046 609046 233459 233459 233459
+Col4 (type: type_id::INT64, size: 9103367)
+1892 1895 2150 2150 1891 1891 1891 1892 1892 1892
+Col5 (type: type_id::INT64, size: 9103367)
+94656 76961 24959 88305 60984 55922 71588 52782 95037 82804
+Col6 (type: type_id::FLOAT64, size: 9103367)
+23877.6 77994.7 65900.1 15207.6 91977.8 33008.6 24877.4 86290.6 33040 66959.3
+Col7 (type: type_id::FLOAT64, size: 9103367)
+0.06 0.09 0.01 0.09 0.07 0.06 0.03 0.02 0.04 0.1
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/region.parquet
+[step 8: SourceTable] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+0 1 2 3 4
+Col1 (type: type_id::STRING, size: 5)
+"AFRICA" "AMERICA" "ASIA" "EUROPE" "MIDDLE EAST" 
+
+[step 9: Filter] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::INT32, size: 1)
+2
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 10: SourceTable] -> 25 rows x 3 cols
+Table with 3 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+Col2 (type: type_id::INT32, size: 25)
+0 1 1 1 4 0 3 3 2 2
+
+[step 11: EqJoin] -> 5 rows x 3 cols
+Table with 3 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+2 2 2 2 2
+Col1 (type: type_id::INT32, size: 5)
+18 21 8 9 12
+Col2 (type: type_id::STRING, size: 5)
+"CHINA" "VIETNAM" "INDIA" "INDONESIA" "JAPAN" 
+
+[step 12: Reorder] -> 5 rows x 4 cols
+Table with 4 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+2 2 2 2 2
+Col1 (type: type_id::INT32, size: 5)
+18 21 8 9 12
+Col2 (type: type_id::STRING, size: 5)
+"CHINA" "VIETNAM" "INDIA" "INDONESIA" "JAPAN" 
+Col3 (type: type_id::INT32, size: 5)
+2 2 2 2 2
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 13: SourceTable] -> 100000 rows x 2 cols
+Table with 2 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 14: EqJoin] -> 20037 rows x 5 cols
+Table with 5 columns and 20037 rows:
+Col0 (type: type_id::INT32, size: 20037)
+21 8 18 8 8 18 12 21 8 9
+Col1 (type: type_id::INT32, size: 20037)
+2 2 2 2 2 2 2 2 2 2
+Col2 (type: type_id::STRING, size: 20037)
+"VIETNAM" "INDIA" "CHINA" "INDIA" "INDIA" "CHINA" "JAPAN" "VIETNAM" "INDIA" "INDONESIA" 
+Col3 (type: type_id::INT32, size: 20037)
+2 2 2 2 2 2 2 2 2 2
+Col4 (type: type_id::INT64, size: 20037)
+1391 1377 1378 1403 1406 1466 1444 1448 1395 1457
+
+[step 15: Reorder] -> 20037 rows x 6 cols
+Table with 6 columns and 20037 rows:
+Col0 (type: type_id::INT32, size: 20037)
+2 2 2 2 2 2 2 2 2 2
+Col1 (type: type_id::INT32, size: 20037)
+21 8 18 8 8 18 12 21 8 9
+Col2 (type: type_id::STRING, size: 20037)
+"VIETNAM" "INDIA" "CHINA" "INDIA" "INDIA" "CHINA" "JAPAN" "VIETNAM" "INDIA" "INDONESIA" 
+Col3 (type: type_id::INT32, size: 20037)
+2 2 2 2 2 2 2 2 2 2
+Col4 (type: type_id::INT64, size: 20037)
+1391 1377 1378 1403 1406 1466 1444 1448 1395 1457
+Col5 (type: type_id::INT32, size: 20037)
+21 8 18 8 8 18 12 21 8 9
+
+[step 16: EqJoin] -> 1825042 rows x 13 cols
+Table with 13 columns and 1825042 rows:
+Col0 (type: type_id::INT64, size: 1825042)
+5762 5762 5762 5762 5762 5762 5762 5762 5764 5764
+Col1 (type: type_id::INT64, size: 1825042)
+157151 9898 826741 826067 740476 250660 325195 1497373 186235 203578
+Col2 (type: type_id::INT32, size: 1825042)
+22 4 14 17 3 14 21 17 6 19
+Col3 (type: type_id::INT64, size: 1825042)
+475909 2607585 3255877 4129890 2444806 2627493 3381733 4797536 10692 2204004
+Col4 (type: type_id::INT64, size: 1825042)
+157151 9898 826741 826067 740476 250660 325195 1497373 186235 203578
+Col5 (type: type_id::INT64, size: 1825042)
+475909 2607585 3255877 4129890 2444806 2627493 3381733 4797536 10692 2204004
+Col6 (type: type_id::FLOAT64, size: 1825042)
+80001.1 67587.9 35883.3 49553.2 30901.7 74200.6 62480.4 42879.8 73710.4 59287.8
+Col7 (type: type_id::FLOAT64, size: 1825042)
+0.07 0.03 0.02 0.07 0.01 0.1 0.07 0.05 0.05 0.02
+Col8 (type: type_id::INT32, size: 1825042)
+2 2 2 2 2 2 2 2 2 2
+Col9 (type: type_id::INT32, size: 1825042)
+21 21 21 21 21 21 21 21 8 8
+Col10 (type: type_id::STRING, size: 1825042)
+"VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "INDIA" "INDIA" 
+Col11 (type: type_id::INT32, size: 1825042)
+2 2 2 2 2 2 2 2 2 2
+Col12 (type: type_id::INT32, size: 1825042)
+21 21 21 21 21 21 21 21 8 8
+
+[step 17: Reorder] -> 1825042 rows x 14 cols
+Table with 14 columns and 1825042 rows:
+Col0 (type: type_id::INT64, size: 1825042)
+157151 9898 826741 826067 740476 250660 325195 1497373 186235 203578
+Col1 (type: type_id::INT32, size: 1825042)
+22 4 14 17 3 14 21 17 6 19
+Col2 (type: type_id::INT64, size: 1825042)
+475909 2607585 3255877 4129890 2444806 2627493 3381733 4797536 10692 2204004
+Col3 (type: type_id::INT64, size: 1825042)
+157151 9898 826741 826067 740476 250660 325195 1497373 186235 203578
+Col4 (type: type_id::INT64, size: 1825042)
+475909 2607585 3255877 4129890 2444806 2627493 3381733 4797536 10692 2204004
+Col5 (type: type_id::INT64, size: 1825042)
+5762 5762 5762 5762 5762 5762 5762 5762 5764 5764
+Col6 (type: type_id::FLOAT64, size: 1825042)
+80001.1 67587.9 35883.3 49553.2 30901.7 74200.6 62480.4 42879.8 73710.4 59287.8
+Col7 (type: type_id::FLOAT64, size: 1825042)
+0.07 0.03 0.02 0.07 0.01 0.1 0.07 0.05 0.05 0.02
+Col8 (type: type_id::INT32, size: 1825042)
+2 2 2 2 2 2 2 2 2 2
+Col9 (type: type_id::INT32, size: 1825042)
+21 21 21 21 21 21 21 21 8 8
+Col10 (type: type_id::STRING, size: 1825042)
+"VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "VIETNAM" "INDIA" "INDIA" 
+Col11 (type: type_id::INT32, size: 1825042)
+2 2 2 2 2 2 2 2 2 2
+Col12 (type: type_id::INT64, size: 1825042)
+5762 5762 5762 5762 5762 5762 5762 5762 5764 5764
+Col13 (type: type_id::INT32, size: 1825042)
+21 21 21 21 21 21 21 21 8 8
+
+[step 18: Filter] -> 72985 rows x 3 cols
+Table with 3 columns and 72985 rows:
+Col0 (type: type_id::FLOAT64, size: 72985)
+62480.4 33198.5 10590.2 67201.9 25657.2 29960 70760.7 24044.8 48666.1 37995.8
+Col1 (type: type_id::FLOAT64, size: 72985)
+0.07 0.04 0.1 0.05 0 0.06 0.08 0.01 0.1 0.05
+Col2 (type: type_id::STRING, size: 72985)
+"VIETNAM" "VIETNAM" "VIETNAM" "INDONESIA" "JAPAN" "INDIA" "VIETNAM" "VIETNAM" "INDIA" "INDONESIA" 
+
+[step 19: Project] -> 72985 rows x 2 cols
+Table with 2 columns and 72985 rows:
+Col0 (type: type_id::STRING, size: 72985)
+"VIETNAM" "VIETNAM" "VIETNAM" "INDONESIA" "JAPAN" "INDIA" "VIETNAM" "VIETNAM" "INDIA" "INDONESIA" 
+Col1 (type: type_id::FLOAT64, size: 72985)
+58106.8 31870.6 9531.18 63841.8 25657.2 28162.4 65099.8 23804.4 43799.5 36096
+
+[step 20: Reorder] -> 72985 rows x 2 cols
+Table with 2 columns and 72985 rows:
+Col0 (type: type_id::STRING, size: 72985)
+"VIETNAM" "VIETNAM" "VIETNAM" "INDONESIA" "JAPAN" "INDIA" "VIETNAM" "VIETNAM" "INDIA" "INDONESIA" 
+Col1 (type: type_id::FLOAT64, size: 72985)
+58106.8 31870.6 9531.18 63841.8 25657.2 28162.4 65099.8 23804.4 43799.5 36096
+
+[GROUPBY DEBUG] rows=72985 groups_upper_bound=9223372036854775807 algo=1
+[step 21: GroupBy] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::STRING, size: 5)
+"CHINA" "INDONESIA" "JAPAN" "VIETNAM" "INDIA" 
+Col1 (type: type_id::FLOAT64, size: 5)
+5.35351e+08 5.23177e+08 5.26767e+08 5.32269e+08 5.36863e+08
+
+[step 22: Sort] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::STRING, size: 5)
+"INDIA" "CHINA" "VIETNAM" "JAPAN" "INDONESIA" 
+Col1 (type: type_id::FLOAT64, size: 5)
+5.36863e+08 5.35351e+08 5.32269e+08 5.26767e+08 5.23177e+08
+
+Executed in 5268 ms.
+Result: 5 rows × 2 columns (showing 5)
+INDIA | 536862587.999500
+CHINA | 535350829.928200
+VIETNAM | 532269388.717600
+JAPAN | 526766837.144400
+INDONESIA | 523176852.318900
+VERIFY: comparing against /work/data/tpch//sf10/golden/q05.parquet
+VERIFY: OK

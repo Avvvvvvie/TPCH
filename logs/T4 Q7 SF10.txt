@@ -1,0 +1,413 @@
+== TPC-H Q7 (SF=10) via IR pipeline ==
+IR built: 4 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 24 steps, 5 sources.
+
+-- IR (pre-rules) --
+Sort[n_name#12 ASC, n_name#14 ASC, l_year ASC]
+  Aggregate(keys=[n_name#12, n_name#14, l_year]; aggs=[sum(volume) AS revenue])
+    Project(supp_nation = n_name#12, cust_nation = n_name#14, l_year = year(l_shipdate), volume = (l_extendedprice * (1 - l_discount)))
+      Filter(((str_eq(n_name#12, "FRANCE") && str_eq(n_name#14, "GERMANY")) || (str_eq(n_name#12, "GERMANY") && str_eq(n_name#14, "FRANCE"))))
+        InnerJoin(on=(o_custkey == c_custkey))
+          InnerJoin(on=(l_orderkey == o_orderkey))
+            InnerJoin(on=(s_suppkey == l_suppkey))
+              InnerJoin(on=(n_nationkey#11 == s_nationkey))
+                Filter(str_in(n_name#12, ["FRANCE", "GERMANY"]))
+                  Scan(nation [n_nationkey, n_name])
+                Scan(supplier [s_suppkey, s_nationkey])
+              Filter(((l_shipdate >= 19950101) && (l_shipdate <= 19961231)))
+                Scan(lineitem [l_orderkey, l_suppkey, l_extendedprice, l_discount, l_shipdate])
+            Scan(orders [o_orderkey, o_custkey])
+          InnerJoin(on=(n_nationkey#13 == c_nationkey))
+            Filter(str_in(n_name#14, ["FRANCE", "GERMANY"]))
+              Scan(nation [n_nationkey, n_name])
+            Scan(customer [c_custkey, c_nationkey])
+
+
+-- IR (post-rules) --
+Sort[n_name#12 ASC, n_name#14 ASC, l_year ASC]
+  Aggregate(keys=[n_name#12, n_name#14, l_year]; aggs=[sum(volume) AS revenue])
+    Project(supp_nation = n_name#12, cust_nation = n_name#14, l_year = year(l_shipdate), volume = (l_extendedprice * (1 - l_discount)))
+      Filter(((str_eq(n_name#12, "FRANCE") && str_eq(n_name#14, "GERMANY")) || (str_eq(n_name#12, "GERMANY") && str_eq(n_name#14, "FRANCE"))))
+        InnerJoin(on=(o_custkey == c_custkey))
+          InnerJoin(on=(l_orderkey == o_orderkey))
+            InnerJoin(on=(s_suppkey == l_suppkey))
+              InnerJoin(on=(n_nationkey#11 == s_nationkey))
+                Filter(str_in(n_name#12, ["FRANCE", "GERMANY"]))
+                  Scan(nation [n_nationkey, n_name])
+                Scan(supplier [s_suppkey, s_nationkey])
+              Filter(((l_shipdate >= 19950101) && (l_shipdate <= 19961231)))
+                Scan(lineitem [l_orderkey, l_suppkey, l_extendedprice, l_discount, l_shipdate])
+            Scan(orders [o_orderkey, o_custkey])
+          InnerJoin(on=(n_nationkey#13 == c_nationkey))
+            Filter(str_in(n_name#14, ["FRANCE", "GERMANY"]))
+              Scan(nation [n_nationkey, n_name])
+            Scan(customer [c_custkey, c_nationkey])
+
+
+-- ExecPlan --
+// required sources: nation supplier lineitem orders customer
+v0 = SourceTable("nation" cols=[n_nationkey, n_name])
+v1 = Filter(v0; predicate=<Predicate>)
+v2 = SourceTable("supplier" cols=[s_suppkey, s_nationkey])
+v3 = EqJoin(v1, v2; lkeys=[0], rkeys=[1])
+v4 = Reorder(v3; ordinals=[0, 1, 2, 0])
+v5 = SourceTable("lineitem" cols=[l_orderkey, l_suppkey, l_extendedprice, l_discount, l_shipdate])
+v6 = Filter(v5; predicate=<Predicate>)
+v7 = EqJoin(v4, v6; lkeys=[2], rkeys=[1])
+v8 = Reorder(v7; ordinals=[1, 2, 0, 3, 4, 0, 5, 6, 7])
+v9 = SourceTable("orders" cols=[o_orderkey, o_custkey])
+v10 = EqJoin(v8, v9; lkeys=[4], rkeys=[0])
+v11 = Reorder(v10; ordinals=[1, 2, 3, 4, 0, 5, 6, 7, 8, 0, 9])
+v12 = SourceTable("nation" cols=[n_nationkey, n_name])
+v13 = Filter(v12; predicate=<Predicate>)
+v14 = SourceTable("customer" cols=[c_custkey, c_nationkey])
+v15 = EqJoin(v13, v14; lkeys=[0], rkeys=[1])
+v16 = Reorder(v15; ordinals=[0, 1, 2, 0])
+v17 = EqJoin(v11, v16; lkeys=[10], rkeys=[2])
+v18 = Reorder(v17; ordinals=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 11, 12, 0, 13])
+v19 = Filter(v18; predicate=<Predicate>, out=[1, 6, 7, 8, 12])
+v20 = Project(v19; #items=4 (tree=4, pred=0, substr=0))
+v21 = Reorder(v20; ordinals=[0, 1, 2, 3])
+v22 = GroupBy(v21; n_keys=3, aggs=[sum(#0)])
+v23 = Sort(v22; keys=[#0 ASC, #1 ASC, #2 ASC])
+return v23
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 0: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[step 1: Filter] -> 2 rows x 2 cols
+Table with 2 columns and 2 rows:
+Col0 (type: type_id::INT32, size: 2)
+6 7
+Col1 (type: type_id::STRING, size: 2)
+"FRANCE" "GERMANY" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 2: SourceTable] -> 100000 rows x 2 cols
+Table with 2 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 3: EqJoin] -> 8010 rows x 3 cols
+Table with 3 columns and 8010 rows:
+Col0 (type: type_id::INT32, size: 8010)
+7 7 6 6 7 6 7 7 7 6
+Col1 (type: type_id::STRING, size: 8010)
+"GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" "FRANCE" 
+Col2 (type: type_id::INT64, size: 8010)
+477 1731 2548 3836 533 468 3021 1818 841 2882
+
+[step 4: Reorder] -> 8010 rows x 4 cols
+Table with 4 columns and 8010 rows:
+Col0 (type: type_id::INT32, size: 8010)
+7 7 6 6 7 6 7 7 7 6
+Col1 (type: type_id::STRING, size: 8010)
+"GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" "FRANCE" 
+Col2 (type: type_id::INT64, size: 8010)
+477 1731 2548 3836 533 468 3021 1818 841 2882
+Col3 (type: type_id::INT32, size: 8010)
+7 7 6 6 7 6 7 7 7 6
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 5: SourceTable] -> 59986052 rows x 5 cols
+Table with 5 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+Col2 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col3 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col4 (type: type_id::INT32, size: 59986052)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+
+[step 6: Filter] -> 18230325 rows x 5 cols
+Table with 5 columns and 18230325 rows:
+Col0 (type: type_id::INT64, size: 18230325)
+1 1 1 1 1 1 4 7 7 7
+Col1 (type: type_id::INT64, size: 18230325)
+76910 73092 36999 46316 15274 6348 55372 95574 77443 97817
+Col2 (type: type_id::FLOAT64, size: 18230325)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 39819 17273 12423.1 84904.5
+Col3 (type: type_id::FLOAT64, size: 18230325)
+0.04 0.09 0.1 0.09 0.1 0.07 0.03 0.07 0.08 0.1
+Col4 (type: type_id::INT32, size: 18230325)
+19960313 19960412 19960129 19960421 19960330 19960130 19960110 19960507 19960201 19960115
+
+[step 7: EqJoin] -> 1460257 rows x 8 cols
+Table with 8 columns and 1460257 rows:
+Col0 (type: type_id::INT64, size: 1460257)
+97061 36744 24343 64156 19793 99349 48834 82646 64382 14680
+Col1 (type: type_id::INT32, size: 1460257)
+7 7 7 6 6 6 6 7 7 6
+Col2 (type: type_id::STRING, size: 1460257)
+"GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col3 (type: type_id::INT32, size: 1460257)
+7 7 7 6 6 6 6 7 7 6
+Col4 (type: type_id::INT64, size: 1460257)
+1538 1572 6977 5696 326 7878 5799 4390 7141 6246
+Col5 (type: type_id::FLOAT64, size: 1460257)
+42839.2 68868.9 31656.2 56539.5 71660 10378.7 57413.1 63947.5 10922.2 79753.4
+Col6 (type: type_id::FLOAT64, size: 1460257)
+0.08 0.02 0.05 0.01 0.02 0.03 0.03 0.05 0.04 0
+Col7 (type: type_id::INT32, size: 1460257)
+19951010 19960516 19950330 19950810 19950912 19950522 19950912 19950612 19961111 19950218
+
+[step 8: Reorder] -> 1460257 rows x 9 cols
+Table with 9 columns and 1460257 rows:
+Col0 (type: type_id::INT32, size: 1460257)
+7 7 7 6 6 6 6 7 7 6
+Col1 (type: type_id::STRING, size: 1460257)
+"GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col2 (type: type_id::INT64, size: 1460257)
+97061 36744 24343 64156 19793 99349 48834 82646 64382 14680
+Col3 (type: type_id::INT32, size: 1460257)
+7 7 7 6 6 6 6 7 7 6
+Col4 (type: type_id::INT64, size: 1460257)
+1538 1572 6977 5696 326 7878 5799 4390 7141 6246
+Col5 (type: type_id::INT64, size: 1460257)
+97061 36744 24343 64156 19793 99349 48834 82646 64382 14680
+Col6 (type: type_id::FLOAT64, size: 1460257)
+42839.2 68868.9 31656.2 56539.5 71660 10378.7 57413.1 63947.5 10922.2 79753.4
+Col7 (type: type_id::FLOAT64, size: 1460257)
+0.08 0.02 0.05 0.01 0.02 0.03 0.03 0.05 0.04 0
+Col8 (type: type_id::INT32, size: 1460257)
+19951010 19960516 19950330 19950810 19950912 19950522 19950912 19950612 19961111 19950218
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 9: SourceTable] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+
+[step 10: EqJoin] -> 1460257 rows x 10 cols
+Table with 10 columns and 1460257 rows:
+Col0 (type: type_id::INT64, size: 1460257)
+8068 8068 8071 8071 8164 18432 8448 18370 18372 2882
+Col1 (type: type_id::INT32, size: 1460257)
+6 7 7 7 7 6 6 7 7 6
+Col2 (type: type_id::STRING, size: 1460257)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col3 (type: type_id::INT64, size: 1460257)
+75614 35655 29795 82970 11537 84175 89524 12648 71444 38781
+Col4 (type: type_id::INT32, size: 1460257)
+6 7 7 7 7 6 6 7 7 6
+Col5 (type: type_id::INT64, size: 1460257)
+75614 35655 29795 82970 11537 84175 89524 12648 71444 38781
+Col6 (type: type_id::FLOAT64, size: 1460257)
+28036.3 52379.2 89789 11153.5 54512.5 35227.1 21847.3 66128.4 21635.5 58199
+Col7 (type: type_id::FLOAT64, size: 1460257)
+0.03 0.03 0.03 0.06 0.03 0.08 0.06 0 0.03 0.07
+Col8 (type: type_id::INT32, size: 1460257)
+19960907 19961012 19960714 19960515 19950101 19950414 19951229 19950312 19951217 19951021
+Col9 (type: type_id::INT64, size: 1460257)
+1328026 1328026 1135136 1135136 1255384 1351768 622507 48751 944441 1200911
+
+[step 11: Reorder] -> 1460257 rows x 11 cols
+Table with 11 columns and 1460257 rows:
+Col0 (type: type_id::INT32, size: 1460257)
+6 7 7 7 7 6 6 7 7 6
+Col1 (type: type_id::STRING, size: 1460257)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col2 (type: type_id::INT64, size: 1460257)
+75614 35655 29795 82970 11537 84175 89524 12648 71444 38781
+Col3 (type: type_id::INT32, size: 1460257)
+6 7 7 7 7 6 6 7 7 6
+Col4 (type: type_id::INT64, size: 1460257)
+8068 8068 8071 8071 8164 18432 8448 18370 18372 2882
+Col5 (type: type_id::INT64, size: 1460257)
+75614 35655 29795 82970 11537 84175 89524 12648 71444 38781
+Col6 (type: type_id::FLOAT64, size: 1460257)
+28036.3 52379.2 89789 11153.5 54512.5 35227.1 21847.3 66128.4 21635.5 58199
+Col7 (type: type_id::FLOAT64, size: 1460257)
+0.03 0.03 0.03 0.06 0.03 0.08 0.06 0 0.03 0.07
+Col8 (type: type_id::INT32, size: 1460257)
+19960907 19961012 19960714 19960515 19950101 19950414 19951229 19950312 19951217 19951021
+Col9 (type: type_id::INT64, size: 1460257)
+8068 8068 8071 8071 8164 18432 8448 18370 18372 2882
+Col10 (type: type_id::INT64, size: 1460257)
+1328026 1328026 1135136 1135136 1255384 1351768 622507 48751 944441 1200911
+
+[step 12: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[step 13: Filter] -> 2 rows x 2 cols
+Table with 2 columns and 2 rows:
+Col0 (type: type_id::INT32, size: 2)
+6 7
+Col1 (type: type_id::STRING, size: 2)
+"FRANCE" "GERMANY" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 14: SourceTable] -> 1500000 rows x 2 cols
+Table with 2 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 1500000)
+15 13 1 4 3 20 18 17 8 5
+
+[step 15: EqJoin] -> 120469 rows x 3 cols
+Table with 3 columns and 120469 rows:
+Col0 (type: type_id::INT32, size: 120469)
+6 7 7 7 7 6 7 7 7 7
+Col1 (type: type_id::STRING, size: 120469)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" 
+Col2 (type: type_id::INT64, size: 120469)
+1757 480 171 1444 397 1669 1533 388 1452 351
+
+[step 16: Reorder] -> 120469 rows x 4 cols
+Table with 4 columns and 120469 rows:
+Col0 (type: type_id::INT32, size: 120469)
+6 7 7 7 7 6 7 7 7 7
+Col1 (type: type_id::STRING, size: 120469)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" 
+Col2 (type: type_id::INT64, size: 120469)
+1757 480 171 1444 397 1669 1533 388 1452 351
+Col3 (type: type_id::INT32, size: 120469)
+6 7 7 7 7 6 7 7 7 7
+
+[step 17: EqJoin] -> 117014 rows x 14 cols
+Table with 14 columns and 117014 rows:
+Col0 (type: type_id::INT64, size: 117014)
+19670 20044 20044 20044 20048 20048 19073 19171 19171 19171
+Col1 (type: type_id::INT32, size: 117014)
+6 7 6 7 6 7 6 6 6 7
+Col2 (type: type_id::STRING, size: 117014)
+"FRANCE" "GERMANY" "FRANCE" "GERMANY" "FRANCE" "GERMANY" "FRANCE" "FRANCE" "FRANCE" "GERMANY" 
+Col3 (type: type_id::INT64, size: 117014)
+90408 39777 58708 9553 38925 12166 58911 34276 27338 74325
+Col4 (type: type_id::INT32, size: 117014)
+6 7 6 7 6 7 6 6 6 7
+Col5 (type: type_id::INT64, size: 117014)
+16898085 23064930 58623648 53141602 33337828 33337828 4572005 3991046 30978688 30978688
+Col6 (type: type_id::INT64, size: 117014)
+90408 39777 58708 9553 38925 12166 58911 34276 27338 74325
+Col7 (type: type_id::FLOAT64, size: 117014)
+13103.7 33614.2 22849.1 58145.9 29443.4 32902.5 56599.8 54013.7 51724.1 6491.55
+Col8 (type: type_id::FLOAT64, size: 117014)
+0.1 0.02 0.08 0.1 0 0.07 0.05 0.1 0.09 0.05
+Col9 (type: type_id::INT32, size: 117014)
+19950405 19960117 19950725 19961231 19951027 19951103 19950426 19950624 19950604 19950524
+Col10 (type: type_id::INT64, size: 117014)
+16898085 23064930 58623648 53141602 33337828 33337828 4572005 3991046 30978688 30978688
+Col11 (type: type_id::INT32, size: 117014)
+6 7 7 7 7 7 6 7 7 7
+Col12 (type: type_id::STRING, size: 117014)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" 
+Col13 (type: type_id::INT32, size: 117014)
+6 7 7 7 7 7 6 7 7 7
+
+[step 18: Reorder] -> 117014 rows x 15 cols
+Table with 15 columns and 117014 rows:
+Col0 (type: type_id::INT32, size: 117014)
+6 7 6 7 6 7 6 6 6 7
+Col1 (type: type_id::STRING, size: 117014)
+"FRANCE" "GERMANY" "FRANCE" "GERMANY" "FRANCE" "GERMANY" "FRANCE" "FRANCE" "FRANCE" "GERMANY" 
+Col2 (type: type_id::INT64, size: 117014)
+90408 39777 58708 9553 38925 12166 58911 34276 27338 74325
+Col3 (type: type_id::INT32, size: 117014)
+6 7 6 7 6 7 6 6 6 7
+Col4 (type: type_id::INT64, size: 117014)
+16898085 23064930 58623648 53141602 33337828 33337828 4572005 3991046 30978688 30978688
+Col5 (type: type_id::INT64, size: 117014)
+90408 39777 58708 9553 38925 12166 58911 34276 27338 74325
+Col6 (type: type_id::FLOAT64, size: 117014)
+13103.7 33614.2 22849.1 58145.9 29443.4 32902.5 56599.8 54013.7 51724.1 6491.55
+Col7 (type: type_id::FLOAT64, size: 117014)
+0.1 0.02 0.08 0.1 0 0.07 0.05 0.1 0.09 0.05
+Col8 (type: type_id::INT32, size: 117014)
+19950405 19960117 19950725 19961231 19951027 19951103 19950426 19950624 19950604 19950524
+Col9 (type: type_id::INT64, size: 117014)
+16898085 23064930 58623648 53141602 33337828 33337828 4572005 3991046 30978688 30978688
+Col10 (type: type_id::INT64, size: 117014)
+19670 20044 20044 20044 20048 20048 19073 19171 19171 19171
+Col11 (type: type_id::INT32, size: 117014)
+6 7 7 7 7 7 6 7 7 7
+Col12 (type: type_id::STRING, size: 117014)
+"FRANCE" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "GERMANY" "GERMANY" "GERMANY" 
+Col13 (type: type_id::INT64, size: 117014)
+19670 20044 20044 20044 20048 20048 19073 19171 19171 19171
+Col14 (type: type_id::INT32, size: 117014)
+6 7 7 7 7 7 6 7 7 7
+
+[step 19: Filter] -> 58365 rows x 5 cols
+Table with 5 columns and 58365 rows:
+Col0 (type: type_id::STRING, size: 58365)
+"FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col1 (type: type_id::FLOAT64, size: 58365)
+22849.1 29443.4 54013.7 51724.1 57773.1 53263.4 37479.9 85093.6 49148.6 9474.65
+Col2 (type: type_id::FLOAT64, size: 58365)
+0.08 0 0.1 0.09 0.05 0.02 0.03 0.09 0.05 0.08
+Col3 (type: type_id::INT32, size: 58365)
+19950725 19951027 19950624 19950604 19960612 19950704 19960711 19960131 19951101 19951118
+Col4 (type: type_id::STRING, size: 58365)
+"GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" 
+
+[step 20: Project] -> 58365 rows x 4 cols
+Table with 4 columns and 58365 rows:
+Col0 (type: type_id::STRING, size: 58365)
+"FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col1 (type: type_id::STRING, size: 58365)
+"GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" 
+Col2 (type: type_id::INT32, size: 58365)
+1995 1995 1995 1995 1996 1995 1996 1996 1995 1995
+Col3 (type: type_id::FLOAT64, size: 58365)
+21021.1 29443.4 48612.3 47069 54884.4 52198.1 36355.5 77435.1 46691.1 8716.68
+
+[step 21: Reorder] -> 58365 rows x 4 cols
+Table with 4 columns and 58365 rows:
+Col0 (type: type_id::STRING, size: 58365)
+"FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col1 (type: type_id::STRING, size: 58365)
+"GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "GERMANY" "FRANCE" "FRANCE" "GERMANY" 
+Col2 (type: type_id::INT32, size: 58365)
+1995 1995 1995 1995 1996 1995 1996 1996 1995 1995
+Col3 (type: type_id::FLOAT64, size: 58365)
+21021.1 29443.4 48612.3 47069 54884.4 52198.1 36355.5 77435.1 46691.1 8716.68
+
+[GROUPBY DEBUG] rows=58365 groups_upper_bound=9223372036854775807 algo=1
+[step 22: GroupBy] -> 4 rows x 4 cols
+Table with 4 columns and 4 rows:
+Col0 (type: type_id::STRING, size: 4)
+"GERMANY" "FRANCE" "FRANCE" "GERMANY" 
+Col1 (type: type_id::STRING, size: 4)
+"FRANCE" "GERMANY" "GERMANY" "FRANCE" 
+Col2 (type: type_id::INT32, size: 4)
+1996 1996 1995 1995
+Col3 (type: type_id::FLOAT64, size: 4)
+5.33641e+08 5.24796e+08 5.2196e+08 5.422e+08
+
+[step 23: Sort] -> 4 rows x 4 cols
+Table with 4 columns and 4 rows:
+Col0 (type: type_id::STRING, size: 4)
+"FRANCE" "FRANCE" "GERMANY" "GERMANY" 
+Col1 (type: type_id::STRING, size: 4)
+"GERMANY" "GERMANY" "FRANCE" "FRANCE" 
+Col2 (type: type_id::INT32, size: 4)
+1995 1996 1995 1996
+Col3 (type: type_id::FLOAT64, size: 4)
+5.2196e+08 5.24796e+08 5.422e+08 5.33641e+08
+
+Executed in 5978 ms.
+Result: 4 rows × 4 columns (showing 4)
+FRANCE | GERMANY | 1995 | 521960141.700300
+FRANCE | GERMANY | 1996 | 524796110.384200
+GERMANY | FRANCE | 1995 | 542199700.054600
+GERMANY | FRANCE | 1996 | 533640926.261400
+VERIFY: comparing against /work/data/tpch//sf10/golden/q07.parquet
+VERIFY: OK

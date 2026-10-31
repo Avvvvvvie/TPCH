@@ -1,0 +1,172 @@
+== TPC-H Q13 (SF=10) via IR pipeline ==
+IR built: 2 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 14 steps, 2 sources.
+
+-- IR (pre-rules) --
+Sort[custdist DESC, c_count#6 DESC]
+  Aggregate(keys=[c_count#6]; aggs=[count_all(*) AS custdist])
+    Concat(#inputs=2)
+      Aggregate(keys=[c_custkey#0]; aggs=[count_all(*) AS c_count])
+        InnerJoin(on=(c_custkey#0 == o_custkey))
+          Scan(customer [c_custkey])
+          Filter(!contains_multiple(o_comment, ["special", "requests"]))
+            Scan(orders [o_custkey, o_comment])
+      Project(c_custkey = c_custkey#0, c_count = 0)
+        LeftAntiJoin(on=(c_custkey#0 == o_custkey))
+          Scan(customer [c_custkey])
+          Filter(!contains_multiple(o_comment, ["special", "requests"]))
+            Scan(orders [o_custkey, o_comment])
+
+
+-- IR (post-rules) --
+Sort[custdist DESC, c_count#6 DESC]
+  Aggregate(keys=[c_count#6]; aggs=[count_all(*) AS custdist])
+    Concat(#inputs=2)
+      Aggregate(keys=[c_custkey#0]; aggs=[count_all(*) AS c_count])
+        InnerJoin(on=(c_custkey#0 == o_custkey))
+          Scan(customer [c_custkey])
+          Filter(!contains_multiple(o_comment, ["special", "requests"]))
+            Scan(orders [o_custkey, o_comment])
+      Project(c_custkey = c_custkey#0, c_count = 0)
+        LeftAntiJoin(on=(c_custkey#0 == o_custkey))
+          Scan(customer [c_custkey])
+          Filter(!contains_multiple(o_comment, ["special", "requests"]))
+            Scan(orders [o_custkey, o_comment])
+
+
+-- ExecPlan --
+// required sources: customer orders
+v0 = SourceTable("customer" cols=[c_custkey])
+v1 = SourceTable("orders" cols=[o_custkey, o_comment])
+v2 = Filter(v1; predicate=<Predicate>, out=[0])
+v3 = EqJoin(v0, v2; lkeys=[0], rkeys=[0])
+v4 = Reorder(v3; ordinals=[0, 0])
+v5 = Reorder(v4; ordinals=[0])
+v6 = GroupBy(v5; n_keys=1, aggs=[?(#-1)])
+v7 = AntiJoin(v0, v2; lkeys=[0], rkeys=[0])
+v8 = Reorder(v7; ordinals=[0])
+v9 = Project(v8; #items=2 (tree=2, pred=0, substr=0))
+v10 = Concat(v6, v9; )
+v11 = Reorder(v10; ordinals=[1])
+v12 = GroupBy(v11; n_keys=1, aggs=[?(#-1)])
+v13 = Sort(v12; keys=[#1 DESC, #0 DESC])
+return v13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 0: SourceTable] -> 1500000 rows x 1 cols
+Table with 1 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 1: SourceTable] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+Col1 (type: type_id::STRING, size: 15000000)
+"ly express platelets. deposits acc" "ve the furiously fluffy dependencies. carefully regular " " after the asymptotes. instructions cajole after the foxes. carefully unu" "st the furiously bold pinto beans. furiously pending theodolites cajol" "onic requests. carefully daring foxes among the carefu" "furiously ironic accounts haggle blithely carefully regular de" ", ironic packages wa" "ly about the carefully express theodolites. ironic, iron" " careful, regular courts. unusual" "osits according to the ideas are furiously final requests? slyly pe" 
+
+[step 2: Filter] -> 14845369 rows x 1 cols
+Table with 1 columns and 14845369 rows:
+Col0 (type: type_id::INT64, size: 14845369)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+
+[step 3: EqJoin] -> 14845369 rows x 1 cols
+Table with 1 columns and 14845369 rows:
+Col0 (type: type_id::INT64, size: 14845369)
+1394414 1405223 67882 866905 564239 158170 358444 363766 1882 127369
+
+[step 4: Reorder] -> 14845369 rows x 2 cols
+Table with 2 columns and 14845369 rows:
+Col0 (type: type_id::INT64, size: 14845369)
+1394414 1405223 67882 866905 564239 158170 358444 363766 1882 127369
+Col1 (type: type_id::INT64, size: 14845369)
+1394414 1405223 67882 866905 564239 158170 358444 363766 1882 127369
+
+[step 5: Reorder] -> 14845369 rows x 1 cols
+Table with 1 columns and 14845369 rows:
+Col0 (type: type_id::INT64, size: 14845369)
+1394414 1405223 67882 866905 564239 158170 358444 363766 1882 127369
+
+[GROUPBY DEBUG] rows=14845369 groups_upper_bound=9223372036854775807 algo=5
+[PARTITION DEBUG] input_rows=14845369 num_partitions=65536 num_units=65536 estimated_num_groups=14845369 max_work_units=65537
+[PARTITION DEBUG] sm_bytes=64032 bytes
+[PARTITION DEBUG] set attribute: no error
+[PARTITION DEBUG] launch: no error
+[PARTITION DEBUG] synchronize: no error
+[step 6: GroupBy] -> 999981 rows x 2 cols
+Table with 2 columns and 999981 rows:
+Col0 (type: type_id::INT64, size: 999981)
+866567 1206880 379688 136873 106978 574904 602741 163370 141127 107981
+Col1 (type: type_id::INT64, size: 999981)
+6 20 8 19 16 12 9 9 28 12
+
+[step 7: AntiJoin] -> 500019 rows x 1 cols
+Table with 1 columns and 500019 rows:
+Col0 (type: type_id::INT64, size: 500019)
+3 6 9 12 15 18 21 24 27 30
+
+[step 8: Reorder] -> 500019 rows x 1 cols
+Table with 1 columns and 500019 rows:
+Col0 (type: type_id::INT64, size: 500019)
+3 6 9 12 15 18 21 24 27 30
+
+[step 9: Project] -> 500019 rows x 2 cols
+Table with 2 columns and 500019 rows:
+Col0 (type: type_id::INT64, size: 500019)
+3 6 9 12 15 18 21 24 27 30
+Col1 (type: type_id::INT64, size: 500019)
+0 0 0 0 0 0 0 0 0 0
+
+[step 10: Concat] -> 1500000 rows x 2 cols
+Table with 2 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+866567 1206880 379688 136873 106978 574904 602741 163370 141127 107981
+Col1 (type: type_id::INT64, size: 1500000)
+6 20 8 19 16 12 9 9 28 12
+
+[step 11: Reorder] -> 1500000 rows x 1 cols
+Table with 1 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+6 20 8 19 16 12 9 9 28 12
+
+[GROUPBY DEBUG] rows=1500000 groups_upper_bound=9223372036854775807 algo=1
+[step 12: GroupBy] -> 45 rows x 2 cols
+Table with 2 columns and 45 rows:
+Col0 (type: type_id::INT64, size: 45)
+6 7 15 17 14 13 21 16 10 11
+Col1 (type: type_id::INT64, size: 45)
+32772 46529 43808 44970 45349 49943 42585 43830 66125 62192
+
+[step 13: Sort] -> 45 rows x 2 cols
+Table with 2 columns and 45 rows:
+Col0 (type: type_id::INT64, size: 45)
+0 10 9 11 8 12 13 19 7 18
+Col1 (type: type_id::INT64, size: 45)
+500019 66125 65012 62192 58445 55784 49943 46595 46529 46036
+
+Executed in 4544 ms.
+Result: 45 rows × 2 columns (showing 20)
+0 | 500019
+10 | 66125
+9 | 65012
+11 | 62192
+8 | 58445
+12 | 55784
+13 | 49943
+19 | 46595
+7 | 46529
+18 | 46036
+14 | 45349
+20 | 45327
+17 | 44970
+16 | 43830
+15 | 43808
+21 | 42585
+22 | 38057
+6 | 32772
+23 | 32590
+24 | 26830
+VERIFY: comparing against /work/data/tpch//sf10/golden/q13.parquet
+VERIFY: OK

@@ -1,0 +1,325 @@
+== TPC-H Q10 (SF=10) via IR pipeline ==
+IR built: 8 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 17 steps, 4 sources.
+
+-- IR (pre-rules) --
+Limit(n=20)
+  Sort[revenue DESC]
+    Project(c_custkey = c_custkey, c_name = c_name, revenue = revenue, c_acctbal = c_acctbal, n_name = n_name, c_address = c_address, c_phone = c_phone, c_comment = c_comment)
+      InnerJoin(on=(n_nationkey == c_nationkey))
+        Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(c_custkey == o_custkey))
+          Scan(customer [c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment])
+          Aggregate(keys=[o_custkey]; aggs=[sum(disc_price) AS revenue])
+            Project(o_custkey = o_custkey, disc_price = (l_extendedprice * (1 - l_discount)))
+              InnerJoin(on=(l_orderkey == o_orderkey))
+                Filter(str_eq(l_returnflag, "R"))
+                  Scan(lineitem [l_orderkey, l_returnflag, l_extendedprice, l_discount])
+                Filter(((o_orderdate >= 19931001) && (o_orderdate < 19940101)))
+                  Scan(orders [o_orderkey, o_custkey, o_orderdate])
+
+
+-- IR (post-rules) --
+Limit(n=20)
+  Sort[revenue DESC]
+    Project(c_custkey = c_custkey, c_name = c_name, revenue = revenue, c_acctbal = c_acctbal, n_name = n_name, c_address = c_address, c_phone = c_phone, c_comment = c_comment)
+      InnerJoin(on=(n_nationkey == c_nationkey))
+        Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(c_custkey == o_custkey))
+          Scan(customer [c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment])
+          Aggregate(keys=[o_custkey]; aggs=[sum(disc_price) AS revenue])
+            Project(o_custkey = o_custkey, disc_price = (l_extendedprice * (1 - l_discount)))
+              InnerJoin(on=(l_orderkey == o_orderkey))
+                Filter(str_eq(l_returnflag, "R"))
+                  Scan(lineitem [l_orderkey, l_returnflag, l_extendedprice, l_discount])
+                Filter(((o_orderdate >= 19931001) && (o_orderdate < 19940101)))
+                  Scan(orders [o_orderkey, o_custkey, o_orderdate])
+
+
+-- ExecPlan --
+// required sources: nation customer lineitem orders
+v0 = SourceTable("nation" cols=[n_nationkey, n_name])
+v1 = SourceTable("customer" cols=[c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment])
+v2 = SourceTable("lineitem" cols=[l_orderkey, l_returnflag, l_extendedprice, l_discount])
+v3 = Filter(v2; predicate=<Predicate>, out=[0, 2, 3])
+v4 = SourceTable("orders" cols=[o_orderkey, o_custkey, o_orderdate])
+v5 = Filter(v4; predicate=<Predicate>, out=[0, 1])
+v6 = EqJoin(v3, v5; lkeys=[0], rkeys=[0])
+v7 = Reorder(v6; ordinals=[0, 1, 2, 0, 3])
+v8 = Project(v7; #items=2 (tree=2, pred=0, substr=0))
+v9 = Reorder(v8; ordinals=[0, 1])
+v10 = GroupBy(v9; n_keys=1, aggs=[sum(#0)])
+v11 = EqJoin(v1, v10; lkeys=[0], rkeys=[0])
+v12 = Reorder(v11; ordinals=[0, 1, 2, 3, 4, 5, 6, 0, 7])
+v13 = EqJoin(v0, v12; lkeys=[0], rkeys=[3])
+v14 = Reorder(v13; ordinals=[0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9])
+v15 = Project(v14; #items=8 (tree=8, pred=0, substr=0))
+v16 = TopK(v15; k=20, keys=[#2 DESC])
+return v16
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 0: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 1: SourceTable] -> 1500000 rows x 7 cols
+Table with 7 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 1500000)
+"Customer#000000001" "Customer#000000002" "Customer#000000003" "Customer#000000004" "Customer#000000005" "Customer#000000006" "Customer#000000007" "Customer#000000008" "Customer#000000009" "Customer#000000010" 
+Col2 (type: type_id::STRING, size: 1500000)
+"j5JsirBM9PsCy0O1m" "487LW1dovn6Q4dMVymKwwLE9OKf3QG" "fkRGN8nY4pkE" "4u58h fqkyE" "hwBtxkoBF qSW4KrIk5U 2B1AU7H" " g1s,pzDenUEBW3O,2 pxu0f9n2g64rJrt5E" "8OkMVLQ1dK6Mbu6WG9 w4pLGQ n7MQ" "j,pZ,Qp,qtFEo0r0c 92qobZtlhSuOqbE4JGV" "vgIql8H6zoyuLMFNdAMLyE7 H9" "Vf mQ6Ug9Ucf5OKGYq fsaX AtfsO7,rwY" 
+Col3 (type: type_id::INT32, size: 1500000)
+15 13 1 4 3 20 18 17 8 5
+Col4 (type: type_id::STRING, size: 1500000)
+"25-989-741-2988" "23-768-687-3665" "11-719-748-3364" "14-128-190-5944" "13-750-942-6364" "30-114-968-4951" "28-190-982-9759" "27-147-574-9335" "18-338-906-3675" "15-741-346-9870" 
+Col5 (type: type_id::FLOAT64, size: 1500000)
+711.56 121.65 7498.12 2866.83 794.47 7638.57 9561.95 6819.74 8324.07 2753.54
+Col6 (type: type_id::STRING, size: 1500000)
+"y final requests wake slyly quickly special accounts. blithely" "y carefully regular foxes. slyly regular requests about the bli" "fully. carefully silent instructions sleep alongside of the slyly regular asymptotes. quickly regular " " sublate. fluffily even instructions are about th" "equests haggle furiously against the pending packa" " quickly silent asymptotes are slyly regular excuses. instructions wake furiously? quickly bold courts p" "ounts. ironic, regular accounts sleep. final requests haggle quickly after the" "riously final excuses sublate quickly among the fluffily even foxes. quickly final packages haggle furiously furi" "ss pinto beans believe slyly quiet deposits-- doggedly bold packages boost. quickly ironic de" "g quickly after the evenly bold" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 2: SourceTable] -> 59986052 rows x 4 cols
+Table with 4 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::STRING, size: 59986052)
+"N" "N" "N" "N" "N" "N" "N" "R" "R" "A" 
+Col2 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col3 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+
+[step 3: Filter] -> 14808183 rows x 3 cols
+Table with 3 columns and 14808183 rows:
+Col0 (type: type_id::INT64, size: 14808183)
+3 3 3 5 5 33 64 66 69 69
+Col1 (type: type_id::FLOAT64, size: 14808183)
+86083.7 70822.2 52411.8 25179.6 31387.2 49780.6 30837.7 37916.7 3279 72225.3
+Col2 (type: type_id::FLOAT64, size: 14808183)
+0.06 0.1 0.04 0.02 0.07 0.09 0.05 0 0.09 0.07
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 4: SourceTable] -> 15000000 rows x 3 cols
+Table with 3 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+Col2 (type: type_id::INT32, size: 15000000)
+19960102 19961201 19931014 19951011 19940730 19920221 19960110 19950716 19931027 19980721
+
+[step 5: Filter] -> 573157 rows x 2 cols
+Table with 2 columns and 573157 rows:
+Col0 (type: type_id::INT64, size: 573157)
+3 33 70 195 229 230 256 258 325 353
+Col1 (type: type_id::INT64, size: 573157)
+1233140 669580 643396 1354207 1117276 1025342 1248304 418603 400237 17755
+
+[step 6: EqJoin] -> 1147084 rows x 4 cols
+Table with 4 columns and 1147084 rows:
+Col0 (type: type_id::INT64, size: 1147084)
+210053 210081 210212 210212 210212 210212 210342 210400 210400 210402
+Col1 (type: type_id::FLOAT64, size: 1147084)
+8123.92 38788.7 63976.5 30915.9 76712.4 41522.2 30682.5 47295 70379.7 48312.9
+Col2 (type: type_id::FLOAT64, size: 1147084)
+0.1 0.02 0.08 0.08 0 0.03 0.04 0.01 0 0
+Col3 (type: type_id::INT64, size: 1147084)
+942574 1137107 731366 731366 731366 731366 581536 1212980 1212980 869122
+
+[step 7: Reorder] -> 1147084 rows x 5 cols
+Table with 5 columns and 1147084 rows:
+Col0 (type: type_id::INT64, size: 1147084)
+210053 210081 210212 210212 210212 210212 210342 210400 210400 210402
+Col1 (type: type_id::FLOAT64, size: 1147084)
+8123.92 38788.7 63976.5 30915.9 76712.4 41522.2 30682.5 47295 70379.7 48312.9
+Col2 (type: type_id::FLOAT64, size: 1147084)
+0.1 0.02 0.08 0.08 0 0.03 0.04 0.01 0 0
+Col3 (type: type_id::INT64, size: 1147084)
+210053 210081 210212 210212 210212 210212 210342 210400 210400 210402
+Col4 (type: type_id::INT64, size: 1147084)
+942574 1137107 731366 731366 731366 731366 581536 1212980 1212980 869122
+
+[step 8: Project] -> 1147084 rows x 2 cols
+Table with 2 columns and 1147084 rows:
+Col0 (type: type_id::INT64, size: 1147084)
+942574 1137107 731366 731366 731366 731366 581536 1212980 1212980 869122
+Col1 (type: type_id::FLOAT64, size: 1147084)
+7311.53 38012.9 58858.4 28442.6 76712.4 40276.6 29455.2 46822.1 70379.7 48312.9
+
+[step 9: Reorder] -> 1147084 rows x 2 cols
+Table with 2 columns and 1147084 rows:
+Col0 (type: type_id::INT64, size: 1147084)
+942574 1137107 731366 731366 731366 731366 581536 1212980 1212980 869122
+Col1 (type: type_id::FLOAT64, size: 1147084)
+7311.53 38012.9 58858.4 28442.6 76712.4 40276.6 29455.2 46822.1 70379.7 48312.9
+
+[GROUPBY DEBUG] rows=1147084 groups_upper_bound=9223372036854775807 algo=5
+[PARTITION DEBUG] input_rows=1147084 num_partitions=65536 num_units=65342 estimated_num_groups=1147084 max_work_units=65537
+[PARTITION DEBUG] sm_bytes=64032 bytes
+[PARTITION DEBUG] set attribute: no error
+[PARTITION DEBUG] launch: no error
+[PARTITION DEBUG] synchronize: no error
+[step 10: GroupBy] -> 381105 rows x 2 cols
+Table with 2 columns and 381105 rows:
+Col0 (type: type_id::INT64, size: 381105)
+1091576 884276 1250623 392371 393221 248528 1239196 1080754 1307329 1174688
+Col1 (type: type_id::FLOAT64, size: 381105)
+52096.2 48433.5 16057.8 112054 107631 54885.5 42501.6 114584 168289 142210
+
+[step 11: EqJoin] -> 381105 rows x 8 cols
+Table with 8 columns and 381105 rows:
+Col0 (type: type_id::INT64, size: 381105)
+1329011 1434964 983005 488468 309539 817814 296740 342982 908470 962467
+Col1 (type: type_id::STRING, size: 381105)
+"Customer#001329011" "Customer#001434964" "Customer#000983005" "Customer#000488468" "Customer#000309539" "Customer#000817814" "Customer#000296740" "Customer#000342982" "Customer#000908470" "Customer#000962467" 
+Col2 (type: type_id::STRING, size: 381105)
+"mvr2ajy6147SqrYB" "uwYQ bQsGmeagwH91KO9BRk0M0tg cN4Ls5EMSk" "KHR,uyIwQiFAnxyJ2AU" "IwJpKGFf5d2tflsEQjdes2Jk9cq26wa7H" "1Ddw83L7q38JsE0dTkQ4QCOYfmOy,K" "naoI78Ma tQGI756UiJHIQizMoAoDGsu2gV 29V" "RxQsUMxcI3MlUPhrr3Zp28pRR" "qbGA5CC2JDj6MMiqhKkb4q4aOHXrbpMYwoat" "S57VepgmsZEoJo6p7bY6w42NFh7IYTeRg" "8akoOACNlRloWvkawPycQ" 
+Col3 (type: type_id::INT32, size: 381105)
+4 17 11 12 17 20 18 7 8 23
+Col4 (type: type_id::STRING, size: 381105)
+"14-390-248-9132" "27-538-541-9183" "21-154-631-7754" "22-836-184-4543" "27-987-706-3879" "30-963-432-2410" "28-736-298-6919" "17-910-144-3212" "18-453-977-6198" "33-291-559-5240" 
+Col5 (type: type_id::FLOAT64, size: 381105)
+9377.65 7384.13 597.56 7709.44 6280.35 -219.33 9750.45 3889.65 7056.88 -540.62
+Col6 (type: type_id::STRING, size: 381105)
+"nal deposits wake slyly final orbits. regular deposits serve s" "n deposits. furiously regular ac" "lly regular accounts. blithely pending dependen" "g the slyly express theodolites. blithely special warhorses boost ironic accounts. even accounts " "d the quickly ironic pinto beans. ironic, express accounts wake across the final, ironic depe" " the silent, even frets nag furiously s" ". accounts wake. packages along the platelets doubt slyly alongside of the b" "ironic courts wake slyly against the even requests. ruthless ideas wake carefully" "n furiously express, regular requests. blithely regular dependencies sleep blithely careful" "even foxes. asymptotes across the express requests cajole furiously accor" 
+Col7 (type: type_id::FLOAT64, size: 381105)
+87251.3 74371.3 149491 167097 24267 92240.5 360754 49777.2 131707 76867.1
+
+[step 12: Reorder] -> 381105 rows x 9 cols
+Table with 9 columns and 381105 rows:
+Col0 (type: type_id::INT64, size: 381105)
+1329011 1434964 983005 488468 309539 817814 296740 342982 908470 962467
+Col1 (type: type_id::STRING, size: 381105)
+"Customer#001329011" "Customer#001434964" "Customer#000983005" "Customer#000488468" "Customer#000309539" "Customer#000817814" "Customer#000296740" "Customer#000342982" "Customer#000908470" "Customer#000962467" 
+Col2 (type: type_id::STRING, size: 381105)
+"mvr2ajy6147SqrYB" "uwYQ bQsGmeagwH91KO9BRk0M0tg cN4Ls5EMSk" "KHR,uyIwQiFAnxyJ2AU" "IwJpKGFf5d2tflsEQjdes2Jk9cq26wa7H" "1Ddw83L7q38JsE0dTkQ4QCOYfmOy,K" "naoI78Ma tQGI756UiJHIQizMoAoDGsu2gV 29V" "RxQsUMxcI3MlUPhrr3Zp28pRR" "qbGA5CC2JDj6MMiqhKkb4q4aOHXrbpMYwoat" "S57VepgmsZEoJo6p7bY6w42NFh7IYTeRg" "8akoOACNlRloWvkawPycQ" 
+Col3 (type: type_id::INT32, size: 381105)
+4 17 11 12 17 20 18 7 8 23
+Col4 (type: type_id::STRING, size: 381105)
+"14-390-248-9132" "27-538-541-9183" "21-154-631-7754" "22-836-184-4543" "27-987-706-3879" "30-963-432-2410" "28-736-298-6919" "17-910-144-3212" "18-453-977-6198" "33-291-559-5240" 
+Col5 (type: type_id::FLOAT64, size: 381105)
+9377.65 7384.13 597.56 7709.44 6280.35 -219.33 9750.45 3889.65 7056.88 -540.62
+Col6 (type: type_id::STRING, size: 381105)
+"nal deposits wake slyly final orbits. regular deposits serve s" "n deposits. furiously regular ac" "lly regular accounts. blithely pending dependen" "g the slyly express theodolites. blithely special warhorses boost ironic accounts. even accounts " "d the quickly ironic pinto beans. ironic, express accounts wake across the final, ironic depe" " the silent, even frets nag furiously s" ". accounts wake. packages along the platelets doubt slyly alongside of the b" "ironic courts wake slyly against the even requests. ruthless ideas wake carefully" "n furiously express, regular requests. blithely regular dependencies sleep blithely careful" "even foxes. asymptotes across the express requests cajole furiously accor" 
+Col7 (type: type_id::INT64, size: 381105)
+1329011 1434964 983005 488468 309539 817814 296740 342982 908470 962467
+Col8 (type: type_id::FLOAT64, size: 381105)
+87251.3 74371.3 149491 167097 24267 92240.5 360754 49777.2 131707 76867.1
+
+[step 13: EqJoin] -> 381105 rows x 10 cols
+Table with 10 columns and 381105 rows:
+Col0 (type: type_id::INT32, size: 381105)
+8 2 16 5 18 13 6 2 7 2
+Col1 (type: type_id::STRING, size: 381105)
+"INDIA" "BRAZIL" "MOZAMBIQUE" "ETHIOPIA" "CHINA" "JORDAN" "FRANCE" "BRAZIL" "GERMANY" "BRAZIL" 
+Col2 (type: type_id::INT64, size: 381105)
+600245 567182 1182881 884824 991777 518617 550067 1171276 816274 136642
+Col3 (type: type_id::STRING, size: 381105)
+"Customer#000600245" "Customer#000567182" "Customer#001182881" "Customer#000884824" "Customer#000991777" "Customer#000518617" "Customer#000550067" "Customer#001171276" "Customer#000816274" "Customer#000136642" 
+Col4 (type: type_id::STRING, size: 381105)
+"Us9WY5,5KSp" ",LLDh kguCeebgV" "f4K7 zc4pGmkXs" "1StZUzusj3q3srCKM3 mWrVrnlmYezoLQg" "MJs0eByYTnaq8EK9tgvqQslq6sK5SIt3L4unNr" "BWD5x2XV,fmlIerhX0zO7ZjcL83tgMfizXnhi" "ETWYHfOoUX5ATv2b9h33YI,afBg,ygqgxiku5sr" "xnL1qwgL437d,slhlcqKW7Ds7y" "rFzyKiYs3sQZzEemJ8D4dw4b8H6Abja" "CKOnPdmtlo9APdGsV8GVKaJ" 
+Col5 (type: type_id::STRING, size: 381105)
+"18-277-461-4907" "12-494-594-4034" "26-238-852-5977" "15-613-196-7623" "28-464-100-4488" "23-228-941-8449" "16-528-304-1729" "12-169-463-9141" "17-206-420-4480" "12-344-571-3205" 
+Col6 (type: type_id::FLOAT64, size: 381105)
+6943.28 2207.89 2900.07 8773.87 -125.65 2275.98 6585.71 9853.54 1031.22 -411.18
+Col7 (type: type_id::STRING, size: 381105)
+" slyly even requests against the packages x-ray accounts. furiously pending theodolites boost bold, regular theod" "s are slyly. regular accounts across the car" ". quiet ideas haggle quickly. quickly bold courts wake. furious, regular packages lose furiously regular deposits. b" "ts-- unusual theodolites along the furiously bold accounts cajole according to " "counts integrate carefully according to the carefully e" ". regular, even accounts grow quickly. slyly regular deposit" "n, bold packages. careful accounts are furiously. regular packages c" "the thinly regular requests. quickly regular theodolites haggle to the even dependencies. blithely pending foxes ac" " packages wake furiously above the regular asymptotes! unusual sheaves about the carefull" "ose requests wake ironic deposits? silent, ironic accounts cajole" 
+Col8 (type: type_id::INT64, size: 381105)
+600245 567182 1182881 884824 991777 518617 550067 1171276 816274 136642
+Col9 (type: type_id::FLOAT64, size: 381105)
+23472.8 5525.64 66610.4 54196.3 270390 148769 143407 60606.1 147755 53753
+
+[step 14: Reorder] -> 381105 rows x 11 cols
+Table with 11 columns and 381105 rows:
+Col0 (type: type_id::INT32, size: 381105)
+8 2 16 5 18 13 6 2 7 2
+Col1 (type: type_id::STRING, size: 381105)
+"INDIA" "BRAZIL" "MOZAMBIQUE" "ETHIOPIA" "CHINA" "JORDAN" "FRANCE" "BRAZIL" "GERMANY" "BRAZIL" 
+Col2 (type: type_id::INT64, size: 381105)
+600245 567182 1182881 884824 991777 518617 550067 1171276 816274 136642
+Col3 (type: type_id::STRING, size: 381105)
+"Customer#000600245" "Customer#000567182" "Customer#001182881" "Customer#000884824" "Customer#000991777" "Customer#000518617" "Customer#000550067" "Customer#001171276" "Customer#000816274" "Customer#000136642" 
+Col4 (type: type_id::STRING, size: 381105)
+"Us9WY5,5KSp" ",LLDh kguCeebgV" "f4K7 zc4pGmkXs" "1StZUzusj3q3srCKM3 mWrVrnlmYezoLQg" "MJs0eByYTnaq8EK9tgvqQslq6sK5SIt3L4unNr" "BWD5x2XV,fmlIerhX0zO7ZjcL83tgMfizXnhi" "ETWYHfOoUX5ATv2b9h33YI,afBg,ygqgxiku5sr" "xnL1qwgL437d,slhlcqKW7Ds7y" "rFzyKiYs3sQZzEemJ8D4dw4b8H6Abja" "CKOnPdmtlo9APdGsV8GVKaJ" 
+Col5 (type: type_id::INT32, size: 381105)
+8 2 16 5 18 13 6 2 7 2
+Col6 (type: type_id::STRING, size: 381105)
+"18-277-461-4907" "12-494-594-4034" "26-238-852-5977" "15-613-196-7623" "28-464-100-4488" "23-228-941-8449" "16-528-304-1729" "12-169-463-9141" "17-206-420-4480" "12-344-571-3205" 
+Col7 (type: type_id::FLOAT64, size: 381105)
+6943.28 2207.89 2900.07 8773.87 -125.65 2275.98 6585.71 9853.54 1031.22 -411.18
+Col8 (type: type_id::STRING, size: 381105)
+" slyly even requests against the packages x-ray accounts. furiously pending theodolites boost bold, regular theod" "s are slyly. regular accounts across the car" ". quiet ideas haggle quickly. quickly bold courts wake. furious, regular packages lose furiously regular deposits. b" "ts-- unusual theodolites along the furiously bold accounts cajole according to " "counts integrate carefully according to the carefully e" ". regular, even accounts grow quickly. slyly regular deposit" "n, bold packages. careful accounts are furiously. regular packages c" "the thinly regular requests. quickly regular theodolites haggle to the even dependencies. blithely pending foxes ac" " packages wake furiously above the regular asymptotes! unusual sheaves about the carefull" "ose requests wake ironic deposits? silent, ironic accounts cajole" 
+Col9 (type: type_id::INT64, size: 381105)
+600245 567182 1182881 884824 991777 518617 550067 1171276 816274 136642
+Col10 (type: type_id::FLOAT64, size: 381105)
+23472.8 5525.64 66610.4 54196.3 270390 148769 143407 60606.1 147755 53753
+
+[step 15: Project] -> 381105 rows x 8 cols
+Table with 8 columns and 381105 rows:
+Col0 (type: type_id::INT64, size: 381105)
+600245 567182 1182881 884824 991777 518617 550067 1171276 816274 136642
+Col1 (type: type_id::STRING, size: 381105)
+"Customer#000600245" "Customer#000567182" "Customer#001182881" "Customer#000884824" "Customer#000991777" "Customer#000518617" "Customer#000550067" "Customer#001171276" "Customer#000816274" "Customer#000136642" 
+Col2 (type: type_id::FLOAT64, size: 381105)
+23472.8 5525.64 66610.4 54196.3 270390 148769 143407 60606.1 147755 53753
+Col3 (type: type_id::FLOAT64, size: 381105)
+6943.28 2207.89 2900.07 8773.87 -125.65 2275.98 6585.71 9853.54 1031.22 -411.18
+Col4 (type: type_id::STRING, size: 381105)
+"INDIA" "BRAZIL" "MOZAMBIQUE" "ETHIOPIA" "CHINA" "JORDAN" "FRANCE" "BRAZIL" "GERMANY" "BRAZIL" 
+Col5 (type: type_id::STRING, size: 381105)
+"Us9WY5,5KSp" ",LLDh kguCeebgV" "f4K7 zc4pGmkXs" "1StZUzusj3q3srCKM3 mWrVrnlmYezoLQg" "MJs0eByYTnaq8EK9tgvqQslq6sK5SIt3L4unNr" "BWD5x2XV,fmlIerhX0zO7ZjcL83tgMfizXnhi" "ETWYHfOoUX5ATv2b9h33YI,afBg,ygqgxiku5sr" "xnL1qwgL437d,slhlcqKW7Ds7y" "rFzyKiYs3sQZzEemJ8D4dw4b8H6Abja" "CKOnPdmtlo9APdGsV8GVKaJ" 
+Col6 (type: type_id::STRING, size: 381105)
+"18-277-461-4907" "12-494-594-4034" "26-238-852-5977" "15-613-196-7623" "28-464-100-4488" "23-228-941-8449" "16-528-304-1729" "12-169-463-9141" "17-206-420-4480" "12-344-571-3205" 
+Col7 (type: type_id::STRING, size: 381105)
+" slyly even requests against the packages x-ray accounts. furiously pending theodolites boost bold, regular theod" "s are slyly. regular accounts across the car" ". quiet ideas haggle quickly. quickly bold courts wake. furious, regular packages lose furiously regular deposits. b" "ts-- unusual theodolites along the furiously bold accounts cajole according to " "counts integrate carefully according to the carefully e" ". regular, even accounts grow quickly. slyly regular deposit" "n, bold packages. careful accounts are furiously. regular packages c" "the thinly regular requests. quickly regular theodolites haggle to the even dependencies. blithely pending foxes ac" " packages wake furiously above the regular asymptotes! unusual sheaves about the carefull" "ose requests wake ironic deposits? silent, ironic accounts cajole" 
+
+[step 16: TopK] -> 20 rows x 8 cols
+Table with 8 columns and 20 rows:
+Col0 (type: type_id::INT64, size: 20)
+1237537 1116802 508954 1487503 1461247 1316338 817849 1335394 102358 1432624
+Col1 (type: type_id::STRING, size: 20)
+"Customer#001237537" "Customer#001116802" "Customer#000508954" "Customer#001487503" "Customer#001461247" "Customer#001316338" "Customer#000817849" "Customer#001335394" "Customer#000102358" "Customer#001432624" 
+Col2 (type: type_id::FLOAT64, size: 20)
+884990 830214 826168 825997 775992 765064 737665 731260 715002 713513
+Col3 (type: type_id::FLOAT64, size: 20)
+7840.17 772.17 3072.07 5398.11 3205.93 8682.95 -380.3 3978.53 3564.9 205.08
+Col4 (type: type_id::STRING, size: 20)
+"RUSSIA" "JORDAN" "ETHIOPIA" "IRAN" "SAUDI ARABIA" "INDIA" "MOROCCO" "VIETNAM" "BRAZIL" "FRANCE" 
+Col5 (type: type_id::STRING, size: 20)
+"mdkU4LpZECCtt20RHa76sA6b4WC" "iBka7YijCCLApX1f 8 sKp 5ldP " "tKQLmGq3MOqXiTmNZQRp" "D tOJIC0rcVO" "Ia1gHwdAyyFo,pCKhCkqX6" "QLsXlkrrAQ7fz5TDIoDUVsUMsH1pBOG" "UKsTjQdC5d9PwYXz u" "FNdEi9tP 5eQib8C" "3BnBw0 bZWmVue6bPGn513kOeitBl5VHj" "e7o5TBwh,bLO6flPI05Nrp0,1Q8m19ODDs0" 
+Col6 (type: type_id::STRING, size: 20)
+"32-367-120-4327" "23-199-655-3770" "15-880-510-9487" "20-271-234-4401" "30-137-949-5375" "18-793-610-3832" "25-111-847-3201" "31-760-271-2302" "12-941-212-8350" "16-550-232-2774" 
+Col7 (type: type_id::STRING, size: 20)
+"yly regular accounts boost. requests need to nag evenly" "y carefully regular deposits. packages nod ironic packages" "t the quickly pending deposits. carefully express dependencies detect. blithely regular" "ithely quiet deposits about the slyly final dolphins hinder carefully about the slyly ironic accounts. carefully ir" "beans. furiously ironic realms after the slyly ironic sentiments are requests. courts was carefully about t" "olites sleep furiously ironic instructions. final, final ideas wake carefully after the slyly iron" "ts after the slyly regular excuses wake pending accounts. deposits wake? carefully ironic foxes wa" "ly ironic, final foxes. slyly bold instructions " " furiously furiously dogged deposits. regular accounts are furiously furiously pending instructions. carefu" "y ironic packages. slyly silent instructions cajole about the a" 
+
+Executed in 5788 ms.
+Result: 20 rows × 8 columns (showing 20)
+1237537 | Customer#001237537 | 884989.665700 | 7840.170000 | RUSSIA | mdkU4LpZECCtt20RHa76sA6b4WC | 32-367-120-4327 | yly regular accounts boost. requests need to nag evenly
+1116802 | Customer#001116802 | 830214.111700 | 772.170000 | JORDAN | iBka7YijCCLApX1f 8 sKp 5ldP  | 23-199-655-3770 | y carefully regular deposits. packages nod ironic packages
+508954 | Customer#000508954 | 826167.513800 | 3072.070000 | ETHIOPIA | tKQLmGq3MOqXiTmNZQRp | 15-880-510-9487 | t the quickly pending deposits. carefully express dependencies detect. blithely regular
+1487503 | Customer#001487503 | 825996.590300 | 5398.110000 | IRAN | D tOJIC0rcVO | 20-271-234-4401 | ithely quiet deposits about the slyly final dolphins hinder carefully about the slyly ironic accounts. carefully ir
+1461247 | Customer#001461247 | 775992.082000 | 3205.930000 | SAUDI ARABIA | Ia1gHwdAyyFo,pCKhCkqX6 | 30-137-949-5375 | beans. furiously ironic realms after the slyly ironic sentiments are requests. courts was carefully about t
+1316338 | Customer#001316338 | 765063.700300 | 8682.950000 | INDIA | QLsXlkrrAQ7fz5TDIoDUVsUMsH1pBOG | 18-793-610-3832 | olites sleep furiously ironic instructions. final, final ideas wake carefully after the slyly iron
+817849 | Customer#000817849 | 737664.723200 | -380.300000 | MOROCCO | UKsTjQdC5d9PwYXz u | 25-111-847-3201 | ts after the slyly regular excuses wake pending accounts. deposits wake? carefully ironic foxes wa
+1335394 | Customer#001335394 | 731259.867500 | 3978.530000 | VIETNAM | FNdEi9tP 5eQib8C | 31-760-271-2302 | ly ironic, final foxes. slyly bold instructions 
+102358 | Customer#000102358 | 715001.882500 | 3564.900000 | BRAZIL | 3BnBw0 bZWmVue6bPGn513kOeitBl5VHj | 12-941-212-8350 |  furiously furiously dogged deposits. regular accounts are furiously furiously pending instructions. carefu
+1432624 | Customer#001432624 | 713512.643100 | 205.080000 | FRANCE | e7o5TBwh,bLO6flPI05Nrp0,1Q8m19ODDs0 | 16-550-232-2774 | y ironic packages. slyly silent instructions cajole about the a
+160528 | Customer#000160528 | 710673.331700 | 3425.520000 | INDONESIA | VrYJ,qyK75m PkPLTQT7KocfwMwPYQTlcEYBz | 19-670-600-6340 | blithely even deposits sleep until the even accounts
+1345237 | Customer#001345237 | 707735.574500 | 6905.220000 | FRANCE | QJxZWEukcxoDYlFOgUGIOuGay | 16-133-279-4001 | symptotes integrate according to the sl
+839816 | Customer#000839816 | 705643.285400 | 2110.250000 | UNITED STATES | r9c CDy,MgOouA | 34-453-282-7925 | sly sly pinto beans wake quickly slyly final packages. express deposit
+1136716 | Customer#001136716 | 695043.560600 | 5886.010000 | CHINA | yqiALHYT6gaiip1g6wgnM6ctJ | 28-729-762-5783 | out the fluffily pending requests. furiously ironic forges integrate. quickly bold theod
+1439413 | Customer#001439413 | 690161.978300 | 8808.650000 | ETHIOPIA | 5vMec8OoAWrStjng | 15-432-961-8772 | boost across the regular, ironic packages. final instructions 
+1392475 | Customer#001392475 | 685464.408600 | 593.260000 | SAUDI ARABIA | sbjxdO1xOzy1wBIhAOzp6b2,9sHMj8q1f | 30-640-220-2095 | c accounts. always final instructions boost according to the final 
+616909 | Customer#000616909 | 684978.104400 | 2660.840000 | EGYPT | Jg9FiC98BUWmlBb3WTN | 14-185-768-2185 | s about the busy ideas affix f
+314272 | Customer#000314272 | 682212.636500 | 5127.920000 | UNITED STATES |  LKR3R5VStcAlT4D,qGBJLWYkmJU | 34-674-752-5199 | ng to the slyly express instructions sleep fluffily even foxes. special id
+1472980 | Customer#001472980 | 677765.918000 | 6003.360000 | IRAQ | JIMreXGvswrve5rkBww | 21-506-776-4657 | e. packages according to the instructions are among the even, regular th
+1486201 | Customer#001486201 | 674878.453900 | -276.920000 | JORDAN | 8hJKgyMlv Ay3fyNDJFvszoYd | 23-611-797-4750 | es nag. silent accounts are blithely daring packages. 
+VERIFY: comparing against /work/data/tpch//sf10/golden/q10.parquet
+VERIFY: OK

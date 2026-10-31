@@ -1,0 +1,247 @@
+== TPC-H Q11 (SF=1) via IR pipeline ==
+IR built: 2 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 18 steps, 3 sources.
+
+-- IR (pre-rules) --
+Sort[partkey_value DESC]
+  Project(ps_partkey = ps_partkey, partkey_value = partkey_value)
+    Filter((partkey_value > threshold))
+      CrossJoin
+        Aggregate(keys=[ps_partkey]; aggs=[sum(value) AS partkey_value])
+          Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+            InnerJoin(on=(ps_suppkey == s_suppkey))
+              Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
+              InnerJoin(on=(n_nationkey == s_nationkey))
+                Filter(str_eq(n_name, "GERMANY"))
+                  Scan(nation [n_nationkey, n_name])
+                Scan(supplier [s_suppkey, s_nationkey])
+        Project(threshold = (global_sum * 0.0001))
+          Aggregate(aggs=[sum(value) AS global_sum])
+            Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+              InnerJoin(on=(ps_suppkey == s_suppkey))
+                Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
+                InnerJoin(on=(n_nationkey == s_nationkey))
+                  Filter(str_eq(n_name, "GERMANY"))
+                    Scan(nation [n_nationkey, n_name])
+                  Scan(supplier [s_suppkey, s_nationkey])
+
+
+-- IR (post-rules) --
+Sort[partkey_value DESC]
+  Project(ps_partkey = ps_partkey, partkey_value = partkey_value)
+    Filter((partkey_value > threshold))
+      CrossJoin
+        Aggregate(keys=[ps_partkey]; aggs=[sum(value) AS partkey_value])
+          Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+            InnerJoin(on=(ps_suppkey == s_suppkey))
+              Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
+              InnerJoin(on=(n_nationkey == s_nationkey))
+                Filter(str_eq(n_name, "GERMANY"))
+                  Scan(nation [n_nationkey, n_name])
+                Scan(supplier [s_suppkey, s_nationkey])
+        Project(threshold = (global_sum * 0.0001))
+          Aggregate(aggs=[sum(value) AS global_sum])
+            Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+              InnerJoin(on=(ps_suppkey == s_suppkey))
+                Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
+                InnerJoin(on=(n_nationkey == s_nationkey))
+                  Filter(str_eq(n_name, "GERMANY"))
+                    Scan(nation [n_nationkey, n_name])
+                  Scan(supplier [s_suppkey, s_nationkey])
+
+
+-- ExecPlan --
+// required sources: partsupp nation supplier
+v0 = SourceTable("partsupp" cols=[ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
+v1 = SourceTable("nation" cols=[n_nationkey, n_name])
+v2 = Filter(v1; predicate=<Predicate>, out=[0])
+v3 = SourceTable("supplier" cols=[s_suppkey, s_nationkey])
+v4 = EqJoin(v2, v3; lkeys=[0], rkeys=[1])
+v5 = Reorder(v4; ordinals=[0, 1, 0])
+v6 = EqJoin(v0, v5; lkeys=[1], rkeys=[1])
+v7 = Reorder(v6; ordinals=[1, 0, 2, 3, 4, 0, 5])
+v8 = Project(v7; #items=2 (tree=2, pred=0, substr=0))
+v9 = Reorder(v8; ordinals=[0, 1])
+v10 = GroupBy(v9; n_keys=1, aggs=[sum(#0)])
+v11 = Reorder(v8; ordinals=[1])
+v12 = ScalarAgg(v11; aggs=[sum(#0)])
+v13 = Project(v12; #items=1 (tree=1, pred=0, substr=0))
+v14 = CrossJoin(v10, v13; )
+v15 = Filter(v14; predicate=<Predicate>, out=[0, 1])
+v16 = Project(v15; #items=2 (tree=2, pred=0, substr=0))
+v17 = Sort(v16; keys=[#1 DESC])
+return v17
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/partsupp.parquet
+[step 0: SourceTable] -> 800000 rows x 4 cols
+Table with 4 columns and 800000 rows:
+Col0 (type: type_id::INT64, size: 800000)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 800000)
+2 2502 5002 7502 3 2503 5003 7503 4 2504
+Col2 (type: type_id::INT64, size: 800000)
+3325 8076 3956 4069 8895 4969 8539 3025 4651 4093
+Col3 (type: type_id::FLOAT64, size: 800000)
+771.64 993.49 337.09 357.84 378.49 915.27 438.37 306.39 920.92 498.13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/nation.parquet
+[step 1: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[step 2: Filter] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::INT32, size: 1)
+7
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/supplier.parquet
+[step 3: SourceTable] -> 10000 rows x 2 cols
+Table with 2 columns and 10000 rows:
+Col0 (type: type_id::INT64, size: 10000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 10000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 4: EqJoin] -> 396 rows x 2 cols
+Table with 2 columns and 396 rows:
+Col0 (type: type_id::INT32, size: 396)
+7 7 7 7 7 7 7 7 7 7
+Col1 (type: type_id::INT64, size: 396)
+2380 369 1731 2388 1818 841 53 2277 1272 1436
+
+[step 5: Reorder] -> 396 rows x 3 cols
+Table with 3 columns and 396 rows:
+Col0 (type: type_id::INT32, size: 396)
+7 7 7 7 7 7 7 7 7 7
+Col1 (type: type_id::INT64, size: 396)
+2380 369 1731 2388 1818 841 53 2277 1272 1436
+Col2 (type: type_id::INT32, size: 396)
+7 7 7 7 7 7 7 7 7 7
+
+[step 6: EqJoin] -> 31680 rows x 6 cols
+Table with 6 columns and 31680 rows:
+Col0 (type: type_id::INT64, size: 31680)
+9338 9338 9338 9338 9338 9338 9338 9338 8938 8938
+Col1 (type: type_id::INT64, size: 31680)
+1837 6837 11834 16836 4337 9337 14335 19337 1437 6437
+Col2 (type: type_id::INT64, size: 31680)
+3427 6256 1081 9556 1584 9747 1538 3963 9477 4461
+Col3 (type: type_id::FLOAT64, size: 31680)
+837.2 112.08 485.66 949.74 428.34 58.55 220.03 71.78 679.78 517.52
+Col4 (type: type_id::INT32, size: 31680)
+7 7 7 7 7 7 7 7 7 7
+Col5 (type: type_id::INT32, size: 31680)
+7 7 7 7 7 7 7 7 7 7
+
+[step 7: Reorder] -> 31680 rows x 7 cols
+Table with 7 columns and 31680 rows:
+Col0 (type: type_id::INT64, size: 31680)
+1837 6837 11834 16836 4337 9337 14335 19337 1437 6437
+Col1 (type: type_id::INT64, size: 31680)
+9338 9338 9338 9338 9338 9338 9338 9338 8938 8938
+Col2 (type: type_id::INT64, size: 31680)
+3427 6256 1081 9556 1584 9747 1538 3963 9477 4461
+Col3 (type: type_id::FLOAT64, size: 31680)
+837.2 112.08 485.66 949.74 428.34 58.55 220.03 71.78 679.78 517.52
+Col4 (type: type_id::INT32, size: 31680)
+7 7 7 7 7 7 7 7 7 7
+Col5 (type: type_id::INT64, size: 31680)
+9338 9338 9338 9338 9338 9338 9338 9338 8938 8938
+Col6 (type: type_id::INT32, size: 31680)
+7 7 7 7 7 7 7 7 7 7
+
+[step 8: Project] -> 31680 rows x 2 cols
+Table with 2 columns and 31680 rows:
+Col0 (type: type_id::INT64, size: 31680)
+1837 6837 11834 16836 4337 9337 14335 19337 1437 6437
+Col1 (type: type_id::FLOAT64, size: 31680)
+2.86908e+06 701172 524998 9.07572e+06 678491 570687 338406 284464 6.44228e+06 2.30866e+06
+
+[step 9: Reorder] -> 31680 rows x 2 cols
+Table with 2 columns and 31680 rows:
+Col0 (type: type_id::INT64, size: 31680)
+1837 6837 11834 16836 4337 9337 14335 19337 1437 6437
+Col1 (type: type_id::FLOAT64, size: 31680)
+2.86908e+06 701172 524998 9.07572e+06 678491 570687 338406 284464 6.44228e+06 2.30866e+06
+
+[GROUPBY DEBUG] rows=31680 groups_upper_bound=9223372036854775807 algo=1
+[step 10: GroupBy] -> 29818 rows x 2 cols
+Table with 2 columns and 29818 rows:
+Col0 (type: type_id::INT64, size: 29818)
+520 5520 10519 15517 3020 8020 13020 18018 403 5403
+Col1 (type: type_id::FLOAT64, size: 29818)
+3.62049e+06 6.5169e+06 290257 3.34264e+06 393796 2.68756e+06 1.97391e+06 678568 7.7301e+06 5.68644e+06
+
+[step 11: Reorder] -> 31680 rows x 1 cols
+Table with 1 columns and 31680 rows:
+Col0 (type: type_id::FLOAT64, size: 31680)
+2.86908e+06 701172 524998 9.07572e+06 678491 570687 338406 284464 6.44228e+06 2.30866e+06
+
+[step 12: ScalarAgg] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+7.8741e+10
+
+[step 13: Project] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+7.8741e+06
+
+[step 14: CrossJoin] -> 29818 rows x 3 cols
+Table with 3 columns and 29818 rows:
+Col0 (type: type_id::INT64, size: 29818)
+520 5520 10519 15517 3020 8020 13020 18018 403 5403
+Col1 (type: type_id::FLOAT64, size: 29818)
+3.62049e+06 6.5169e+06 290257 3.34264e+06 393796 2.68756e+06 1.97391e+06 678568 7.7301e+06 5.68644e+06
+Col2 (type: type_id::FLOAT64, size: 29818)
+7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06 7.8741e+06
+
+[step 15: Filter] -> 1048 rows x 2 cols
+Table with 2 columns and 1048 rows:
+Col0 (type: type_id::INT64, size: 1048)
+2903 70476 64419 72922 62117 75133 75165 30235 71475 87004
+Col1 (type: type_id::FLOAT64, size: 1048)
+8.50996e+06 8.96763e+06 8.29763e+06 7.9304e+06 8.36949e+06 7.98824e+06 1.29169e+07 8.74161e+06 7.90337e+06 8.71402e+06
+
+[step 16: Project] -> 1048 rows x 2 cols
+Table with 2 columns and 1048 rows:
+Col0 (type: type_id::INT64, size: 1048)
+2903 70476 64419 72922 62117 75133 75165 30235 71475 87004
+Col1 (type: type_id::FLOAT64, size: 1048)
+8.50996e+06 8.96763e+06 8.29763e+06 7.9304e+06 8.36949e+06 7.98824e+06 1.29169e+07 8.74161e+06 7.90337e+06 8.71402e+06
+
+[step 17: Sort] -> 1048 rows x 2 cols
+Table with 2 columns and 1048 rows:
+Col0 (type: type_id::INT64, size: 1048)
+129760 166726 191287 161758 34452 139035 9403 154358 38823 85606
+Col1 (type: type_id::FLOAT64, size: 1048)
+1.75385e+07 1.65034e+07 1.64748e+07 1.61018e+07 1.59838e+07 1.59071e+07 1.54518e+07 1.52129e+07 1.50648e+07 1.5054e+07
+
+Executed in 836 ms.
+Result: 1048 rows × 2 columns (showing 20)
+129760 | 17538456.860000
+166726 | 16503353.920000
+191287 | 16474801.970000
+161758 | 16101755.540000
+34452 | 15983844.720000
+139035 | 15907078.340000
+9403 | 15451755.620000
+154358 | 15212937.880000
+38823 | 15064802.860000
+85606 | 15053957.150000
+33354 | 14408297.400000
+154747 | 14407580.680000
+82865 | 14235489.780000
+76094 | 14094247.040000
+222 | 13937777.740000
+121271 | 13908336.000000
+55221 | 13716120.470000
+22819 | 13666434.280000
+76281 | 13646853.680000
+85298 | 13581154.930000
+VERIFY: comparing against /work/data/tpch//sf1/golden/q11.parquet
+VERIFY: OK

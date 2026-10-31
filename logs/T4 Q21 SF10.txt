@@ -1,0 +1,368 @@
+== TPC-H Q21 (SF=10) via IR pipeline ==
+IR built: 2 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 29 steps, 4 sources.
+
+-- IR (pre-rules) --
+Limit(n=100)
+  Sort[numwait DESC, s_name ASC]
+    Aggregate(keys=[s_name]; aggs=[count_all(*) AS numwait])
+      InnerJoin(on=(n_nationkey == s_nationkey))
+        Filter(str_eq(n_name, "SAUDI ARABIA"))
+          Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(l_orderkey#2 == o_orderkey))
+          InnerJoin(on=(l_suppkey#3 == s_suppkey))
+            LeftSemiJoin(on=(l_orderkey#2 == l_orderkey#2))
+              LeftSemiJoin(on=(l_orderkey#2 == l_orderkey#0))
+                Filter((l_receiptdate > l_commitdate))
+                  Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
+                Filter((n_supp > 1))
+                  Aggregate(keys=[l_orderkey#0]; aggs=[count_distinct(l_suppkey#1) AS n_supp])
+                    Scan(lineitem [l_orderkey, l_suppkey])
+              Filter((n_failed_supp == 1))
+                Aggregate(keys=[l_orderkey#2]; aggs=[count_distinct(l_suppkey#3) AS n_failed_supp])
+                  Filter((l_receiptdate > l_commitdate))
+                    Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
+            Scan(supplier [s_suppkey, s_name, s_nationkey])
+          Filter(str_eq(o_orderstatus, "F"))
+            Scan(orders [o_orderkey, o_orderstatus])
+
+
+-- IR (post-rules) --
+Limit(n=100)
+  Sort[numwait DESC, s_name ASC]
+    Aggregate(keys=[s_name]; aggs=[count_all(*) AS numwait])
+      InnerJoin(on=(n_nationkey == s_nationkey))
+        Filter(str_eq(n_name, "SAUDI ARABIA"))
+          Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(l_orderkey#2 == o_orderkey))
+          InnerJoin(on=(l_suppkey#3 == s_suppkey))
+            LeftSemiJoin(on=(l_orderkey#2 == l_orderkey#2))
+              LeftSemiJoin(on=(l_orderkey#2 == l_orderkey#0))
+                Filter((l_receiptdate > l_commitdate))
+                  Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
+                Filter((n_supp > 1))
+                  Aggregate(keys=[l_orderkey#0]; aggs=[count_all(*) AS n_supp])
+                    Distinct(keys=[l_orderkey#0, l_suppkey#1])
+                      Scan(lineitem [l_orderkey, l_suppkey])
+              Filter((n_failed_supp == 1))
+                Aggregate(keys=[l_orderkey#2]; aggs=[count_all(*) AS n_failed_supp])
+                  Distinct(keys=[l_orderkey#2, l_suppkey#3])
+                    Filter((l_receiptdate > l_commitdate))
+                      Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
+            Scan(supplier [s_suppkey, s_name, s_nationkey])
+          Filter(str_eq(o_orderstatus, "F"))
+            Scan(orders [o_orderkey, o_orderstatus])
+
+
+-- ExecPlan --
+// required sources: nation lineitem supplier orders
+v0 = SourceTable("nation" cols=[n_nationkey, n_name])
+v1 = Filter(v0; predicate=<Predicate>, out=[0])
+v2 = SourceTable("lineitem" cols=[l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
+v3 = Filter(v2; predicate=<Predicate>, out=[0, 1])
+v4 = SourceTable("lineitem" cols=[l_orderkey, l_suppkey])
+v5 = Distinct(v4; keys=[0, 1])
+v6 = Reorder(v5; ordinals=[0])
+v7 = GroupBy(v6; n_keys=1, aggs=[?(#-1)])
+v8 = Filter(v7; predicate=<Predicate>, out=[0])
+v9 = SemiJoin(v3, v8; lkeys=[0], rkeys=[0])
+v10 = Reorder(v9; ordinals=[0, 1])
+v11 = Distinct(v3; keys=[0, 1])
+v12 = Reorder(v11; ordinals=[0])
+v13 = GroupBy(v12; n_keys=1, aggs=[?(#-1)])
+v14 = Filter(v13; predicate=<Predicate>, out=[0])
+v15 = SemiJoin(v10, v14; lkeys=[0], rkeys=[0])
+v16 = Reorder(v15; ordinals=[0, 1])
+v17 = SourceTable("supplier" cols=[s_suppkey, s_name, s_nationkey])
+v18 = EqJoin(v16, v17; lkeys=[1], rkeys=[0])
+v19 = Reorder(v18; ordinals=[1, 0, 0, 2, 3])
+v20 = SourceTable("orders" cols=[o_orderkey, o_orderstatus])
+v21 = Filter(v20; predicate=<Predicate>, out=[0])
+v22 = EqJoin(v19, v21; lkeys=[0], rkeys=[0])
+v23 = Reorder(v22; ordinals=[0, 1, 2, 3, 4, 0])
+v24 = EqJoin(v1, v23; lkeys=[0], rkeys=[4])
+v25 = Reorder(v24; ordinals=[0, 1, 2, 3, 4, 0, 5])
+v26 = Reorder(v25; ordinals=[4])
+v27 = GroupBy(v26; n_keys=1, aggs=[?(#-1)])
+v28 = TopK(v27; k=100, keys=[#1 DESC, #0 ASC])
+return v28
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 0: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[step 1: Filter] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::INT32, size: 1)
+20
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 2: SourceTable] -> 59986052 rows x 4 cols
+Table with 4 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+Col2 (type: type_id::INT32, size: 59986052)
+19960212 19960228 19960305 19960330 19960314 19960207 19970114 19940104 19931220 19931122
+Col3 (type: type_id::INT32, size: 59986052)
+19960322 19960420 19960131 19960516 19960401 19960203 19970202 19940223 19931124 19940123
+
+[step 3: Filter] -> 37929348 rows x 2 cols
+Table with 2 columns and 37929348 rows:
+Col0 (type: type_id::INT64, size: 37929348)
+1 1 1 1 2 3 3 4 5 5
+Col1 (type: type_id::INT64, size: 37929348)
+76910 73092 46316 15274 11719 17971 34508 55372 85694 39269
+
+[step 4: SourceTable] -> 59986052 rows x 2 cols
+Table with 2 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+
+[step 5: Distinct] -> 59984817 rows x 2 cols
+Table with 2 columns and 59984817 rows:
+Col0 (type: type_id::INT64, size: 59984817)
+13376 13376 13376 13376 13377 13377 13378 13378 13378 13378
+Col1 (type: type_id::INT64, size: 59984817)
+42329 55461 79302 68646 15624 98304 7740 52044 64720 92291
+
+[step 6: Reorder] -> 59984817 rows x 1 cols
+Table with 1 columns and 59984817 rows:
+Col0 (type: type_id::INT64, size: 59984817)
+13376 13376 13376 13376 13377 13377 13378 13378 13378 13378
+
+[GROUPBY DEBUG] rows=59984817 groups_upper_bound=9223372036854775807 algo=5
+[PARTITION DEBUG] input_rows=59984817 num_partitions=65536 num_units=65536 estimated_num_groups=59984817 max_work_units=65537
+[PARTITION DEBUG] sm_bytes=64032 bytes
+[PARTITION DEBUG] set attribute: no error
+[PARTITION DEBUG] launch: no error
+[PARTITION DEBUG] synchronize: no error
+[step 7: GroupBy] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+51616737 51730405 52040708 52959843 53039014 53452774 53650241 49768129 50162310 50381125
+Col1 (type: type_id::INT64, size: 15000000)
+1 5 7 4 7 6 4 7 7 5
+
+[step 8: Filter] -> 12856058 rows x 1 cols
+Table with 1 columns and 12856058 rows:
+Col0 (type: type_id::INT64, size: 12856058)
+51730405 52040708 52959843 53039014 53452774 53650241 49768129 50162310 50381125 50543429
+
+[step 9: SemiJoin] -> 36573988 rows x 2 cols
+Table with 2 columns and 36573988 rows:
+Col0 (type: type_id::INT64, size: 36573988)
+1 1 1 1 3 3 5 5 7 7
+Col1 (type: type_id::INT64, size: 36573988)
+76910 73092 46316 15274 17971 34508 85694 39269 95574 30722
+
+[step 10: Reorder] -> 36573988 rows x 2 cols
+Table with 2 columns and 36573988 rows:
+Col0 (type: type_id::INT64, size: 36573988)
+1 1 1 1 3 3 5 5 7 7
+Col1 (type: type_id::INT64, size: 36573988)
+76910 73092 46316 15274 17971 34508 85694 39269 95574 30722
+
+[step 11: Distinct] -> 37928859 rows x 2 cols
+Table with 2 columns and 37928859 rows:
+Col0 (type: type_id::INT64, size: 37928859)
+8293 8293 8294 8294 8294 8295 8295 8295 8295 8320
+Col1 (type: type_id::INT64, size: 37928859)
+71790 9302 4327 71936 2184 47079 19088 9757 48428 66547
+
+[step 12: Reorder] -> 37928859 rows x 1 cols
+Table with 1 columns and 37928859 rows:
+Col0 (type: type_id::INT64, size: 37928859)
+8293 8293 8294 8294 8294 8295 8295 8295 8295 8320
+
+[GROUPBY DEBUG] rows=37928859 groups_upper_bound=9223372036854775807 algo=5
+[PARTITION DEBUG] input_rows=37928859 num_partitions=65536 num_units=65536 estimated_num_groups=37928859 max_work_units=65537
+[PARTITION DEBUG] sm_bytes=64032 bytes
+[PARTITION DEBUG] set attribute: no error
+[PARTITION DEBUG] launch: no error
+[PARTITION DEBUG] synchronize: no error
+[step 13: GroupBy] -> 13753474 rows x 2 cols
+Table with 2 columns and 13753474 rows:
+Col0 (type: type_id::INT64, size: 13753474)
+53530243 53536608 54465766 54549797 54605350 54878212 55006019 55974498 56216451 56525346
+Col1 (type: type_id::INT64, size: 13753474)
+4 2 4 3 1 1 4 4 2 4
+
+[step 14: Filter] -> 3372250 rows x 1 cols
+Table with 1 columns and 3372250 rows:
+Col0 (type: type_id::INT64, size: 3372250)
+54605350 54878212 52008353 53144007 43587815 44715872 45242018 41594977 43370692 43492000
+
+[step 15: SemiJoin] -> 2016924 rows x 2 cols
+Table with 2 columns and 2016924 rows:
+Col0 (type: type_id::INT64, size: 2016924)
+66 99 132 160 193 196 199 227 259 288
+Col1 (type: type_id::INT64, size: 2016924)
+34885 8382 90526 97850 14580 23520 95760 16071 87782 68970
+
+[step 16: Reorder] -> 2016924 rows x 2 cols
+Table with 2 columns and 2016924 rows:
+Col0 (type: type_id::INT64, size: 2016924)
+66 99 132 160 193 196 199 227 259 288
+Col1 (type: type_id::INT64, size: 2016924)
+34885 8382 90526 97850 14580 23520 95760 16071 87782 68970
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 17: SourceTable] -> 100000 rows x 3 cols
+Table with 3 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 100000)
+"Supplier#000000001" "Supplier#000000002" "Supplier#000000003" "Supplier#000000004" "Supplier#000000005" "Supplier#000000006" "Supplier#000000007" "Supplier#000000008" "Supplier#000000009" "Supplier#000000010" 
+Col2 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 18: EqJoin] -> 2016924 rows x 4 cols
+Table with 4 columns and 2016924 rows:
+Col0 (type: type_id::INT64, size: 2016924)
+1497 1497 1497 1497 1497 1497 1497 1497 1498 1498
+Col1 (type: type_id::INT64, size: 2016924)
+5775751 13277890 23129318 30700453 8497445 15933157 27447268 42018080 1200802 1853123
+Col2 (type: type_id::STRING, size: 2016924)
+"Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001498" "Supplier#000001498" 
+Col3 (type: type_id::INT32, size: 2016924)
+18 18 18 18 18 18 18 18 20 20
+
+[step 19: Reorder] -> 2016924 rows x 5 cols
+Table with 5 columns and 2016924 rows:
+Col0 (type: type_id::INT64, size: 2016924)
+5775751 13277890 23129318 30700453 8497445 15933157 27447268 42018080 1200802 1853123
+Col1 (type: type_id::INT64, size: 2016924)
+1497 1497 1497 1497 1497 1497 1497 1497 1498 1498
+Col2 (type: type_id::INT64, size: 2016924)
+1497 1497 1497 1497 1497 1497 1497 1497 1498 1498
+Col3 (type: type_id::STRING, size: 2016924)
+"Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001497" "Supplier#000001498" "Supplier#000001498" 
+Col4 (type: type_id::INT32, size: 2016924)
+18 18 18 18 18 18 18 18 20 20
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 20: SourceTable] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::STRING, size: 15000000)
+"O" "O" "F" "O" "F" "F" "O" "O" "F" "O" 
+
+[step 21: Filter] -> 7309184 rows x 1 cols
+Table with 1 columns and 7309184 rows:
+Col0 (type: type_id::INT64, size: 7309184)
+3 5 6 33 37 64 66 69 70 96
+
+[step 22: EqJoin] -> 990572 rows x 5 cols
+Table with 5 columns and 990572 rows:
+Col0 (type: type_id::INT64, size: 990572)
+5863 6052 5991 5891 5893 5953 6598 6400 6434 6436
+Col1 (type: type_id::INT64, size: 990572)
+18706 74180 99710 46742 12104 8093 58679 22139 1236 14390
+Col2 (type: type_id::INT64, size: 990572)
+18706 74180 99710 46742 12104 8093 58679 22139 1236 14390
+Col3 (type: type_id::STRING, size: 990572)
+"Supplier#000018706" "Supplier#000074180" "Supplier#000099710" "Supplier#000046742" "Supplier#000012104" "Supplier#000008093" "Supplier#000058679" "Supplier#000022139" "Supplier#000001236" "Supplier#000014390" 
+Col4 (type: type_id::INT32, size: 990572)
+6 24 0 2 19 19 2 5 10 4
+
+[step 23: Reorder] -> 990572 rows x 6 cols
+Table with 6 columns and 990572 rows:
+Col0 (type: type_id::INT64, size: 990572)
+5863 6052 5991 5891 5893 5953 6598 6400 6434 6436
+Col1 (type: type_id::INT64, size: 990572)
+18706 74180 99710 46742 12104 8093 58679 22139 1236 14390
+Col2 (type: type_id::INT64, size: 990572)
+18706 74180 99710 46742 12104 8093 58679 22139 1236 14390
+Col3 (type: type_id::STRING, size: 990572)
+"Supplier#000018706" "Supplier#000074180" "Supplier#000099710" "Supplier#000046742" "Supplier#000012104" "Supplier#000008093" "Supplier#000058679" "Supplier#000022139" "Supplier#000001236" "Supplier#000014390" 
+Col4 (type: type_id::INT32, size: 990572)
+6 24 0 2 19 19 2 5 10 4
+Col5 (type: type_id::INT64, size: 990572)
+5863 6052 5991 5891 5893 5953 6598 6400 6434 6436
+
+[step 24: EqJoin] -> 39448 rows x 6 cols
+Table with 6 columns and 39448 rows:
+Col0 (type: type_id::INT32, size: 39448)
+20 20 20 20 20 20 20 20 20 20
+Col1 (type: type_id::INT64, size: 39448)
+20518 83140 72544 10437 141543 77504 77666 205411 63814 48742
+Col2 (type: type_id::INT64, size: 39448)
+74135 40834 52534 64419 29424 83978 10386 39847 53792 67890
+Col3 (type: type_id::INT64, size: 39448)
+74135 40834 52534 64419 29424 83978 10386 39847 53792 67890
+Col4 (type: type_id::STRING, size: 39448)
+"Supplier#000074135" "Supplier#000040834" "Supplier#000052534" "Supplier#000064419" "Supplier#000029424" "Supplier#000083978" "Supplier#000010386" "Supplier#000039847" "Supplier#000053792" "Supplier#000067890" 
+Col5 (type: type_id::INT64, size: 39448)
+20518 83140 72544 10437 141543 77504 77666 205411 63814 48742
+
+[step 25: Reorder] -> 39448 rows x 7 cols
+Table with 7 columns and 39448 rows:
+Col0 (type: type_id::INT32, size: 39448)
+20 20 20 20 20 20 20 20 20 20
+Col1 (type: type_id::INT64, size: 39448)
+20518 83140 72544 10437 141543 77504 77666 205411 63814 48742
+Col2 (type: type_id::INT64, size: 39448)
+74135 40834 52534 64419 29424 83978 10386 39847 53792 67890
+Col3 (type: type_id::INT64, size: 39448)
+74135 40834 52534 64419 29424 83978 10386 39847 53792 67890
+Col4 (type: type_id::STRING, size: 39448)
+"Supplier#000074135" "Supplier#000040834" "Supplier#000052534" "Supplier#000064419" "Supplier#000029424" "Supplier#000083978" "Supplier#000010386" "Supplier#000039847" "Supplier#000053792" "Supplier#000067890" 
+Col5 (type: type_id::INT32, size: 39448)
+20 20 20 20 20 20 20 20 20 20
+Col6 (type: type_id::INT64, size: 39448)
+20518 83140 72544 10437 141543 77504 77666 205411 63814 48742
+
+[step 26: Reorder] -> 39448 rows x 1 cols
+Table with 1 columns and 39448 rows:
+Col0 (type: type_id::STRING, size: 39448)
+"Supplier#000074135" "Supplier#000040834" "Supplier#000052534" "Supplier#000064419" "Supplier#000029424" "Supplier#000083978" "Supplier#000010386" "Supplier#000039847" "Supplier#000053792" "Supplier#000067890" 
+
+[GROUPBY DEBUG] rows=39448 groups_upper_bound=9223372036854775807 algo=1
+[step 27: GroupBy] -> 4009 rows x 2 cols
+Table with 2 columns and 4009 rows:
+Col0 (type: type_id::STRING, size: 4009)
+"Supplier#000068437" "Supplier#000032123" "Supplier#000088412" "Supplier#000068440" "Supplier#000050878" "Supplier#000055756" "Supplier#000044943" "Supplier#000017488" "Supplier#000004994" "Supplier#000057393" 
+Col1 (type: type_id::INT64, size: 4009)
+8 10 13 14 15 11 14 11 7 11
+
+[step 28: TopK] -> 100 rows x 2 cols
+Table with 2 columns and 100 rows:
+Col0 (type: type_id::STRING, size: 100)
+"Supplier#000062538" "Supplier#000032858" "Supplier#000063723" "Supplier#000089484" "Supplier#000007061" "Supplier#000034162" "Supplier#000086690" "Supplier#000097808" "Supplier#000004163" "Supplier#000016074" 
+Col1 (type: type_id::INT64, size: 100)
+24 22 21 21 20 20 20 20 19 19
+
+Executed in 5100 ms.
+Result: 100 rows × 2 columns (showing 20)
+Supplier#000062538 | 24
+Supplier#000032858 | 22
+Supplier#000063723 | 21
+Supplier#000089484 | 21
+Supplier#000007061 | 20
+Supplier#000034162 | 20
+Supplier#000086690 | 20
+Supplier#000097808 | 20
+Supplier#000004163 | 19
+Supplier#000016074 | 19
+Supplier#000019756 | 19
+Supplier#000031248 | 19
+Supplier#000044511 | 19
+Supplier#000054342 | 19
+Supplier#000057441 | 19
+Supplier#000063355 | 19
+Supplier#000073164 | 19
+Supplier#000073736 | 19
+Supplier#000092215 | 19
+Supplier#000099221 | 19
+VERIFY: comparing against /work/data/tpch//sf10/golden/q21.parquet
+VERIFY: OK

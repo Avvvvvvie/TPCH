@@ -1,0 +1,417 @@
+== TPC-H Q20 (SF=10) via IR pipeline ==
+IR built: 2 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 29 steps, 5 sources.
+
+-- IR (pre-rules) --
+Sort[s_name ASC]
+  Project(s_name = s_name, s_address = s_address)
+    LeftSemiJoin(on=(s_suppkey == ps_suppkey))
+      Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+        InnerJoin(on=(s_nationkey == n_nationkey))
+          Filter(str_eq(n_name, "CANADA"))
+            Scan(nation [n_nationkey, n_name])
+          Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+      Filter((ps_availqty > qty_threshold))
+        InnerJoin(on=((ps_partkey == l_partkey) && (ps_suppkey == l_suppkey)))
+          Project(l_partkey = l_partkey, l_suppkey = l_suppkey, qty_threshold = (sum_quantity * 0.5))
+            Aggregate(keys=[l_partkey, l_suppkey]; aggs=[sum(l_quantity) AS sum_quantity])
+              InnerJoin(on=((ps_partkey == l_partkey) && (ps_suppkey == l_suppkey)))
+                LeftSemiJoin(on=(ps_partkey == p_partkey))
+                  LeftSemiJoin(on=(ps_suppkey == s_suppkey))
+                    Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
+                    Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                      InnerJoin(on=(s_nationkey == n_nationkey))
+                        Filter(str_eq(n_name, "CANADA"))
+                          Scan(nation [n_nationkey, n_name])
+                        Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+                  Filter(startswith(p_name, "forest"))
+                    Scan(part [p_partkey, p_name])
+                Filter(((l_shipdate >= 19940101) && (l_shipdate < 19950101)))
+                  Scan(lineitem [l_partkey, l_suppkey, l_quantity, l_shipdate])
+          LeftSemiJoin(on=(ps_partkey == p_partkey))
+            LeftSemiJoin(on=(ps_suppkey == s_suppkey))
+              Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
+              Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                InnerJoin(on=(s_nationkey == n_nationkey))
+                  Filter(str_eq(n_name, "CANADA"))
+                    Scan(nation [n_nationkey, n_name])
+                  Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+            Filter(startswith(p_name, "forest"))
+              Scan(part [p_partkey, p_name])
+
+
+-- IR (post-rules) --
+Sort[s_name ASC]
+  Project(s_name = s_name, s_address = s_address)
+    LeftSemiJoin(on=(s_suppkey == ps_suppkey))
+      Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+        InnerJoin(on=(s_nationkey == n_nationkey))
+          Filter(str_eq(n_name, "CANADA"))
+            Scan(nation [n_nationkey, n_name])
+          Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+      Filter((ps_availqty > qty_threshold))
+        Filter((ps_suppkey == l_suppkey))
+          InnerJoin(on=(ps_partkey == l_partkey))
+            Project(l_partkey = l_partkey, l_suppkey = l_suppkey, qty_threshold = (sum_quantity * 0.5))
+              Aggregate(keys=[l_partkey, l_suppkey]; aggs=[sum(l_quantity) AS sum_quantity])
+                Filter((ps_suppkey == l_suppkey))
+                  InnerJoin(on=(ps_partkey == l_partkey))
+                    LeftSemiJoin(on=(ps_partkey == p_partkey))
+                      LeftSemiJoin(on=(ps_suppkey == s_suppkey))
+                        Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
+                        Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                          InnerJoin(on=(s_nationkey == n_nationkey))
+                            Filter(str_eq(n_name, "CANADA"))
+                              Scan(nation [n_nationkey, n_name])
+                            Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+                      Filter(startswith(p_name, "forest"))
+                        Scan(part [p_partkey, p_name])
+                    Filter(((l_shipdate >= 19940101) && (l_shipdate < 19950101)))
+                      Scan(lineitem [l_partkey, l_suppkey, l_quantity, l_shipdate])
+            LeftSemiJoin(on=(ps_partkey == p_partkey))
+              LeftSemiJoin(on=(ps_suppkey == s_suppkey))
+                Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
+                Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                  InnerJoin(on=(s_nationkey == n_nationkey))
+                    Filter(str_eq(n_name, "CANADA"))
+                      Scan(nation [n_nationkey, n_name])
+                    Scan(supplier [s_suppkey, s_name, s_address, s_nationkey])
+              Filter(startswith(p_name, "forest"))
+                Scan(part [p_partkey, p_name])
+
+
+-- ExecPlan --
+// required sources: nation supplier partsupp part lineitem
+v0 = SourceTable("nation" cols=[n_nationkey, n_name])
+v1 = Filter(v0; predicate=<Predicate>, out=[0])
+v2 = SourceTable("supplier" cols=[s_suppkey, s_name, s_address, s_nationkey])
+v3 = EqJoin(v1, v2; lkeys=[0], rkeys=[3])
+v4 = Reorder(v3; ordinals=[0, 1, 2, 3, 0])
+v5 = Project(v4; #items=3 (tree=3, pred=0, substr=0))
+v6 = SourceTable("partsupp" cols=[ps_partkey, ps_suppkey, ps_availqty])
+v7 = SemiJoin(v6, v5; lkeys=[1], rkeys=[0])
+v8 = Reorder(v7; ordinals=[1, 0, 2])
+v9 = SourceTable("part" cols=[p_partkey, p_name])
+v10 = Filter(v9; predicate=<Predicate>, out=[0])
+v11 = SemiJoin(v8, v10; lkeys=[0], rkeys=[0])
+v12 = Reorder(v11; ordinals=[0, 1, 2])
+v13 = SourceTable("lineitem" cols=[l_partkey, l_suppkey, l_quantity, l_shipdate])
+v14 = Filter(v13; predicate=<Predicate>, out=[0, 1, 2])
+v15 = EqJoin(v12, v14; lkeys=[0], rkeys=[0])
+v16 = Reorder(v15; ordinals=[0, 1, 2, 0, 3, 4])
+v17 = Filter(v16; predicate=<Predicate>, out=[3, 4, 5])
+v18 = Reorder(v17; ordinals=[0, 1, 2])
+v19 = GroupBy(v18; n_keys=2, aggs=[sum(#0)])
+v20 = Project(v19; #items=3 (tree=3, pred=0, substr=0))
+v21 = EqJoin(v20, v12; lkeys=[0], rkeys=[0])
+v22 = Reorder(v21; ordinals=[0, 1, 2, 0, 3, 4])
+v23 = Filter(v22; predicate=<Predicate>, out=[2, 4, 5])
+v24 = Filter(v23; predicate=<Predicate>, out=[1])
+v25 = SemiJoin(v5, v24; lkeys=[0], rkeys=[0])
+v26 = Reorder(v25; ordinals=[0, 1, 2])
+v27 = Project(v26; #items=2 (tree=2, pred=0, substr=0))
+v28 = Sort(v27; keys=[#0 ASC])
+return v28
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 0: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[step 1: Filter] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::INT32, size: 1)
+3
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 2: SourceTable] -> 100000 rows x 4 cols
+Table with 4 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 100000)
+"Supplier#000000001" "Supplier#000000002" "Supplier#000000003" "Supplier#000000004" "Supplier#000000005" "Supplier#000000006" "Supplier#000000007" "Supplier#000000008" "Supplier#000000009" "Supplier#000000010" 
+Col2 (type: type_id::STRING, size: 100000)
+"sdrGnXCDRcfriBvY0KL,ipCanOTyK t NN1" "TRMhVHz3XiFuhapxucPo1" "BZ0kXcHUcHjx62L7CjZSql7gbWQ6RPn5X" "qGTQJXogS83a7MBnEweGHKevK" "lONEYAh9sFWAF75tO" "zaux5FTzToEg" " 0W7IPdkpWycUbQ9Adp6B" "S8AWPqjYlanEQlcDO2WV 97uCVtxCk" ",gJ6K2MKveYxQTN 2EMG3pzg" "9QtKQKXK24fBTYIsb2" 
+Col3 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 3: EqJoin] -> 4054 rows x 4 cols
+Table with 4 columns and 4054 rows:
+Col0 (type: type_id::INT32, size: 4054)
+3 3 3 3 3 3 3 3 3 3
+Col1 (type: type_id::INT64, size: 4054)
+20 1367 1602 157 2669 1263 1426 1399 1454 1446
+Col2 (type: type_id::STRING, size: 4054)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000001602" "Supplier#000000157" "Supplier#000002669" "Supplier#000001263" "Supplier#000001426" "Supplier#000001399" "Supplier#000001454" "Supplier#000001446" 
+Col3 (type: type_id::STRING, size: 4054)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "ygd4iNQLQeVWW" "1EmkCApL5iF" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "Aa4 UELS1JqY7qIjniwCWiC" "QbcoO0TUClFSzfy90Lk k" "gE COEie8t3c4xqeuT" "8cBIELxY754iHJIgRXJ0" "GOJRjfd6Z9UQ,fiuPz6CO5GDGV" 
+
+[step 4: Reorder] -> 4054 rows x 5 cols
+Table with 5 columns and 4054 rows:
+Col0 (type: type_id::INT32, size: 4054)
+3 3 3 3 3 3 3 3 3 3
+Col1 (type: type_id::INT64, size: 4054)
+20 1367 1602 157 2669 1263 1426 1399 1454 1446
+Col2 (type: type_id::STRING, size: 4054)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000001602" "Supplier#000000157" "Supplier#000002669" "Supplier#000001263" "Supplier#000001426" "Supplier#000001399" "Supplier#000001454" "Supplier#000001446" 
+Col3 (type: type_id::STRING, size: 4054)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "ygd4iNQLQeVWW" "1EmkCApL5iF" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "Aa4 UELS1JqY7qIjniwCWiC" "QbcoO0TUClFSzfy90Lk k" "gE COEie8t3c4xqeuT" "8cBIELxY754iHJIgRXJ0" "GOJRjfd6Z9UQ,fiuPz6CO5GDGV" 
+Col4 (type: type_id::INT32, size: 4054)
+3 3 3 3 3 3 3 3 3 3
+
+[step 5: Project] -> 4054 rows x 3 cols
+Table with 3 columns and 4054 rows:
+Col0 (type: type_id::INT64, size: 4054)
+20 1367 1602 157 2669 1263 1426 1399 1454 1446
+Col1 (type: type_id::STRING, size: 4054)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000001602" "Supplier#000000157" "Supplier#000002669" "Supplier#000001263" "Supplier#000001426" "Supplier#000001399" "Supplier#000001454" "Supplier#000001446" 
+Col2 (type: type_id::STRING, size: 4054)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "ygd4iNQLQeVWW" "1EmkCApL5iF" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "Aa4 UELS1JqY7qIjniwCWiC" "QbcoO0TUClFSzfy90Lk k" "gE COEie8t3c4xqeuT" "8cBIELxY754iHJIgRXJ0" "GOJRjfd6Z9UQ,fiuPz6CO5GDGV" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/partsupp.parquet
+[step 6: SourceTable] -> 8000000 rows x 3 cols
+Table with 3 columns and 8000000 rows:
+Col0 (type: type_id::INT64, size: 8000000)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 8000000)
+2 25002 50002 75002 3 25003 50003 75003 4 25004
+Col2 (type: type_id::INT64, size: 8000000)
+3325 8076 3956 4069 8895 4969 8539 3025 4651 4093
+
+[step 7: SemiJoin] -> 324320 rows x 3 cols
+Table with 3 columns and 324320 rows:
+Col0 (type: type_id::INT64, size: 324320)
+25004 13 20 75021 50028 25045 50046 75049 25052 75055
+Col1 (type: type_id::INT64, size: 324320)
+3 12 19 20 27 44 45 48 51 54
+Col2 (type: type_id::INT64, size: 324320)
+4093 3610 1416 4271 3407 5310 5669 1719 7318 536
+
+[step 8: Reorder] -> 324320 rows x 3 cols
+Table with 3 columns and 324320 rows:
+Col0 (type: type_id::INT64, size: 324320)
+3 12 19 20 27 44 45 48 51 54
+Col1 (type: type_id::INT64, size: 324320)
+25004 13 20 75021 50028 25045 50046 75049 25052 75055
+Col2 (type: type_id::INT64, size: 324320)
+4093 3610 1416 4271 3407 5310 5669 1719 7318 536
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/part.parquet
+[step 9: SourceTable] -> 2000000 rows x 2 cols
+Table with 2 columns and 2000000 rows:
+Col0 (type: type_id::INT64, size: 2000000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 2000000)
+"goldenrod lavender spring chocolate lace" "blush thistle blue yellow saddle" "spring green yellow purple cornsilk" "cornflower chocolate smoke green pink" "forest brown coral puff cream" "bisque cornflower lawn forest magenta" "moccasin green thistle khaki floral" "misty lace thistle snow royal" "thistle dim navajo dark gainsboro" "linen pink saddle puff powder" 
+
+[step 10: Filter] -> 21551 rows x 1 cols
+Table with 1 columns and 21551 rows:
+Col0 (type: type_id::INT64, size: 21551)
+5 304 447 488 696 722 748 986 1107 1135
+
+[step 11: SemiJoin] -> 3517 rows x 3 cols
+Table with 3 columns and 3517 rows:
+Col0 (type: type_id::INT64, size: 3517)
+748 1135 2217 3310 3889 6092 6216 6327 6349 6467
+Col1 (type: type_id::INT64, size: 3517)
+75749 51136 2218 28311 78890 6093 6217 56328 56350 81468
+Col2 (type: type_id::INT64, size: 3517)
+7953 1804 7698 8206 1725 8994 8047 2213 3923 8892
+
+[step 12: Reorder] -> 3517 rows x 3 cols
+Table with 3 columns and 3517 rows:
+Col0 (type: type_id::INT64, size: 3517)
+748 1135 2217 3310 3889 6092 6216 6327 6349 6467
+Col1 (type: type_id::INT64, size: 3517)
+75749 51136 2218 28311 78890 6093 6217 56328 56350 81468
+Col2 (type: type_id::INT64, size: 3517)
+7953 1804 7698 8206 1725 8994 8047 2213 3923 8892
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 13: SourceTable] -> 59986052 rows x 4 cols
+Table with 4 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1551894 673091 636998 21315 240267 156345 1061698 42970 190355 1284483
+Col1 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+Col2 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+Col3 (type: type_id::INT32, size: 59986052)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+
+[step 14: Filter] -> 9099165 rows x 3 cols
+Table with 3 columns and 9099165 rows:
+Col0 (type: type_id::INT64, size: 9099165)
+42970 1284483 1085693 1239268 375302 859509 1151172 1734884 1152082 1041791
+Col1 (type: type_id::INT64, size: 9099165)
+17971 34508 85694 39269 306 59510 76184 34885 77094 91812
+Col2 (type: type_id::FLOAT64, size: 9099165)
+45 27 15 26 50 21 31 41 48 32
+
+[step 15: EqJoin] -> 15984 rows x 5 cols
+Table with 5 columns and 15984 rows:
+Col0 (type: type_id::INT64, size: 15984)
+55194 1226689 1594099 1452277 1310862 916920 92616 823234 1253103 235790
+Col1 (type: type_id::INT64, size: 15984)
+5195 1726 44130 52278 35876 41930 92617 23235 78116 60793
+Col2 (type: type_id::INT64, size: 15984)
+6175 7753 5014 5796 6405 2639 1244 6023 8384 2057
+Col3 (type: type_id::INT64, size: 15984)
+80195 76714 94100 52278 10863 41930 67617 73251 78116 60793
+Col4 (type: type_id::FLOAT64, size: 15984)
+19 21 18 27 2 46 18 43 16 16
+
+[step 16: Reorder] -> 15984 rows x 6 cols
+Table with 6 columns and 15984 rows:
+Col0 (type: type_id::INT64, size: 15984)
+55194 1226689 1594099 1452277 1310862 916920 92616 823234 1253103 235790
+Col1 (type: type_id::INT64, size: 15984)
+5195 1726 44130 52278 35876 41930 92617 23235 78116 60793
+Col2 (type: type_id::INT64, size: 15984)
+6175 7753 5014 5796 6405 2639 1244 6023 8384 2057
+Col3 (type: type_id::INT64, size: 15984)
+55194 1226689 1594099 1452277 1310862 916920 92616 823234 1253103 235790
+Col4 (type: type_id::INT64, size: 15984)
+80195 76714 94100 52278 10863 41930 67617 73251 78116 60793
+Col5 (type: type_id::FLOAT64, size: 15984)
+19 21 18 27 2 46 18 43 16 16
+
+[step 17: Filter] -> 4015 rows x 3 cols
+Table with 3 columns and 4015 rows:
+Col0 (type: type_id::INT64, size: 4015)
+1452277 916920 1253103 235790 1237779 541703 1820598 1328356 647124 1589440
+Col1 (type: type_id::INT64, size: 4015)
+52278 41930 78116 60793 12816 66709 20599 53370 97137 14456
+Col2 (type: type_id::FLOAT64, size: 4015)
+27 46 16 16 21 6 38 3 21 10
+
+[step 18: Reorder] -> 4015 rows x 3 cols
+Table with 3 columns and 4015 rows:
+Col0 (type: type_id::INT64, size: 4015)
+1452277 916920 1253103 235790 1237779 541703 1820598 1328356 647124 1589440
+Col1 (type: type_id::INT64, size: 4015)
+52278 41930 78116 60793 12816 66709 20599 53370 97137 14456
+Col2 (type: type_id::FLOAT64, size: 4015)
+27 46 16 16 21 6 38 3 21 10
+
+[GROUPBY DEBUG] rows=4015 groups_upper_bound=9223372036854775807 algo=1
+[step 19: GroupBy] -> 2384 rows x 3 cols
+Table with 3 columns and 2384 rows:
+Col0 (type: type_id::INT64, size: 2384)
+509960 1203637 51120 1879681 1673025 1921042 1634127 1527753 974389 1452931
+Col1 (type: type_id::INT64, size: 2384)
+9961 78674 51121 29718 48074 71081 34128 2799 49417 2960
+Col2 (type: type_id::FLOAT64, size: 2384)
+73 64 158 83 131 96 39 43 140 59
+
+[step 20: Project] -> 2384 rows x 3 cols
+Table with 3 columns and 2384 rows:
+Col0 (type: type_id::INT64, size: 2384)
+509960 1203637 51120 1879681 1673025 1921042 1634127 1527753 974389 1452931
+Col1 (type: type_id::INT64, size: 2384)
+9961 78674 51121 29718 48074 71081 34128 2799 49417 2960
+Col2 (type: type_id::FLOAT64, size: 2384)
+36.5 32 79 41.5 65.5 48 19.5 21.5 70 29.5
+
+[step 21: EqJoin] -> 2667 rows x 5 cols
+Table with 5 columns and 2667 rows:
+Col0 (type: type_id::INT64, size: 2667)
+1321980 1323623 1324013 1324403 1325014 1325245 1325362 1326251 1343545 1343701
+Col1 (type: type_id::INT64, size: 2667)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+Col2 (type: type_id::FLOAT64, size: 2667)
+20.5 34.5 37.5 17.5 31.5 4 20.5 7 18.5 38.5
+Col3 (type: type_id::INT64, size: 2667)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+Col4 (type: type_id::INT64, size: 2667)
+2206 9643 4100 2436 4154 3504 9203 7543 8860 6836
+
+[step 22: Reorder] -> 2667 rows x 6 cols
+Table with 6 columns and 2667 rows:
+Col0 (type: type_id::INT64, size: 2667)
+1321980 1323623 1324013 1324403 1325014 1325245 1325362 1326251 1343545 1343701
+Col1 (type: type_id::INT64, size: 2667)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+Col2 (type: type_id::FLOAT64, size: 2667)
+20.5 34.5 37.5 17.5 31.5 4 20.5 7 18.5 38.5
+Col3 (type: type_id::INT64, size: 2667)
+1321980 1323623 1324013 1324403 1325014 1325245 1325362 1326251 1343545 1343701
+Col4 (type: type_id::INT64, size: 2667)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+Col5 (type: type_id::INT64, size: 2667)
+2206 9643 4100 2436 4154 3504 9203 7543 8860 6836
+
+[step 23: Filter] -> 2384 rows x 3 cols
+Table with 3 columns and 2384 rows:
+Col0 (type: type_id::FLOAT64, size: 2384)
+20.5 34.5 37.5 17.5 31.5 4 20.5 7 18.5 38.5
+Col1 (type: type_id::INT64, size: 2384)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+Col2 (type: type_id::INT64, size: 2384)
+2206 9643 4100 2436 4154 3504 9203 7543 8860 6836
+
+[step 24: Filter] -> 2377 rows x 1 cols
+Table with 1 columns and 2377 rows:
+Col0 (type: type_id::INT64, size: 2377)
+21981 48637 24014 49417 50028 285 402 76278 93572 43702
+
+[step 25: SemiJoin] -> 1804 rows x 3 cols
+Table with 3 columns and 1804 rows:
+Col0 (type: type_id::INT64, size: 1804)
+20 1367 2669 1426 1447 3918 2264 688 1990 1682
+Col1 (type: type_id::STRING, size: 1804)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000002669" "Supplier#000001426" "Supplier#000001447" "Supplier#000003918" "Supplier#000002264" "Supplier#000000688" "Supplier#000001990" "Supplier#000001682" 
+Col2 (type: type_id::STRING, size: 1804)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "QbcoO0TUClFSzfy90Lk k" "3UDPM2EuuRi,H0ZcfwBFIKQrAxy5,MYMJ7J6H3eL" "FM9w9pzhCqQLAN,aMW" "OpnzPUbUmO6fz3" "orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3" "o8nhGpKphsybKZtye0o6OfDz9GIcuGHjMs7pq" "C37Gkv 7a5ujZ9 " 
+
+[step 26: Reorder] -> 1804 rows x 3 cols
+Table with 3 columns and 1804 rows:
+Col0 (type: type_id::INT64, size: 1804)
+20 1367 2669 1426 1447 3918 2264 688 1990 1682
+Col1 (type: type_id::STRING, size: 1804)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000002669" "Supplier#000001426" "Supplier#000001447" "Supplier#000003918" "Supplier#000002264" "Supplier#000000688" "Supplier#000001990" "Supplier#000001682" 
+Col2 (type: type_id::STRING, size: 1804)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "QbcoO0TUClFSzfy90Lk k" "3UDPM2EuuRi,H0ZcfwBFIKQrAxy5,MYMJ7J6H3eL" "FM9w9pzhCqQLAN,aMW" "OpnzPUbUmO6fz3" "orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3" "o8nhGpKphsybKZtye0o6OfDz9GIcuGHjMs7pq" "C37Gkv 7a5ujZ9 " 
+
+[step 27: Project] -> 1804 rows x 2 cols
+Table with 2 columns and 1804 rows:
+Col0 (type: type_id::STRING, size: 1804)
+"Supplier#000000020" "Supplier#000001367" "Supplier#000002669" "Supplier#000001426" "Supplier#000001447" "Supplier#000003918" "Supplier#000002264" "Supplier#000000688" "Supplier#000001990" "Supplier#000001682" 
+Col1 (type: type_id::STRING, size: 1804)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "XY28GmOq3efOxOzBMmMLdmWjMpo" "lkZk4ZyeUvxc4rIjbPFuvE3HYL" "QbcoO0TUClFSzfy90Lk k" "3UDPM2EuuRi,H0ZcfwBFIKQrAxy5,MYMJ7J6H3eL" "FM9w9pzhCqQLAN,aMW" "OpnzPUbUmO6fz3" "orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3" "o8nhGpKphsybKZtye0o6OfDz9GIcuGHjMs7pq" "C37Gkv 7a5ujZ9 " 
+
+[step 28: Sort] -> 1804 rows x 2 cols
+Table with 2 columns and 1804 rows:
+Col0 (type: type_id::STRING, size: 1804)
+"Supplier#000000020" "Supplier#000000285" "Supplier#000000358" "Supplier#000000361" "Supplier#000000402" "Supplier#000000555" "Supplier#000000688" "Supplier#000000729" "Supplier#000000744" "Supplier#000000752" 
+Col1 (type: type_id::STRING, size: 1804)
+"JtPqm19E7tF 152Rl1wQZ8j0H" "q TMZEDyZtv vUiFKBhT3NJlnIxpL" "6XtuJkJj83BcCOV7bwV7wG5nkhazk" "MSi62aEN53KaoRAiaH4GEo3EsKMXSwpPGU" "JR8vWoCteJtJg3okRpt0r28KEo" "8Lp0QWPLFXrJrX1sTWkAEdzUsh5ke" "orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3" "CAOGYCBtTVT7aB1p6qHbxF6VVhXaHLgTpI" "WdgxvW4WEloeapP7H6cWHrGLCHkStwrM" "GrOjezmDCNvHXl5" 
+
+Executed in 4775 ms.
+Result: 1804 rows × 2 columns (showing 20)
+Supplier#000000020 | JtPqm19E7tF 152Rl1wQZ8j0H
+Supplier#000000285 | q TMZEDyZtv vUiFKBhT3NJlnIxpL
+Supplier#000000358 | 6XtuJkJj83BcCOV7bwV7wG5nkhazk
+Supplier#000000361 | MSi62aEN53KaoRAiaH4GEo3EsKMXSwpPGU
+Supplier#000000402 | JR8vWoCteJtJg3okRpt0r28KEo
+Supplier#000000555 | 8Lp0QWPLFXrJrX1sTWkAEdzUsh5ke
+Supplier#000000688 | orLvVDOBBE2B2ppjbiTZTJoIJgn1VgKg3
+Supplier#000000729 | CAOGYCBtTVT7aB1p6qHbxF6VVhXaHLgTpI
+Supplier#000000744 | WdgxvW4WEloeapP7H6cWHrGLCHkStwrM
+Supplier#000000752 | GrOjezmDCNvHXl5
+Supplier#000000783 | OeB1v2RVusE14KWROea4sNgSqbeJp
+Supplier#000000975 | 1qorM1ypBdwgPVuf6sMCKuF9D1rJN1iCTXKmalSt
+Supplier#000000997 | UM64eAcogoCYh2Q UbWEgRXMQ5icygh4y73
+Supplier#000001141 | vocxbxcNVUW RjX,0ux1PBm
+Supplier#000001245 | Qsy7oMj1DzgQLKy24M0I 5rk sWilK
+Supplier#000001367 | XY28GmOq3efOxOzBMmMLdmWjMpo
+Supplier#000001426 | QbcoO0TUClFSzfy90Lk k
+Supplier#000001447 | 3UDPM2EuuRi,H0ZcfwBFIKQrAxy5,MYMJ7J6H3eL
+Supplier#000001501 | vf,U03rYeXpHb 
+Supplier#000001528 | JyWmEcRtJ40j1w6EQBP2MCg35x2Y
+VERIFY: comparing against /work/data/tpch//sf10/golden/q20.parquet
+VERIFY: OK

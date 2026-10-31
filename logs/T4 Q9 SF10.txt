@@ -1,0 +1,411 @@
+== TPC-H Q9 (SF=10) via IR pipeline ==
+IR built: 3 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 22 steps, 6 sources.
+
+-- IR (pre-rules) --
+Sort[n_name ASC, o_year DESC]
+  Aggregate(keys=[n_name, o_year]; aggs=[sum(amount) AS sum_profit])
+    Project(nation = n_name, o_year = year(o_orderdate), amount = ((l_extendedprice * (1 - l_discount)) - (ps_supplycost * l_quantity)))
+      InnerJoin(on=(n_nationkey == s_nationkey))
+        Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(l_orderkey == o_orderkey))
+          InnerJoin(on=((l_partkey == ps_partkey) && (l_suppkey == ps_suppkey)))
+            InnerJoin(on=(l_suppkey == s_suppkey))
+              InnerJoin(on=(p_partkey == l_partkey))
+                Filter(contains(p_name, "green"))
+                  Scan(part [p_partkey, p_name])
+                Scan(lineitem [l_orderkey, l_partkey, l_suppkey, l_quantity, l_extendedprice, l_discount])
+              Scan(supplier [s_suppkey, s_nationkey])
+            Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+          Scan(orders [o_orderkey, o_orderdate])
+
+
+-- IR (post-rules) --
+Sort[n_name ASC, o_year DESC]
+  Aggregate(keys=[n_name, o_year]; aggs=[sum(amount) AS sum_profit])
+    Project(nation = n_name, o_year = year(o_orderdate), amount = ((l_extendedprice * (1 - l_discount)) - (ps_supplycost * l_quantity)))
+      InnerJoin(on=(n_nationkey == s_nationkey))
+        Scan(nation [n_nationkey, n_name])
+        InnerJoin(on=(l_orderkey == o_orderkey))
+          Filter((l_suppkey == ps_suppkey))
+            InnerJoin(on=(l_partkey == ps_partkey))
+              InnerJoin(on=(l_suppkey == s_suppkey))
+                InnerJoin(on=(p_partkey == l_partkey))
+                  Filter(contains(p_name, "green"))
+                    Scan(part [p_partkey, p_name])
+                  Scan(lineitem [l_orderkey, l_partkey, l_suppkey, l_quantity, l_extendedprice, l_discount])
+                Scan(supplier [s_suppkey, s_nationkey])
+              Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+          Scan(orders [o_orderkey, o_orderdate])
+
+
+-- ExecPlan --
+// required sources: nation part lineitem supplier partsupp orders
+v0 = SourceTable("nation" cols=[n_nationkey, n_name])
+v1 = SourceTable("part" cols=[p_partkey, p_name])
+v2 = Filter(v1; predicate=<Predicate>, out=[0])
+v3 = SourceTable("lineitem" cols=[l_orderkey, l_partkey, l_suppkey, l_quantity, l_extendedprice, l_discount])
+v4 = EqJoin(v2, v3; lkeys=[0], rkeys=[1])
+v5 = Reorder(v4; ordinals=[0, 1, 0, 2, 3, 4, 5])
+v6 = SourceTable("supplier" cols=[s_suppkey, s_nationkey])
+v7 = EqJoin(v5, v6; lkeys=[3], rkeys=[0])
+v8 = Reorder(v7; ordinals=[1, 2, 3, 0, 4, 5, 6, 0, 7])
+v9 = SourceTable("partsupp" cols=[ps_partkey, ps_suppkey, ps_supplycost])
+v10 = EqJoin(v8, v9; lkeys=[2], rkeys=[0])
+v11 = Reorder(v10; ordinals=[1, 2, 0, 3, 4, 5, 6, 7, 8, 0, 9, 10])
+v12 = Filter(v11; predicate=<Predicate>, out=[1, 4, 5, 6, 8, 11])
+v13 = SourceTable("orders" cols=[o_orderkey, o_orderdate])
+v14 = EqJoin(v12, v13; lkeys=[0], rkeys=[0])
+v15 = Reorder(v14; ordinals=[0, 1, 2, 3, 4, 5, 0, 6])
+v16 = EqJoin(v0, v15; lkeys=[0], rkeys=[4])
+v17 = Reorder(v16; ordinals=[0, 1, 2, 3, 4, 5, 0, 6, 7, 8])
+v18 = Project(v17; #items=3 (tree=3, pred=0, substr=0))
+v19 = Reorder(v18; ordinals=[0, 1, 2])
+v20 = GroupBy(v19; n_keys=2, aggs=[sum(#0)])
+v21 = Sort(v20; keys=[#0 ASC, #1 DESC])
+return v21
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 0: SourceTable] -> 25 rows x 2 cols
+Table with 2 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/part.parquet
+[step 1: SourceTable] -> 2000000 rows x 2 cols
+Table with 2 columns and 2000000 rows:
+Col0 (type: type_id::INT64, size: 2000000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 2000000)
+"goldenrod lavender spring chocolate lace" "blush thistle blue yellow saddle" "spring green yellow purple cornsilk" "cornflower chocolate smoke green pink" "forest brown coral puff cream" "bisque cornflower lawn forest magenta" "moccasin green thistle khaki floral" "misty lace thistle snow royal" "thistle dim navajo dark gainsboro" "linen pink saddle puff powder" 
+
+[step 2: Filter] -> 108782 rows x 1 cols
+Table with 1 columns and 108782 rows:
+Col0 (type: type_id::INT64, size: 108782)
+3 4 7 35 83 86 119 175 177 201
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 3: SourceTable] -> 59986052 rows x 6 cols
+Table with 6 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT64, size: 59986052)
+1551894 673091 636998 21315 240267 156345 1061698 42970 190355 1284483
+Col2 (type: type_id::INT64, size: 59986052)
+76910 73092 36999 46316 15274 6348 11719 17971 65359 34508
+Col3 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+Col4 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+Col5 (type: type_id::FLOAT64, size: 59986052)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+
+[step 4: EqJoin] -> 3261613 rows x 6 cols
+Table with 6 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+1775987 1977037 486779 537266 857543 1890204 1190525 1921657 600849 1984444
+Col1 (type: type_id::INT64, size: 3261613)
+1123 1124 2149 2150 1637 131 132 898 899 1988
+Col2 (type: type_id::INT64, size: 3261613)
+1005 52095 36788 12282 57544 15223 90526 71696 25856 59502
+Col3 (type: type_id::FLOAT64, size: 3261613)
+39 1 47 39 49 4 43 36 18 19
+Col4 (type: type_id::FLOAT64, size: 3261613)
+80453.1 1113.94 82990.2 50826.4 73524.5 4776.44 69465.2 60428.2 31496.6 29038.7
+Col5 (type: type_id::FLOAT64, size: 3261613)
+0.03 0.09 0 0.05 0.02 0.04 0.01 0.04 0.04 0.08
+
+[step 5: Reorder] -> 3261613 rows x 7 cols
+Table with 7 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+1775987 1977037 486779 537266 857543 1890204 1190525 1921657 600849 1984444
+Col1 (type: type_id::INT64, size: 3261613)
+1123 1124 2149 2150 1637 131 132 898 899 1988
+Col2 (type: type_id::INT64, size: 3261613)
+1775987 1977037 486779 537266 857543 1890204 1190525 1921657 600849 1984444
+Col3 (type: type_id::INT64, size: 3261613)
+1005 52095 36788 12282 57544 15223 90526 71696 25856 59502
+Col4 (type: type_id::FLOAT64, size: 3261613)
+39 1 47 39 49 4 43 36 18 19
+Col5 (type: type_id::FLOAT64, size: 3261613)
+80453.1 1113.94 82990.2 50826.4 73524.5 4776.44 69465.2 60428.2 31496.6 29038.7
+Col6 (type: type_id::FLOAT64, size: 3261613)
+0.03 0.09 0 0.05 0.02 0.04 0.01 0.04 0.04 0.08
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 6: SourceTable] -> 100000 rows x 2 cols
+Table with 2 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+
+[step 7: EqJoin] -> 3261613 rows x 8 cols
+Table with 8 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+2281 2281 2281 2281 2281 2281 2281 2281 2282 2282
+Col1 (type: type_id::INT64, size: 3261613)
+52280 1752246 1652248 1477266 1927223 202280 1927223 1477266 1302281 302281
+Col2 (type: type_id::INT64, size: 3261613)
+1456128 3633476 5200068 6912420 2975236 4941894 5533959 7945671 1382052 5709287
+Col3 (type: type_id::INT64, size: 3261613)
+52280 1752246 1652248 1477266 1927223 202280 1927223 1477266 1302281 302281
+Col4 (type: type_id::FLOAT64, size: 3261613)
+36 24 18 17 1 15 8 39 8 13
+Col5 (type: type_id::FLOAT64, size: 3261613)
+44362.1 31155.8 21602.9 21134.2 1250.13 17734 10001 48484.4 10265.8 16682.5
+Col6 (type: type_id::FLOAT64, size: 3261613)
+0.02 0.07 0.09 0.04 0.09 0.07 0.05 0.03 0.06 0.02
+Col7 (type: type_id::INT32, size: 3261613)
+4 4 4 4 4 4 4 4 3 3
+
+[step 8: Reorder] -> 3261613 rows x 9 cols
+Table with 9 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+52280 1752246 1652248 1477266 1927223 202280 1927223 1477266 1302281 302281
+Col1 (type: type_id::INT64, size: 3261613)
+1456128 3633476 5200068 6912420 2975236 4941894 5533959 7945671 1382052 5709287
+Col2 (type: type_id::INT64, size: 3261613)
+52280 1752246 1652248 1477266 1927223 202280 1927223 1477266 1302281 302281
+Col3 (type: type_id::INT64, size: 3261613)
+2281 2281 2281 2281 2281 2281 2281 2281 2282 2282
+Col4 (type: type_id::FLOAT64, size: 3261613)
+36 24 18 17 1 15 8 39 8 13
+Col5 (type: type_id::FLOAT64, size: 3261613)
+44362.1 31155.8 21602.9 21134.2 1250.13 17734 10001 48484.4 10265.8 16682.5
+Col6 (type: type_id::FLOAT64, size: 3261613)
+0.02 0.07 0.09 0.04 0.09 0.07 0.05 0.03 0.06 0.02
+Col7 (type: type_id::INT64, size: 3261613)
+2281 2281 2281 2281 2281 2281 2281 2281 2282 2282
+Col8 (type: type_id::INT32, size: 3261613)
+4 4 4 4 4 4 4 4 3 3
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/partsupp.parquet
+[step 9: SourceTable] -> 8000000 rows x 3 cols
+Table with 3 columns and 8000000 rows:
+Col0 (type: type_id::INT64, size: 8000000)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 8000000)
+2 25002 50002 75002 3 25003 50003 75003 4 25004
+Col2 (type: type_id::FLOAT64, size: 8000000)
+771.64 993.49 337.09 357.84 378.49 915.27 438.37 306.39 920.92 498.13
+
+[step 10: EqJoin] -> 13046452 rows x 11 cols
+Table with 11 columns and 13046452 rows:
+Col0 (type: type_id::INT64, size: 13046452)
+3 3 3 3 3 3 3 3 3 3
+Col1 (type: type_id::INT64, size: 13046452)
+3 3 3 3 3 3 3 3 3 3
+Col2 (type: type_id::INT64, size: 13046452)
+23375938 24672035 40730016 26322593 37995653 23375938 24672035 40730016 26322593 37995653
+Col3 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 4 4 4 4 4
+Col4 (type: type_id::FLOAT64, size: 13046452)
+41 24 4 16 8 41 24 4 16 8
+Col5 (type: type_id::FLOAT64, size: 13046452)
+37023 21672 3612 14448 7224 37023 21672 3612 14448 7224
+Col6 (type: type_id::FLOAT64, size: 13046452)
+0.07 0.01 0.02 0 0.01 0.07 0.01 0.02 0 0.01
+Col7 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 4 4 4 4 4
+Col8 (type: type_id::INT32, size: 13046452)
+15 15 15 15 15 15 15 15 15 15
+Col9 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 25004 25004 25004 25004 25004
+Col10 (type: type_id::FLOAT64, size: 13046452)
+920.92 920.92 920.92 920.92 920.92 498.13 498.13 498.13 498.13 498.13
+
+[step 11: Reorder] -> 13046452 rows x 12 cols
+Table with 12 columns and 13046452 rows:
+Col0 (type: type_id::INT64, size: 13046452)
+3 3 3 3 3 3 3 3 3 3
+Col1 (type: type_id::INT64, size: 13046452)
+23375938 24672035 40730016 26322593 37995653 23375938 24672035 40730016 26322593 37995653
+Col2 (type: type_id::INT64, size: 13046452)
+3 3 3 3 3 3 3 3 3 3
+Col3 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 4 4 4 4 4
+Col4 (type: type_id::FLOAT64, size: 13046452)
+41 24 4 16 8 41 24 4 16 8
+Col5 (type: type_id::FLOAT64, size: 13046452)
+37023 21672 3612 14448 7224 37023 21672 3612 14448 7224
+Col6 (type: type_id::FLOAT64, size: 13046452)
+0.07 0.01 0.02 0 0.01 0.07 0.01 0.02 0 0.01
+Col7 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 4 4 4 4 4
+Col8 (type: type_id::INT32, size: 13046452)
+15 15 15 15 15 15 15 15 15 15
+Col9 (type: type_id::INT64, size: 13046452)
+3 3 3 3 3 3 3 3 3 3
+Col10 (type: type_id::INT64, size: 13046452)
+4 4 4 4 4 25004 25004 25004 25004 25004
+Col11 (type: type_id::FLOAT64, size: 13046452)
+920.92 920.92 920.92 920.92 920.92 498.13 498.13 498.13 498.13 498.13
+
+[step 12: Filter] -> 3261613 rows x 6 cols
+Table with 6 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+23375938 24672035 40730016 26322593 37995653 4076803 34959522 45807780 545153 38697894
+Col1 (type: type_id::FLOAT64, size: 3261613)
+41 24 4 16 8 24 45 25 15 11
+Col2 (type: type_id::FLOAT64, size: 3261613)
+37023 21672 3612 14448 7224 21696 40680 22600 13560 9944
+Col3 (type: type_id::FLOAT64, size: 3261613)
+0.07 0.01 0.02 0 0.01 0 0.05 0.08 0.1 0.05
+Col4 (type: type_id::INT32, size: 3261613)
+15 15 15 15 15 11 11 11 11 11
+Col5 (type: type_id::FLOAT64, size: 3261613)
+920.92 920.92 920.92 920.92 920.92 113.97 113.97 113.97 113.97 113.97
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 13: SourceTable] -> 15000000 rows x 2 cols
+Table with 2 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT32, size: 15000000)
+19960102 19961201 19931014 19951011 19940730 19920221 19960110 19950716 19931027 19980721
+
+[step 14: EqJoin] -> 3261613 rows x 7 cols
+Table with 7 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+7138 7141 7142 7073 7075 7076 7078 7079 7398 7331
+Col1 (type: type_id::FLOAT64, size: 3261613)
+2 32 48 14 26 19 33 40 3 17
+Col2 (type: type_id::FLOAT64, size: 3261613)
+2232.12 42985.3 54000.5 24410.4 32607.6 18143.5 38088.6 44484.4 4732.44 29419.9
+Col3 (type: type_id::FLOAT64, size: 3261613)
+0.08 0.03 0.05 0.01 0.02 0.06 0.01 0.07 0.05 0.09
+Col4 (type: type_id::INT32, size: 3261613)
+13 14 4 8 7 7 6 8 20 12
+Col5 (type: type_id::FLOAT64, size: 3261613)
+811.34 698.72 944.7 33.18 430.32 855 388.76 209.53 285.09 13.15
+Col6 (type: type_id::INT32, size: 3261613)
+19980509 19960719 19950722 19971004 19951011 19951212 19930412 19930209 19940602 19960722
+
+[step 15: Reorder] -> 3261613 rows x 8 cols
+Table with 8 columns and 3261613 rows:
+Col0 (type: type_id::INT64, size: 3261613)
+7138 7141 7142 7073 7075 7076 7078 7079 7398 7331
+Col1 (type: type_id::FLOAT64, size: 3261613)
+2 32 48 14 26 19 33 40 3 17
+Col2 (type: type_id::FLOAT64, size: 3261613)
+2232.12 42985.3 54000.5 24410.4 32607.6 18143.5 38088.6 44484.4 4732.44 29419.9
+Col3 (type: type_id::FLOAT64, size: 3261613)
+0.08 0.03 0.05 0.01 0.02 0.06 0.01 0.07 0.05 0.09
+Col4 (type: type_id::INT32, size: 3261613)
+13 14 4 8 7 7 6 8 20 12
+Col5 (type: type_id::FLOAT64, size: 3261613)
+811.34 698.72 944.7 33.18 430.32 855 388.76 209.53 285.09 13.15
+Col6 (type: type_id::INT64, size: 3261613)
+7138 7141 7142 7073 7075 7076 7078 7079 7398 7331
+Col7 (type: type_id::INT32, size: 3261613)
+19980509 19960719 19950722 19971004 19951011 19951212 19930412 19930209 19940602 19960722
+
+[step 16: EqJoin] -> 3261613 rows x 9 cols
+Table with 9 columns and 3261613 rows:
+Col0 (type: type_id::INT32, size: 3261613)
+4 2 1 4 16 3 18 21 15 9
+Col1 (type: type_id::STRING, size: 3261613)
+"EGYPT" "BRAZIL" "ARGENTINA" "EGYPT" "MOZAMBIQUE" "CANADA" "CHINA" "VIETNAM" "MOROCCO" "INDONESIA" 
+Col2 (type: type_id::INT64, size: 3261613)
+67236 67239 67264 58946 58949 57379 51393 51396 23235 13987
+Col3 (type: type_id::FLOAT64, size: 3261613)
+42 9 37 26 14 14 10 48 25 25
+Col4 (type: type_id::FLOAT64, size: 3261613)
+51375.2 15764.1 53701.8 38802.9 16717.7 21020.7 13724.1 70820.2 40390 44920
+Col5 (type: type_id::FLOAT64, size: 3261613)
+0.07 0.06 0.02 0.09 0.02 0.1 0.02 0.09 0.03 0.07
+Col6 (type: type_id::FLOAT64, size: 3261613)
+316.79 53.84 417.03 962.93 347.23 77.84 223.43 425.45 36.33 642.66
+Col7 (type: type_id::INT64, size: 3261613)
+67236 67239 67264 58946 58949 57379 51393 51396 23235 13987
+Col8 (type: type_id::INT32, size: 3261613)
+19930618 19921101 19930421 19980112 19921217 19940606 19970311 19971216 19950706 19980414
+
+[step 17: Reorder] -> 3261613 rows x 10 cols
+Table with 10 columns and 3261613 rows:
+Col0 (type: type_id::INT32, size: 3261613)
+4 2 1 4 16 3 18 21 15 9
+Col1 (type: type_id::STRING, size: 3261613)
+"EGYPT" "BRAZIL" "ARGENTINA" "EGYPT" "MOZAMBIQUE" "CANADA" "CHINA" "VIETNAM" "MOROCCO" "INDONESIA" 
+Col2 (type: type_id::INT64, size: 3261613)
+67236 67239 67264 58946 58949 57379 51393 51396 23235 13987
+Col3 (type: type_id::FLOAT64, size: 3261613)
+42 9 37 26 14 14 10 48 25 25
+Col4 (type: type_id::FLOAT64, size: 3261613)
+51375.2 15764.1 53701.8 38802.9 16717.7 21020.7 13724.1 70820.2 40390 44920
+Col5 (type: type_id::FLOAT64, size: 3261613)
+0.07 0.06 0.02 0.09 0.02 0.1 0.02 0.09 0.03 0.07
+Col6 (type: type_id::INT32, size: 3261613)
+4 2 1 4 16 3 18 21 15 9
+Col7 (type: type_id::FLOAT64, size: 3261613)
+316.79 53.84 417.03 962.93 347.23 77.84 223.43 425.45 36.33 642.66
+Col8 (type: type_id::INT64, size: 3261613)
+67236 67239 67264 58946 58949 57379 51393 51396 23235 13987
+Col9 (type: type_id::INT32, size: 3261613)
+19930618 19921101 19930421 19980112 19921217 19940606 19970311 19971216 19950706 19980414
+
+[step 18: Project] -> 3261613 rows x 3 cols
+Table with 3 columns and 3261613 rows:
+Col0 (type: type_id::STRING, size: 3261613)
+"EGYPT" "BRAZIL" "ARGENTINA" "EGYPT" "MOZAMBIQUE" "CANADA" "CHINA" "VIETNAM" "MOROCCO" "INDONESIA" 
+Col1 (type: type_id::INT32, size: 3261613)
+1993 1992 1993 1998 1992 1994 1997 1997 1995 1998
+Col2 (type: type_id::FLOAT64, size: 3261613)
+34473.8 14333.7 37197.7 10274.5 11522.1 17828.9 11215.3 44024.7 38270 25709.1
+
+[step 19: Reorder] -> 3261613 rows x 3 cols
+Table with 3 columns and 3261613 rows:
+Col0 (type: type_id::STRING, size: 3261613)
+"EGYPT" "BRAZIL" "ARGENTINA" "EGYPT" "MOZAMBIQUE" "CANADA" "CHINA" "VIETNAM" "MOROCCO" "INDONESIA" 
+Col1 (type: type_id::INT32, size: 3261613)
+1993 1992 1993 1998 1992 1994 1997 1997 1995 1998
+Col2 (type: type_id::FLOAT64, size: 3261613)
+34473.8 14333.7 37197.7 10274.5 11522.1 17828.9 11215.3 44024.7 38270 25709.1
+
+[GROUPBY DEBUG] rows=3261613 groups_upper_bound=9223372036854775807 algo=1
+[step 20: GroupBy] -> 175 rows x 3 cols
+Table with 3 columns and 175 rows:
+Col0 (type: type_id::STRING, size: 175)
+"SAUDI ARABIA" "MOROCCO" "UNITED KINGDOM" "KENYA" "RUSSIA" "FRANCE" "SAUDI ARABIA" "MOZAMBIQUE" "ARGENTINA" "INDONESIA" 
+Col1 (type: type_id::INT32, size: 175)
+1997 1997 1997 1997 1994 1998 1992 1993 1992 1995
+Col2 (type: type_id::FLOAT64, size: 175)
+4.67654e+08 4.65001e+08 4.63576e+08 4.77087e+08 4.59885e+08 2.66844e+08 4.79819e+08 4.56799e+08 4.7117e+08 4.55828e+08
+
+[step 21: Sort] -> 175 rows x 3 cols
+Table with 3 columns and 175 rows:
+Col0 (type: type_id::STRING, size: 175)
+"ALGERIA" "ALGERIA" "ALGERIA" "ALGERIA" "ALGERIA" "ALGERIA" "ALGERIA" "ARGENTINA" "ARGENTINA" "ARGENTINA" 
+Col1 (type: type_id::INT32, size: 175)
+1998 1997 1996 1995 1994 1993 1992 1998 1997 1996
+Col2 (type: type_id::FLOAT64, size: 175)
+2.71504e+08 4.57036e+08 4.57125e+08 4.60972e+08 4.56445e+08 4.5645e+08 4.59548e+08 2.77793e+08 4.67556e+08 4.73886e+08
+
+Executed in 6872 ms.
+Result: 175 rows × 3 columns (showing 20)
+ALGERIA | 1998 | 271504046.550800
+ALGERIA | 1997 | 457035986.955500
+ALGERIA | 1996 | 457125199.041400
+ALGERIA | 1995 | 460972497.049100
+ALGERIA | 1994 | 456444975.712700
+ALGERIA | 1993 | 456449926.413800
+ALGERIA | 1992 | 459548354.768000
+ARGENTINA | 1998 | 277792984.914100
+ARGENTINA | 1997 | 467555914.559400
+ARGENTINA | 1996 | 473886192.745300
+ARGENTINA | 1995 | 468457259.958400
+ARGENTINA | 1994 | 467071963.604100
+ARGENTINA | 1993 | 469523991.918800
+ARGENTINA | 1992 | 471169675.311000
+BRAZIL | 1998 | 278153002.022100
+BRAZIL | 1997 | 460597231.952200
+BRAZIL | 1996 | 465471604.294900
+BRAZIL | 1995 | 466391978.064500
+BRAZIL | 1994 | 466833690.977500
+BRAZIL | 1993 | 458908773.797400
+VERIFY: comparing against /work/data/tpch//sf10/golden/q09.parquet
+VERIFY: OK

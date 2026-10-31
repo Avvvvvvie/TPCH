@@ -1,0 +1,552 @@
+== TPC-H Q2 (SF=10) via IR pipeline ==
+IR built: 8 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 28 steps, 5 sources.
+
+-- IR (pre-rules) --
+Limit(n=100)
+  Sort[s_acctbal DESC, n_name ASC, s_name ASC, p_partkey ASC]
+    Project(s_acctbal = s_acctbal, s_name = s_name, n_name = n_name, p_partkey = p_partkey, p_mfgr = p_mfgr, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+      InnerJoin(on=((p_partkey == p_partkey) && (min_supplycost == ps_supplycost)))
+        Project(agg_partkey = p_partkey, min_supplycost = min_supplycost)
+          Aggregate(keys=[p_partkey]; aggs=[min(ps_supplycost) AS min_supplycost])
+            Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+              InnerJoin(on=(n_nationkey == s_nationkey))
+                Project(n_nationkey = n_nationkey, n_name = n_name)
+                  InnerJoin(on=(r_regionkey == n_regionkey))
+                    Filter(str_eq(r_name, "EUROPE"))
+                      Scan(region [r_regionkey, r_name])
+                    Scan(nation [n_nationkey, n_name, n_regionkey])
+                Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+                  InnerJoin(on=(s_suppkey == ps_suppkey))
+                    Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
+                    InnerJoin(on=(ps_partkey == p_partkey))
+                      Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+                      Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                        Filter(endswith(p_type, "BRASS"))
+                          Filter((p_size == 15))
+                            Scan(part [p_partkey, p_mfgr, p_type, p_size])
+        Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+          InnerJoin(on=(n_nationkey == s_nationkey))
+            Project(n_nationkey = n_nationkey, n_name = n_name)
+              InnerJoin(on=(r_regionkey == n_regionkey))
+                Filter(str_eq(r_name, "EUROPE"))
+                  Scan(region [r_regionkey, r_name])
+                Scan(nation [n_nationkey, n_name, n_regionkey])
+            Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+              InnerJoin(on=(s_suppkey == ps_suppkey))
+                Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
+                InnerJoin(on=(ps_partkey == p_partkey))
+                  Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+                  Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                    Filter(endswith(p_type, "BRASS"))
+                      Filter((p_size == 15))
+                        Scan(part [p_partkey, p_mfgr, p_type, p_size])
+
+
+-- IR (post-rules) --
+Limit(n=100)
+  Sort[s_acctbal DESC, n_name ASC, s_name ASC, p_partkey ASC]
+    Project(s_acctbal = s_acctbal, s_name = s_name, n_name = n_name, p_partkey = p_partkey, p_mfgr = p_mfgr, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+      Filter((min_supplycost == ps_supplycost))
+        InnerJoin(on=(p_partkey == p_partkey))
+          Project(agg_partkey = p_partkey, min_supplycost = min_supplycost)
+            Aggregate(keys=[p_partkey]; aggs=[min(ps_supplycost) AS min_supplycost])
+              Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+                InnerJoin(on=(n_nationkey == s_nationkey))
+                  Project(n_nationkey = n_nationkey, n_name = n_name)
+                    InnerJoin(on=(r_regionkey == n_regionkey))
+                      Filter(str_eq(r_name, "EUROPE"))
+                        Scan(region [r_regionkey, r_name])
+                      Scan(nation [n_nationkey, n_name, n_regionkey])
+                  Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+                    InnerJoin(on=(s_suppkey == ps_suppkey))
+                      Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
+                      InnerJoin(on=(ps_partkey == p_partkey))
+                        Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+                        Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                          Filter(endswith(p_type, "BRASS"))
+                            Filter((p_size == 15))
+                              Scan(part [p_partkey, p_mfgr, p_type, p_size])
+          Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+            InnerJoin(on=(n_nationkey == s_nationkey))
+              Project(n_nationkey = n_nationkey, n_name = n_name)
+                InnerJoin(on=(r_regionkey == n_regionkey))
+                  Filter(str_eq(r_name, "EUROPE"))
+                    Scan(region [r_regionkey, r_name])
+                  Scan(nation [n_nationkey, n_name, n_regionkey])
+              Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+                InnerJoin(on=(s_suppkey == ps_suppkey))
+                  Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
+                  InnerJoin(on=(ps_partkey == p_partkey))
+                    Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
+                    Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                      Filter(endswith(p_type, "BRASS"))
+                        Filter((p_size == 15))
+                          Scan(part [p_partkey, p_mfgr, p_type, p_size])
+
+
+-- ExecPlan --
+// required sources: region nation supplier partsupp part
+v0 = SourceTable("region" cols=[r_regionkey, r_name])
+v1 = Filter(v0; predicate=<Predicate>, out=[0])
+v2 = SourceTable("nation" cols=[n_nationkey, n_name, n_regionkey])
+v3 = EqJoin(v1, v2; lkeys=[0], rkeys=[2])
+v4 = Reorder(v3; ordinals=[0, 1, 2, 0])
+v5 = Project(v4; #items=2 (tree=2, pred=0, substr=0))
+v6 = SourceTable("supplier" cols=[s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
+v7 = SourceTable("partsupp" cols=[ps_partkey, ps_suppkey, ps_supplycost])
+v8 = SourceTable("part" cols=[p_partkey, p_mfgr, p_type, p_size])
+v9 = Filter(v8; predicate=<Predicate>, out=[0, 1, 2])
+v10 = Filter(v9; predicate=<Predicate>, out=[0, 1])
+v11 = Project(v10; #items=2 (tree=2, pred=0, substr=0))
+v12 = EqJoin(v7, v11; lkeys=[0], rkeys=[0])
+v13 = Reorder(v12; ordinals=[0, 1, 2, 0, 3])
+v14 = EqJoin(v6, v13; lkeys=[0], rkeys=[1])
+v15 = Reorder(v14; ordinals=[0, 1, 2, 3, 4, 5, 6, 7, 0, 8, 9, 10])
+v16 = Project(v15; #items=9 (tree=9, pred=0, substr=0))
+v17 = EqJoin(v5, v16; lkeys=[0], rkeys=[3])
+v18 = Reorder(v17; ordinals=[0, 1, 2, 3, 4, 0, 5, 6, 7, 8, 9])
+v19 = Project(v18; #items=9 (tree=9, pred=0, substr=0))
+v20 = Reorder(v19; ordinals=[0, 1])
+v21 = GroupBy(v20; n_keys=1, aggs=[min(#0)])
+v22 = Project(v21; #items=2 (tree=2, pred=0, substr=0))
+v23 = EqJoin(v22, v19; lkeys=[0], rkeys=[0])
+v24 = Reorder(v23; ordinals=[0, 1, 0, 2, 3, 4, 5, 6, 7, 8, 9])
+v25 = Filter(v24; predicate=<Predicate>, out=[0, 2, 4, 5, 6, 7, 8, 9, 10])
+v26 = Project(v25; #items=8 (tree=8, pred=0, substr=0))
+v27 = TopK(v26; k=100, keys=[#0 DESC, #2 ASC, #1 ASC, #3 ASC])
+return v27
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/region.parquet
+[step 0: SourceTable] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+0 1 2 3 4
+Col1 (type: type_id::STRING, size: 5)
+"AFRICA" "AMERICA" "ASIA" "EUROPE" "MIDDLE EAST" 
+
+[step 1: Filter] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::INT32, size: 1)
+3
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/nation.parquet
+[step 2: SourceTable] -> 25 rows x 3 cols
+Table with 3 columns and 25 rows:
+Col0 (type: type_id::INT32, size: 25)
+0 1 2 3 4 5 6 7 8 9
+Col1 (type: type_id::STRING, size: 25)
+"ALGERIA" "ARGENTINA" "BRAZIL" "CANADA" "EGYPT" "ETHIOPIA" "FRANCE" "GERMANY" "INDIA" "INDONESIA" 
+Col2 (type: type_id::INT32, size: 25)
+0 1 1 1 4 0 3 3 2 2
+
+[step 3: EqJoin] -> 5 rows x 3 cols
+Table with 3 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+3 3 3 3 3
+Col1 (type: type_id::INT32, size: 5)
+6 7 19 22 23
+Col2 (type: type_id::STRING, size: 5)
+"FRANCE" "GERMANY" "ROMANIA" "RUSSIA" "UNITED KINGDOM" 
+
+[step 4: Reorder] -> 5 rows x 4 cols
+Table with 4 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+3 3 3 3 3
+Col1 (type: type_id::INT32, size: 5)
+6 7 19 22 23
+Col2 (type: type_id::STRING, size: 5)
+"FRANCE" "GERMANY" "ROMANIA" "RUSSIA" "UNITED KINGDOM" 
+Col3 (type: type_id::INT32, size: 5)
+3 3 3 3 3
+
+[step 5: Project] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::INT32, size: 5)
+6 7 19 22 23
+Col1 (type: type_id::STRING, size: 5)
+"FRANCE" "GERMANY" "ROMANIA" "RUSSIA" "UNITED KINGDOM" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/supplier.parquet
+[step 6: SourceTable] -> 100000 rows x 7 cols
+Table with 7 columns and 100000 rows:
+Col0 (type: type_id::INT64, size: 100000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 100000)
+"Supplier#000000001" "Supplier#000000002" "Supplier#000000003" "Supplier#000000004" "Supplier#000000005" "Supplier#000000006" "Supplier#000000007" "Supplier#000000008" "Supplier#000000009" "Supplier#000000010" 
+Col2 (type: type_id::STRING, size: 100000)
+"sdrGnXCDRcfriBvY0KL,ipCanOTyK t NN1" "TRMhVHz3XiFuhapxucPo1" "BZ0kXcHUcHjx62L7CjZSql7gbWQ6RPn5X" "qGTQJXogS83a7MBnEweGHKevK" "lONEYAh9sFWAF75tO" "zaux5FTzToEg" " 0W7IPdkpWycUbQ9Adp6B" "S8AWPqjYlanEQlcDO2WV 97uCVtxCk" ",gJ6K2MKveYxQTN 2EMG3pzg" "9QtKQKXK24fBTYIsb2" 
+Col3 (type: type_id::INT32, size: 100000)
+17 5 1 15 11 14 23 17 10 24
+Col4 (type: type_id::STRING, size: 100000)
+"27-918-335-1736" "15-679-861-2259" "11-383-516-1199" "25-843-787-7479" "21-151-690-3663" "24-696-997-4969" "33-990-965-2201" "27-498-742-3860" "20-403-398-8662" "34-852-489-8585" 
+Col5 (type: type_id::FLOAT64, size: 100000)
+5755.94 4032.68 4192.4 4641.08 -283.84 1365.79 6820.35 7627.85 5302.37 3891.91
+Col6 (type: type_id::STRING, size: 100000)
+" instructions. slyly unusual" " the pending packages. furiously expres" "ong the fluffily idle packages: bold foxes mold silent package" "al braids affix through the regular" "accounts. instructions ha" " sleep fluffily against the blithely special dugouts. furiously express th" "ke across the slyly ironic packages. carefully special pinto beans wake blithely. even deposits los" "iously about the bold packages. " "asymptotes cajole along the furiously bold deposits. iron" "ronic pinto beans. slyly even i" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/partsupp.parquet
+[step 7: SourceTable] -> 8000000 rows x 3 cols
+Table with 3 columns and 8000000 rows:
+Col0 (type: type_id::INT64, size: 8000000)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 8000000)
+2 25002 50002 75002 3 25003 50003 75003 4 25004
+Col2 (type: type_id::FLOAT64, size: 8000000)
+771.64 993.49 337.09 357.84 378.49 915.27 438.37 306.39 920.92 498.13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/part.parquet
+[step 8: SourceTable] -> 2000000 rows x 4 cols
+Table with 4 columns and 2000000 rows:
+Col0 (type: type_id::INT64, size: 2000000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 2000000)
+"Manufacturer#1" "Manufacturer#1" "Manufacturer#4" "Manufacturer#3" "Manufacturer#3" "Manufacturer#2" "Manufacturer#1" "Manufacturer#4" "Manufacturer#4" "Manufacturer#5" 
+Col2 (type: type_id::STRING, size: 2000000)
+"PROMO BURNISHED COPPER" "LARGE BRUSHED BRASS" "STANDARD POLISHED BRASS" "SMALL PLATED BRASS" "STANDARD POLISHED TIN" "PROMO PLATED STEEL" "SMALL PLATED COPPER" "PROMO BURNISHED TIN" "SMALL BURNISHED STEEL" "LARGE BURNISHED STEEL" 
+Col3 (type: type_id::INT32, size: 2000000)
+7 1 21 14 15 4 45 41 12 44
+
+[step 9: Filter] -> 39575 rows x 3 cols
+Table with 3 columns and 39575 rows:
+Col0 (type: type_id::INT64, size: 39575)
+5 186 249 323 331 420 486 522 678 686
+Col1 (type: type_id::STRING, size: 39575)
+"Manufacturer#3" "Manufacturer#2" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#2" "Manufacturer#4" "Manufacturer#3" "Manufacturer#4" "Manufacturer#5" 
+Col2 (type: type_id::STRING, size: 39575)
+"STANDARD POLISHED TIN" "ECONOMY BRUSHED TIN" "ECONOMY BURNISHED BRASS" "MEDIUM BRUSHED BRASS" "SMALL BURNISHED COPPER" "PROMO BRUSHED TIN" "SMALL PLATED COPPER" "STANDARD BRUSHED NICKEL" "PROMO BRUSHED TIN" "STANDARD BRUSHED COPPER" 
+
+[step 10: Filter] -> 7854 rows x 2 cols
+Table with 2 columns and 7854 rows:
+Col0 (type: type_id::INT64, size: 7854)
+249 323 1015 1634 2037 2156 3080 3563 3822 3873
+Col1 (type: type_id::STRING, size: 7854)
+"Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#1" "Manufacturer#5" "Manufacturer#2" "Manufacturer#1" "Manufacturer#5" "Manufacturer#5" 
+
+[step 11: Project] -> 7854 rows x 2 cols
+Table with 2 columns and 7854 rows:
+Col0 (type: type_id::INT64, size: 7854)
+249 323 1015 1634 2037 2156 3080 3563 3822 3873
+Col1 (type: type_id::STRING, size: 7854)
+"Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#1" "Manufacturer#5" "Manufacturer#2" "Manufacturer#1" "Manufacturer#5" "Manufacturer#5" 
+
+[step 12: EqJoin] -> 31416 rows x 4 cols
+Table with 4 columns and 31416 rows:
+Col0 (type: type_id::INT64, size: 31416)
+610951 610951 610951 610951 611000 611000 611000 611000 611065 611065
+Col1 (type: type_id::INT64, size: 31416)
+10952 60964 35958 85970 11001 61013 36007 86019 11066 61078
+Col2 (type: type_id::FLOAT64, size: 31416)
+488.45 866.73 789.64 829.15 502.84 832.68 830.23 949.22 987.35 532.28
+Col3 (type: type_id::STRING, size: 31416)
+"Manufacturer#2" "Manufacturer#2" "Manufacturer#2" "Manufacturer#2" "Manufacturer#3" "Manufacturer#3" "Manufacturer#3" "Manufacturer#3" "Manufacturer#1" "Manufacturer#1" 
+
+[step 13: Reorder] -> 31416 rows x 5 cols
+Table with 5 columns and 31416 rows:
+Col0 (type: type_id::INT64, size: 31416)
+610951 610951 610951 610951 611000 611000 611000 611000 611065 611065
+Col1 (type: type_id::INT64, size: 31416)
+10952 60964 35958 85970 11001 61013 36007 86019 11066 61078
+Col2 (type: type_id::FLOAT64, size: 31416)
+488.45 866.73 789.64 829.15 502.84 832.68 830.23 949.22 987.35 532.28
+Col3 (type: type_id::INT64, size: 31416)
+610951 610951 610951 610951 611000 611000 611000 611000 611065 611065
+Col4 (type: type_id::STRING, size: 31416)
+"Manufacturer#2" "Manufacturer#2" "Manufacturer#2" "Manufacturer#2" "Manufacturer#3" "Manufacturer#3" "Manufacturer#3" "Manufacturer#3" "Manufacturer#1" "Manufacturer#1" 
+
+[step 14: EqJoin] -> 31416 rows x 11 cols
+Table with 11 columns and 31416 rows:
+Col0 (type: type_id::INT64, size: 31416)
+12197 62205 37201 87209 12338 62346 37342 87350 89043 39045
+Col1 (type: type_id::STRING, size: 31416)
+"Supplier#000012197" "Supplier#000062205" "Supplier#000037201" "Supplier#000087209" "Supplier#000012338" "Supplier#000062346" "Supplier#000037342" "Supplier#000087350" "Supplier#000089043" "Supplier#000039045" 
+Col2 (type: type_id::STRING, size: 31416)
+"Zzyf,yLlY995XsbipHAsC0 IJU vb,FUkhzYcN7" "0RG3Y VQJiGID" "zX1w5Cm3vujqC" "9ixwZJU 4ed,ORjFn" "1,sVCvMEhCMn5McmyBUITw8SMrTNs5D5,Qc1EwaQ" "80DMaieW,IlS pJie1wZwshx" "VPdDQGs47kt96xcFWul7Ex4JqOcvBTdprb3sG" "OAEjC188fpHQOu" "L8NvKHmpC3" "GzzX1cQHt5PL5DVhzp1RcPYsEmglIQUNVDjl2dD" 
+Col3 (type: type_id::INT32, size: 31416)
+10 10 23 24 0 2 8 4 12 1
+Col4 (type: type_id::STRING, size: 31416)
+"20-765-822-4633" "20-902-903-8745" "33-483-369-1425" "34-386-869-3923" "10-947-420-9056" "12-415-580-9586" "18-872-149-7691" "14-765-248-7001" "22-417-694-2900" "11-406-402-7919" 
+Col5 (type: type_id::FLOAT64, size: 31416)
+7748.18 8836.29 349.64 6976.51 2862.61 6339.38 9192.17 7380.23 3556.1 5739.24
+Col6 (type: type_id::STRING, size: 31416)
+"kly final theodolites sleep fluffily final foxes. even, special packages ha" "egular packages. slyly ironic requests haggle. carefully bold acc" ". dogged, special pinto beans haggle along the slyly special Tiresias. slyly even platelets wake " "s haggle blithely! express instructions use carefully af" "le slyly. regular deposits haggle. ironic, pending accoun" ". blithely final instructions are. carefully pending deposits could cajole alongside" "ep beyond the blithely express ideas. regular requests along the bold ideas sleep after the blith" " pinto beans mold furiously slyly ironic accounts. fi" " deposits. special requests use blithely according to the furiously silent packages. careful" "escapades. blithely final dependencies cajole blithely quiet requests. quickly bold Tir" 
+Col7 (type: type_id::INT64, size: 31416)
+412196 412196 412196 412196 412337 412337 412337 412337 189042 189042
+Col8 (type: type_id::FLOAT64, size: 31416)
+243.81 180.09 114.42 11.55 265.04 384.92 234.44 947.57 466.46 928.73
+Col9 (type: type_id::INT64, size: 31416)
+412196 412196 412196 412196 412337 412337 412337 412337 189042 189042
+Col10 (type: type_id::STRING, size: 31416)
+"Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#1" "Manufacturer#1" 
+
+[step 15: Reorder] -> 31416 rows x 12 cols
+Table with 12 columns and 31416 rows:
+Col0 (type: type_id::INT64, size: 31416)
+12197 62205 37201 87209 12338 62346 37342 87350 89043 39045
+Col1 (type: type_id::STRING, size: 31416)
+"Supplier#000012197" "Supplier#000062205" "Supplier#000037201" "Supplier#000087209" "Supplier#000012338" "Supplier#000062346" "Supplier#000037342" "Supplier#000087350" "Supplier#000089043" "Supplier#000039045" 
+Col2 (type: type_id::STRING, size: 31416)
+"Zzyf,yLlY995XsbipHAsC0 IJU vb,FUkhzYcN7" "0RG3Y VQJiGID" "zX1w5Cm3vujqC" "9ixwZJU 4ed,ORjFn" "1,sVCvMEhCMn5McmyBUITw8SMrTNs5D5,Qc1EwaQ" "80DMaieW,IlS pJie1wZwshx" "VPdDQGs47kt96xcFWul7Ex4JqOcvBTdprb3sG" "OAEjC188fpHQOu" "L8NvKHmpC3" "GzzX1cQHt5PL5DVhzp1RcPYsEmglIQUNVDjl2dD" 
+Col3 (type: type_id::INT32, size: 31416)
+10 10 23 24 0 2 8 4 12 1
+Col4 (type: type_id::STRING, size: 31416)
+"20-765-822-4633" "20-902-903-8745" "33-483-369-1425" "34-386-869-3923" "10-947-420-9056" "12-415-580-9586" "18-872-149-7691" "14-765-248-7001" "22-417-694-2900" "11-406-402-7919" 
+Col5 (type: type_id::FLOAT64, size: 31416)
+7748.18 8836.29 349.64 6976.51 2862.61 6339.38 9192.17 7380.23 3556.1 5739.24
+Col6 (type: type_id::STRING, size: 31416)
+"kly final theodolites sleep fluffily final foxes. even, special packages ha" "egular packages. slyly ironic requests haggle. carefully bold acc" ". dogged, special pinto beans haggle along the slyly special Tiresias. slyly even platelets wake " "s haggle blithely! express instructions use carefully af" "le slyly. regular deposits haggle. ironic, pending accoun" ". blithely final instructions are. carefully pending deposits could cajole alongside" "ep beyond the blithely express ideas. regular requests along the bold ideas sleep after the blith" " pinto beans mold furiously slyly ironic accounts. fi" " deposits. special requests use blithely according to the furiously silent packages. careful" "escapades. blithely final dependencies cajole blithely quiet requests. quickly bold Tir" 
+Col7 (type: type_id::INT64, size: 31416)
+412196 412196 412196 412196 412337 412337 412337 412337 189042 189042
+Col8 (type: type_id::INT64, size: 31416)
+12197 62205 37201 87209 12338 62346 37342 87350 89043 39045
+Col9 (type: type_id::FLOAT64, size: 31416)
+243.81 180.09 114.42 11.55 265.04 384.92 234.44 947.57 466.46 928.73
+Col10 (type: type_id::INT64, size: 31416)
+412196 412196 412196 412196 412337 412337 412337 412337 189042 189042
+Col11 (type: type_id::STRING, size: 31416)
+"Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#1" "Manufacturer#1" 
+
+[step 16: Project] -> 31416 rows x 9 cols
+Table with 9 columns and 31416 rows:
+Col0 (type: type_id::INT64, size: 31416)
+412196 412196 412196 412196 412337 412337 412337 412337 189042 189042
+Col1 (type: type_id::FLOAT64, size: 31416)
+243.81 180.09 114.42 11.55 265.04 384.92 234.44 947.57 466.46 928.73
+Col2 (type: type_id::STRING, size: 31416)
+"Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#5" "Manufacturer#1" "Manufacturer#1" 
+Col3 (type: type_id::INT32, size: 31416)
+10 10 23 24 0 2 8 4 12 1
+Col4 (type: type_id::FLOAT64, size: 31416)
+7748.18 8836.29 349.64 6976.51 2862.61 6339.38 9192.17 7380.23 3556.1 5739.24
+Col5 (type: type_id::STRING, size: 31416)
+"Supplier#000012197" "Supplier#000062205" "Supplier#000037201" "Supplier#000087209" "Supplier#000012338" "Supplier#000062346" "Supplier#000037342" "Supplier#000087350" "Supplier#000089043" "Supplier#000039045" 
+Col6 (type: type_id::STRING, size: 31416)
+"Zzyf,yLlY995XsbipHAsC0 IJU vb,FUkhzYcN7" "0RG3Y VQJiGID" "zX1w5Cm3vujqC" "9ixwZJU 4ed,ORjFn" "1,sVCvMEhCMn5McmyBUITw8SMrTNs5D5,Qc1EwaQ" "80DMaieW,IlS pJie1wZwshx" "VPdDQGs47kt96xcFWul7Ex4JqOcvBTdprb3sG" "OAEjC188fpHQOu" "L8NvKHmpC3" "GzzX1cQHt5PL5DVhzp1RcPYsEmglIQUNVDjl2dD" 
+Col7 (type: type_id::STRING, size: 31416)
+"20-765-822-4633" "20-902-903-8745" "33-483-369-1425" "34-386-869-3923" "10-947-420-9056" "12-415-580-9586" "18-872-149-7691" "14-765-248-7001" "22-417-694-2900" "11-406-402-7919" 
+Col8 (type: type_id::STRING, size: 31416)
+"kly final theodolites sleep fluffily final foxes. even, special packages ha" "egular packages. slyly ironic requests haggle. carefully bold acc" ". dogged, special pinto beans haggle along the slyly special Tiresias. slyly even platelets wake " "s haggle blithely! express instructions use carefully af" "le slyly. regular deposits haggle. ironic, pending accoun" ". blithely final instructions are. carefully pending deposits could cajole alongside" "ep beyond the blithely express ideas. regular requests along the bold ideas sleep after the blith" " pinto beans mold furiously slyly ironic accounts. fi" " deposits. special requests use blithely according to the furiously silent packages. careful" "escapades. blithely final dependencies cajole blithely quiet requests. quickly bold Tir" 
+
+[step 17: EqJoin] -> 6351 rows x 10 cols
+Table with 10 columns and 6351 rows:
+Col0 (type: type_id::INT32, size: 6351)
+23 7 6 19 7 19 7 22 22 6
+Col1 (type: type_id::STRING, size: 6351)
+"UNITED KINGDOM" "GERMANY" "FRANCE" "ROMANIA" "GERMANY" "ROMANIA" "GERMANY" "RUSSIA" "RUSSIA" "FRANCE" 
+Col2 (type: type_id::INT64, size: 6351)
+611000 1289979 1289979 310011 1083383 191065 191065 615921 616079 1138135
+Col3 (type: type_id::FLOAT64, size: 6351)
+830.23 679.32 98.07 653.71 155.49 992.47 933.28 676.57 782.23 104.03
+Col4 (type: type_id::STRING, size: 6351)
+"Manufacturer#3" "Manufacturer#5" "Manufacturer#5" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#3" "Manufacturer#2" 
+Col5 (type: type_id::FLOAT64, size: 6351)
+5275.65 3424.86 1544.55 5022.83 9323.88 5789.59 3179.91 3961.68 287.7 1204.38
+Col6 (type: type_id::STRING, size: 6351)
+"Supplier#000036007" "Supplier#000089980" "Supplier#000065016" "Supplier#000035015" "Supplier#000033404" "Supplier#000016067" "Supplier#000066069" "Supplier#000090940" "Supplier#000041086" "Supplier#000013169" 
+Col7 (type: type_id::STRING, size: 6351)
+"3exkwsWNvHmhoShngQ6BcmsbcB591ho uU2 wy" "RgZQ5c WMwShvhoCSdIoLo9laKY4kSrROz" "00 sl,GXM,zO6Tldpb31oF9" "z8upHJYpTkSA" "5BlBlnn3M6UBGFW9YOx58l,iN4f6Q" "l8onF1tR1x" "2nYYYFgKXpQV,utNLNzStcFCob6IUm, NM" "ahJLGTNs68KwPOlH63zrl5" "dBUHJK,w9h" "o7kExYSvxDj7wUPqZvwDXLZHJ" 
+Col8 (type: type_id::STRING, size: 6351)
+"33-535-881-6914" "17-753-976-4230" "16-941-894-1509" "29-911-979-1525" "17-972-352-1543" "29-220-935-5303" "17-569-720-7737" "32-793-181-2962" "32-451-290-5138" "16-361-998-4919" 
+Col9 (type: type_id::STRING, size: 6351)
+"etimes even requests cajole slyly express instructions. orbits sleep blithely. furiously ironic " "furiously except the slyly unusual packages. blithely express ideas are" "l requests. blithely ironic instructions haggle. even accounts boost blithely fluffily iro" "scapades boost-- theodolites whithout the furio" "its sleep furiously express, ironic instructions: carefully even courts are " "g packages hang carefully at the quickly special dependencies. foxes boost according to the fluffily" "kly after the furiously final accounts. slyly ironic requests cajole ca" " fluffily final requests integrate above the idle fox" "t, express ideas. quickly even packages at the regular, even r" "ic instructions. accounts sleep slyly. slyly unusual theodolites" 
+
+[step 18: Reorder] -> 6351 rows x 11 cols
+Table with 11 columns and 6351 rows:
+Col0 (type: type_id::INT32, size: 6351)
+23 7 6 19 7 19 7 22 22 6
+Col1 (type: type_id::STRING, size: 6351)
+"UNITED KINGDOM" "GERMANY" "FRANCE" "ROMANIA" "GERMANY" "ROMANIA" "GERMANY" "RUSSIA" "RUSSIA" "FRANCE" 
+Col2 (type: type_id::INT64, size: 6351)
+611000 1289979 1289979 310011 1083383 191065 191065 615921 616079 1138135
+Col3 (type: type_id::FLOAT64, size: 6351)
+830.23 679.32 98.07 653.71 155.49 992.47 933.28 676.57 782.23 104.03
+Col4 (type: type_id::STRING, size: 6351)
+"Manufacturer#3" "Manufacturer#5" "Manufacturer#5" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#3" "Manufacturer#2" 
+Col5 (type: type_id::INT32, size: 6351)
+23 7 6 19 7 19 7 22 22 6
+Col6 (type: type_id::FLOAT64, size: 6351)
+5275.65 3424.86 1544.55 5022.83 9323.88 5789.59 3179.91 3961.68 287.7 1204.38
+Col7 (type: type_id::STRING, size: 6351)
+"Supplier#000036007" "Supplier#000089980" "Supplier#000065016" "Supplier#000035015" "Supplier#000033404" "Supplier#000016067" "Supplier#000066069" "Supplier#000090940" "Supplier#000041086" "Supplier#000013169" 
+Col8 (type: type_id::STRING, size: 6351)
+"3exkwsWNvHmhoShngQ6BcmsbcB591ho uU2 wy" "RgZQ5c WMwShvhoCSdIoLo9laKY4kSrROz" "00 sl,GXM,zO6Tldpb31oF9" "z8upHJYpTkSA" "5BlBlnn3M6UBGFW9YOx58l,iN4f6Q" "l8onF1tR1x" "2nYYYFgKXpQV,utNLNzStcFCob6IUm, NM" "ahJLGTNs68KwPOlH63zrl5" "dBUHJK,w9h" "o7kExYSvxDj7wUPqZvwDXLZHJ" 
+Col9 (type: type_id::STRING, size: 6351)
+"33-535-881-6914" "17-753-976-4230" "16-941-894-1509" "29-911-979-1525" "17-972-352-1543" "29-220-935-5303" "17-569-720-7737" "32-793-181-2962" "32-451-290-5138" "16-361-998-4919" 
+Col10 (type: type_id::STRING, size: 6351)
+"etimes even requests cajole slyly express instructions. orbits sleep blithely. furiously ironic " "furiously except the slyly unusual packages. blithely express ideas are" "l requests. blithely ironic instructions haggle. even accounts boost blithely fluffily iro" "scapades boost-- theodolites whithout the furio" "its sleep furiously express, ironic instructions: carefully even courts are " "g packages hang carefully at the quickly special dependencies. foxes boost according to the fluffily" "kly after the furiously final accounts. slyly ironic requests cajole ca" " fluffily final requests integrate above the idle fox" "t, express ideas. quickly even packages at the regular, even r" "ic instructions. accounts sleep slyly. slyly unusual theodolites" 
+
+[step 19: Project] -> 6351 rows x 9 cols
+Table with 9 columns and 6351 rows:
+Col0 (type: type_id::INT64, size: 6351)
+611000 1289979 1289979 310011 1083383 191065 191065 615921 616079 1138135
+Col1 (type: type_id::FLOAT64, size: 6351)
+830.23 679.32 98.07 653.71 155.49 992.47 933.28 676.57 782.23 104.03
+Col2 (type: type_id::STRING, size: 6351)
+"Manufacturer#3" "Manufacturer#5" "Manufacturer#5" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#3" "Manufacturer#2" 
+Col3 (type: type_id::STRING, size: 6351)
+"UNITED KINGDOM" "GERMANY" "FRANCE" "ROMANIA" "GERMANY" "ROMANIA" "GERMANY" "RUSSIA" "RUSSIA" "FRANCE" 
+Col4 (type: type_id::FLOAT64, size: 6351)
+5275.65 3424.86 1544.55 5022.83 9323.88 5789.59 3179.91 3961.68 287.7 1204.38
+Col5 (type: type_id::STRING, size: 6351)
+"Supplier#000036007" "Supplier#000089980" "Supplier#000065016" "Supplier#000035015" "Supplier#000033404" "Supplier#000016067" "Supplier#000066069" "Supplier#000090940" "Supplier#000041086" "Supplier#000013169" 
+Col6 (type: type_id::STRING, size: 6351)
+"3exkwsWNvHmhoShngQ6BcmsbcB591ho uU2 wy" "RgZQ5c WMwShvhoCSdIoLo9laKY4kSrROz" "00 sl,GXM,zO6Tldpb31oF9" "z8upHJYpTkSA" "5BlBlnn3M6UBGFW9YOx58l,iN4f6Q" "l8onF1tR1x" "2nYYYFgKXpQV,utNLNzStcFCob6IUm, NM" "ahJLGTNs68KwPOlH63zrl5" "dBUHJK,w9h" "o7kExYSvxDj7wUPqZvwDXLZHJ" 
+Col7 (type: type_id::STRING, size: 6351)
+"33-535-881-6914" "17-753-976-4230" "16-941-894-1509" "29-911-979-1525" "17-972-352-1543" "29-220-935-5303" "17-569-720-7737" "32-793-181-2962" "32-451-290-5138" "16-361-998-4919" 
+Col8 (type: type_id::STRING, size: 6351)
+"etimes even requests cajole slyly express instructions. orbits sleep blithely. furiously ironic " "furiously except the slyly unusual packages. blithely express ideas are" "l requests. blithely ironic instructions haggle. even accounts boost blithely fluffily iro" "scapades boost-- theodolites whithout the furio" "its sleep furiously express, ironic instructions: carefully even courts are " "g packages hang carefully at the quickly special dependencies. foxes boost according to the fluffily" "kly after the furiously final accounts. slyly ironic requests cajole ca" " fluffily final requests integrate above the idle fox" "t, express ideas. quickly even packages at the regular, even r" "ic instructions. accounts sleep slyly. slyly unusual theodolites" 
+
+[step 20: Reorder] -> 6351 rows x 2 cols
+Table with 2 columns and 6351 rows:
+Col0 (type: type_id::INT64, size: 6351)
+611000 1289979 1289979 310011 1083383 191065 191065 615921 616079 1138135
+Col1 (type: type_id::FLOAT64, size: 6351)
+830.23 679.32 98.07 653.71 155.49 992.47 933.28 676.57 782.23 104.03
+
+[GROUPBY DEBUG] rows=6351 groups_upper_bound=9223372036854775807 algo=1
+[step 21: GroupBy] -> 4667 rows x 2 cols
+Table with 2 columns and 4667 rows:
+Col0 (type: type_id::INT64, size: 4667)
+759393 1040365 1435134 1435392 204817 418103 418307 223544 1062124 1524124
+Col1 (type: type_id::FLOAT64, size: 4667)
+65.12 22.53 817.27 202.27 434.53 403.01 567.64 886.06 757.07 652.15
+
+[step 22: Project] -> 4667 rows x 2 cols
+Table with 2 columns and 4667 rows:
+Col0 (type: type_id::INT64, size: 4667)
+759393 1040365 1435134 1435392 204817 418103 418307 223544 1062124 1524124
+Col1 (type: type_id::FLOAT64, size: 4667)
+65.12 22.53 817.27 202.27 434.53 403.01 567.64 886.06 757.07 652.15
+
+[step 23: EqJoin] -> 6351 rows x 10 cols
+Table with 10 columns and 6351 rows:
+Col0 (type: type_id::INT64, size: 6351)
+297407 553744 1796150 1796236 1796266 1796266 783579 485615 496431 496500
+Col1 (type: type_id::FLOAT64, size: 6351)
+664.65 967.23 329 100.71 351.12 351.12 316.69 242.7 941.01 126.43
+Col2 (type: type_id::FLOAT64, size: 6351)
+664.65 967.23 329 100.71 447.39 351.12 316.69 350.96 941.01 873.64
+Col3 (type: type_id::STRING, size: 6351)
+"Manufacturer#4" "Manufacturer#1" "Manufacturer#1" "Manufacturer#5" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#2" "Manufacturer#4" "Manufacturer#1" 
+Col4 (type: type_id::STRING, size: 6351)
+"ROMANIA" "UNITED KINGDOM" "RUSSIA" "GERMANY" "FRANCE" "GERMANY" "RUSSIA" "GERMANY" "GERMANY" "RUSSIA" 
+Col5 (type: type_id::FLOAT64, size: 6351)
+8045.99 2506.64 2311.84 9849.06 3594.89 9585.26 1433.36 -821.23 1393.98 4387.51
+Col6 (type: type_id::STRING, size: 6351)
+"Supplier#000097408" "Supplier#000053745" "Supplier#000071202" "Supplier#000021254" "Supplier#000096267" "Supplier#000071318" "Supplier#000033594" "Supplier#000035624" "Supplier#000071444" "Supplier#000096501" 
+Col7 (type: type_id::STRING, size: 6351)
+"xm4kMipR2dJwEqCd ib7EwxTAI" "aHxVHylmAYnlPcr86o338ALHGQPD" "H4V2VUQBwhYNkT9K8jtBR0ucoymLtNz" "Sa0iy9WBFA49TjokGkXbHEVpe" "8DWRdjEB k5FEwoDXGrBxZ0N" "KXmpCMJFpPnMw " "KMMVWTG,A8" "eyjt8Tr,P7vyOZHbnBgx" "3f02bLRMbWZO hiA7eq5EgDMDEiG319fHtH0z,b" "qdJKRtq6gJSn" 
+Col8 (type: type_id::STRING, size: 6351)
+"29-216-659-2607" "33-113-482-6725" "32-856-369-9565" "17-623-110-6693" "16-430-468-9400" "17-366-977-2800" "32-656-386-3858" "17-818-325-5895" "17-968-637-2789" "32-435-344-7352" 
+Col9 (type: type_id::STRING, size: 6351)
+"ithely final ideas. fluffily ironic accounts " "fily final packages. quickly final ideas can use furi" "ns-- fluffily bold packages sleep daring deposits. slyly bold requests use furiously against" "old dugouts. slyly even instructions print " "s; excuses use blithely? deposits nag. quickly bold ideas haggle above " "ntain closely after the fluffily pending requests. express deposits ought to" "nding accounts cajole along the special deposits. packages alongside of the instructions" "ding accounts. theodolites above the blithely final fo" "tes across the fluffily unusual instruct" "ual, final requests boost quickly ideas. sp" 
+
+[step 24: Reorder] -> 6351 rows x 11 cols
+Table with 11 columns and 6351 rows:
+Col0 (type: type_id::INT64, size: 6351)
+297407 553744 1796150 1796236 1796266 1796266 783579 485615 496431 496500
+Col1 (type: type_id::FLOAT64, size: 6351)
+664.65 967.23 329 100.71 351.12 351.12 316.69 242.7 941.01 126.43
+Col2 (type: type_id::INT64, size: 6351)
+297407 553744 1796150 1796236 1796266 1796266 783579 485615 496431 496500
+Col3 (type: type_id::FLOAT64, size: 6351)
+664.65 967.23 329 100.71 447.39 351.12 316.69 350.96 941.01 873.64
+Col4 (type: type_id::STRING, size: 6351)
+"Manufacturer#4" "Manufacturer#1" "Manufacturer#1" "Manufacturer#5" "Manufacturer#4" "Manufacturer#4" "Manufacturer#2" "Manufacturer#2" "Manufacturer#4" "Manufacturer#1" 
+Col5 (type: type_id::STRING, size: 6351)
+"ROMANIA" "UNITED KINGDOM" "RUSSIA" "GERMANY" "FRANCE" "GERMANY" "RUSSIA" "GERMANY" "GERMANY" "RUSSIA" 
+Col6 (type: type_id::FLOAT64, size: 6351)
+8045.99 2506.64 2311.84 9849.06 3594.89 9585.26 1433.36 -821.23 1393.98 4387.51
+Col7 (type: type_id::STRING, size: 6351)
+"Supplier#000097408" "Supplier#000053745" "Supplier#000071202" "Supplier#000021254" "Supplier#000096267" "Supplier#000071318" "Supplier#000033594" "Supplier#000035624" "Supplier#000071444" "Supplier#000096501" 
+Col8 (type: type_id::STRING, size: 6351)
+"xm4kMipR2dJwEqCd ib7EwxTAI" "aHxVHylmAYnlPcr86o338ALHGQPD" "H4V2VUQBwhYNkT9K8jtBR0ucoymLtNz" "Sa0iy9WBFA49TjokGkXbHEVpe" "8DWRdjEB k5FEwoDXGrBxZ0N" "KXmpCMJFpPnMw " "KMMVWTG,A8" "eyjt8Tr,P7vyOZHbnBgx" "3f02bLRMbWZO hiA7eq5EgDMDEiG319fHtH0z,b" "qdJKRtq6gJSn" 
+Col9 (type: type_id::STRING, size: 6351)
+"29-216-659-2607" "33-113-482-6725" "32-856-369-9565" "17-623-110-6693" "16-430-468-9400" "17-366-977-2800" "32-656-386-3858" "17-818-325-5895" "17-968-637-2789" "32-435-344-7352" 
+Col10 (type: type_id::STRING, size: 6351)
+"ithely final ideas. fluffily ironic accounts " "fily final packages. quickly final ideas can use furi" "ns-- fluffily bold packages sleep daring deposits. slyly bold requests use furiously against" "old dugouts. slyly even instructions print " "s; excuses use blithely? deposits nag. quickly bold ideas haggle above " "ntain closely after the fluffily pending requests. express deposits ought to" "nding accounts cajole along the special deposits. packages alongside of the instructions" "ding accounts. theodolites above the blithely final fo" "tes across the fluffily unusual instruct" "ual, final requests boost quickly ideas. sp" 
+
+[step 25: Filter] -> 4667 rows x 9 cols
+Table with 9 columns and 4667 rows:
+Col0 (type: type_id::INT64, size: 4667)
+297407 553744 1796150 1796236 1796266 783579 496431 496500 1124707 1124856
+Col1 (type: type_id::INT64, size: 4667)
+297407 553744 1796150 1796236 1796266 783579 496431 496500 1124707 1124856
+Col2 (type: type_id::STRING, size: 4667)
+"Manufacturer#4" "Manufacturer#1" "Manufacturer#1" "Manufacturer#5" "Manufacturer#4" "Manufacturer#2" "Manufacturer#4" "Manufacturer#1" "Manufacturer#5" "Manufacturer#3" 
+Col3 (type: type_id::STRING, size: 4667)
+"ROMANIA" "UNITED KINGDOM" "RUSSIA" "GERMANY" "GERMANY" "RUSSIA" "GERMANY" "ROMANIA" "RUSSIA" "GERMANY" 
+Col4 (type: type_id::FLOAT64, size: 4667)
+8045.99 2506.64 2311.84 9849.06 9585.26 1433.36 1393.98 4181.84 7330.52 5641.18
+Col5 (type: type_id::STRING, size: 4667)
+"Supplier#000097408" "Supplier#000053745" "Supplier#000071202" "Supplier#000021254" "Supplier#000071318" "Supplier#000033594" "Supplier#000071444" "Supplier#000021505" "Supplier#000049719" "Supplier#000099890" 
+Col6 (type: type_id::STRING, size: 4667)
+"xm4kMipR2dJwEqCd ib7EwxTAI" "aHxVHylmAYnlPcr86o338ALHGQPD" "H4V2VUQBwhYNkT9K8jtBR0ucoymLtNz" "Sa0iy9WBFA49TjokGkXbHEVpe" "KXmpCMJFpPnMw " "KMMVWTG,A8" "3f02bLRMbWZO hiA7eq5EgDMDEiG319fHtH0z,b" "OyQMVFS6 QN" "0uM13doYA6LexpqqlEAzRCQ" "itwG6GKEobzsBVR" 
+Col7 (type: type_id::STRING, size: 4667)
+"29-216-659-2607" "33-113-482-6725" "32-856-369-9565" "17-623-110-6693" "17-366-977-2800" "32-656-386-3858" "17-968-637-2789" "29-309-764-4374" "32-122-839-1042" "17-337-355-5546" 
+Col8 (type: type_id::STRING, size: 4667)
+"ithely final ideas. fluffily ironic accounts " "fily final packages. quickly final ideas can use furi" "ns-- fluffily bold packages sleep daring deposits. slyly bold requests use furiously against" "old dugouts. slyly even instructions print " "ntain closely after the fluffily pending requests. express deposits ought to" "nding accounts cajole along the special deposits. packages alongside of the instructions" "tes across the fluffily unusual instruct" "accounts maintain carefully. furiously ironic requests are quickly ironic ideas. express pinto" "ding foxes! carefully final ideas" "the fluffily ironic ideas sleep among the even courts. carefully final notornis about the i" 
+
+[step 26: Project] -> 4667 rows x 8 cols
+Table with 8 columns and 4667 rows:
+Col0 (type: type_id::FLOAT64, size: 4667)
+8045.99 2506.64 2311.84 9849.06 9585.26 1433.36 1393.98 4181.84 7330.52 5641.18
+Col1 (type: type_id::STRING, size: 4667)
+"Supplier#000097408" "Supplier#000053745" "Supplier#000071202" "Supplier#000021254" "Supplier#000071318" "Supplier#000033594" "Supplier#000071444" "Supplier#000021505" "Supplier#000049719" "Supplier#000099890" 
+Col2 (type: type_id::STRING, size: 4667)
+"ROMANIA" "UNITED KINGDOM" "RUSSIA" "GERMANY" "GERMANY" "RUSSIA" "GERMANY" "ROMANIA" "RUSSIA" "GERMANY" 
+Col3 (type: type_id::INT64, size: 4667)
+297407 553744 1796150 1796236 1796266 783579 496431 496500 1124707 1124856
+Col4 (type: type_id::STRING, size: 4667)
+"Manufacturer#4" "Manufacturer#1" "Manufacturer#1" "Manufacturer#5" "Manufacturer#4" "Manufacturer#2" "Manufacturer#4" "Manufacturer#1" "Manufacturer#5" "Manufacturer#3" 
+Col5 (type: type_id::STRING, size: 4667)
+"xm4kMipR2dJwEqCd ib7EwxTAI" "aHxVHylmAYnlPcr86o338ALHGQPD" "H4V2VUQBwhYNkT9K8jtBR0ucoymLtNz" "Sa0iy9WBFA49TjokGkXbHEVpe" "KXmpCMJFpPnMw " "KMMVWTG,A8" "3f02bLRMbWZO hiA7eq5EgDMDEiG319fHtH0z,b" "OyQMVFS6 QN" "0uM13doYA6LexpqqlEAzRCQ" "itwG6GKEobzsBVR" 
+Col6 (type: type_id::STRING, size: 4667)
+"29-216-659-2607" "33-113-482-6725" "32-856-369-9565" "17-623-110-6693" "17-366-977-2800" "32-656-386-3858" "17-968-637-2789" "29-309-764-4374" "32-122-839-1042" "17-337-355-5546" 
+Col7 (type: type_id::STRING, size: 4667)
+"ithely final ideas. fluffily ironic accounts " "fily final packages. quickly final ideas can use furi" "ns-- fluffily bold packages sleep daring deposits. slyly bold requests use furiously against" "old dugouts. slyly even instructions print " "ntain closely after the fluffily pending requests. express deposits ought to" "nding accounts cajole along the special deposits. packages alongside of the instructions" "tes across the fluffily unusual instruct" "accounts maintain carefully. furiously ironic requests are quickly ironic ideas. express pinto" "ding foxes! carefully final ideas" "the fluffily ironic ideas sleep among the even courts. carefully final notornis about the i" 
+
+[step 27: TopK] -> 100 rows x 8 cols
+Table with 8 columns and 100 rows:
+Col0 (type: type_id::FLOAT64, size: 100)
+9994.37 9992.54 9987.51 9986.4 9984.69 9984.3 9983.76 9980.25 9974.93 9971.99
+Col1 (type: type_id::STRING, size: 100)
+"Supplier#000030084" "Supplier#000099650" "Supplier#000020657" "Supplier#000082995" "Supplier#000008875" "Supplier#000081977" "Supplier#000024757" "Supplier#000067392" "Supplier#000072260" "Supplier#000016715" 
+Col2 (type: type_id::STRING, size: 100)
+"GERMANY" "RUSSIA" "ROMANIA" "RUSSIA" "ROMANIA" "RUSSIA" "RUSSIA" "RUSSIA" "ROMANIA" "FRANCE" 
+Col3 (type: type_id::INT64, size: 100)
+380077 824625 395653 1782994 633856 1356963 599751 192388 397250 691708
+Col4 (type: type_id::STRING, size: 100)
+"Manufacturer#5" "Manufacturer#3" "Manufacturer#5" "Manufacturer#5" "Manufacturer#4" "Manufacturer#5" "Manufacturer#4" "Manufacturer#2" "Manufacturer#3" "Manufacturer#2" 
+Col5 (type: type_id::STRING, size: 100)
+"Lpmw8Ht4rC,xjMQ0p50CkyG7764" "u8irlfFJRKkGmndVKa4LY" "XBf0Sq7X2xE0ZTakAq Rsq01lutxjWg" "p3Ipd2Un6pIK2" "K9NcAhAt60 jA" "LMEM2XU7iYiU1qySKHCxvp" "xhP0Gm9AvzxXWjV3Ukz9rmh3s06o1" "Dmaw gIXZU1,iT1" "JH BmpisKGh0AISYAHgyM,AJe4WcXI,TI" "qHmxVVnEedvr5j1" 
+Col6 (type: type_id::STRING, size: 100)
+"17-519-171-6883" "32-971-481-2533" "29-167-460-7830" "32-510-919-3096" "29-132-904-4395" "32-569-570-6149" "32-868-781-9721" "32-872-236-1034" "29-745-482-4154" "16-401-454-3384" 
+Col7 (type: type_id::STRING, size: 100)
+"thely express instructions. regular hockey players was furiously. quickly pendi" "ironic ideas. special, ironic requests nag blithely. ironic deposits use furiously " " unusual requests cajole across the fluffily final requests." "e packages. slyly unusual ideas use slyly. blithely ironic requests integrate furi" " carefully. furiously ironic requests about the care" ", pending instructions unwind among" "regular accounts sleep furiously furiously close notornis. carefully silent foxes arou" "to the slyly quick deposits. blithely special accounts boost furi" "play furiously according to the slyly unusual packages? slyly express instructions x-ray" ". furiously brave dependencies m" 
+
+Executed in 1128 ms.
+Result: 100 rows × 8 columns (showing 20)
+9994.370000 | Supplier#000030084 | GERMANY | 380077 | Manufacturer#5 | Lpmw8Ht4rC,xjMQ0p50CkyG7764 | 17-519-171-6883 | thely express instructions. regular hockey players was furiously. quickly pendi
+9992.540000 | Supplier#000099650 | RUSSIA | 824625 | Manufacturer#3 | u8irlfFJRKkGmndVKa4LY | 32-971-481-2533 | ironic ideas. special, ironic requests nag blithely. ironic deposits use furiously 
+9987.510000 | Supplier#000020657 | ROMANIA | 395653 | Manufacturer#5 | XBf0Sq7X2xE0ZTakAq Rsq01lutxjWg | 29-167-460-7830 |  unusual requests cajole across the fluffily final requests.
+9986.400000 | Supplier#000082995 | RUSSIA | 1782994 | Manufacturer#5 | p3Ipd2Un6pIK2 | 32-510-919-3096 | e packages. slyly unusual ideas use slyly. blithely ironic requests integrate furi
+9984.690000 | Supplier#000008875 | ROMANIA | 633856 | Manufacturer#4 | K9NcAhAt60 jA | 29-132-904-4395 |  carefully. furiously ironic requests about the care
+9984.300000 | Supplier#000081977 | RUSSIA | 1356963 | Manufacturer#5 | LMEM2XU7iYiU1qySKHCxvp | 32-569-570-6149 | , pending instructions unwind among
+9983.760000 | Supplier#000024757 | RUSSIA | 599751 | Manufacturer#4 | xhP0Gm9AvzxXWjV3Ukz9rmh3s06o1 | 32-868-781-9721 | regular accounts sleep furiously furiously close notornis. carefully silent foxes arou
+9980.250000 | Supplier#000067392 | RUSSIA | 192388 | Manufacturer#2 | Dmaw gIXZU1,iT1 | 32-872-236-1034 | to the slyly quick deposits. blithely special accounts boost furi
+9974.930000 | Supplier#000072260 | ROMANIA | 397250 | Manufacturer#3 | JH BmpisKGh0AISYAHgyM,AJe4WcXI,TI | 29-745-482-4154 | play furiously according to the slyly unusual packages? slyly express instructions x-ray
+9971.990000 | Supplier#000016715 | FRANCE | 691708 | Manufacturer#2 | qHmxVVnEedvr5j1 | 16-401-454-3384 | . furiously brave dependencies m
+9968.960000 | Supplier#000085431 | ROMANIA | 1885430 | Manufacturer#4 | ,JJ6NvcTq5k | 29-402-887-2528 | des cajole across the furiously regular accounts; regular foxes haggle quickly across the furio
+9967.600000 | Supplier#000028837 | ROMANIA | 228836 | Manufacturer#2 | LqQdPou57tmHHJKlCNqgutRxG | 29-105-576-2294 |  pinto beans. even accounts cajole abou
+9967.600000 | Supplier#000028837 | ROMANIA | 1828836 | Manufacturer#4 | LqQdPou57tmHHJKlCNqgutRxG | 29-105-576-2294 |  pinto beans. even accounts cajole abou
+9966.670000 | Supplier#000030306 | UNITED KINGDOM | 1280281 | Manufacturer#3 | uYbzF DXpZh942gzOveePcs217MFWCvV9sB | 33-758-232-4917 |  pinto beans sleep alongside of 
+9962.570000 | Supplier#000034645 | ROMANIA | 759623 | Manufacturer#4 | N3YBJpyKHSw5NS6UC42zVPacQuo | 29-629-100-1429 | s wake furiously slyly express excuses. slyly blithe accounts lose a
+9957.830000 | Supplier#000012588 | ROMANIA | 12587 | Manufacturer#1 | TO9shduokTtrABLH3gK bzUxPMc7g | 29-373-772-7126 | nstructions. slyly bold forges haggle blithely carefully regular accounts. fluf
+9956.670000 | Supplier#000074260 | FRANCE | 124257 | Manufacturer#2 | 5SXrY50BbS lyD5vHcho,QTscW | 16-511-538-8136 | s. furiously unusual theodolites haggle furiously. regular, 
+9945.360000 | Supplier#000036819 | ROMANIA | 761797 | Manufacturer#4 | ehLsFCaW7Afny24rH3eRHl8HA8zT1DjvjE6x7 | 29-370-897-9499 | ages nag regular, regular accounts. special, special requests use furi
+9944.020000 | Supplier#000010019 | ROMANIA | 1810018 | Manufacturer#4 | VLtSIsInE0HovhLRId91z54Mqz fDa8 | 29-695-919-1392 | p furiously furiously even asymptotes-- furiously even instructions are
+9942.900000 | Supplier#000019177 | GERMANY | 494172 | Manufacturer#5 | 86idM87abnJTncO3xM | 17-316-670-1231 | packages sublate slyly after the carefully pending reque
+VERIFY: comparing against /work/data/tpch//sf10/golden/q02.parquet
+VERIFY: OK

@@ -1,0 +1,199 @@
+== TPC-H Q15 (SF=1) via IR pipeline ==
+IR built: 5 output columns.
+ExecPlan: 14 steps, 2 sources.
+
+-- IR (pre-rules) --
+Sort[s_suppkey ASC]
+  Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address, s_phone = s_phone, total_revenue = total_revenue)
+    InnerJoin(on=(s_suppkey == l_suppkey))
+      Scan(supplier [s_suppkey, s_name, s_address, s_phone])
+      Filter((total_revenue == max_revenue))
+        CrossJoin
+          Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+            Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
+              Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
+                Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
+          Aggregate(aggs=[max(total_revenue) AS max_revenue])
+            Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+              Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
+                Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
+                  Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
+
+
+-- IR (post-rules) --
+Sort[s_suppkey ASC]
+  Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address, s_phone = s_phone, total_revenue = total_revenue)
+    InnerJoin(on=(s_suppkey == l_suppkey))
+      Scan(supplier [s_suppkey, s_name, s_address, s_phone])
+      Filter((total_revenue == max_revenue))
+        CrossJoin
+          Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+            Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
+              Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
+                Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
+          Aggregate(aggs=[max(total_revenue) AS max_revenue])
+            Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+              Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
+                Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
+                  Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
+
+
+-- ExecPlan --
+// required sources: supplier lineitem
+v0 = SourceTable("supplier" cols=[s_suppkey, s_name, s_address, s_phone])
+v1 = SourceTable("lineitem" cols=[l_suppkey, l_extendedprice, l_discount, l_shipdate])
+v2 = Filter(v1; predicate=<Predicate>, out=[0, 1, 2])
+v3 = Project(v2; #items=2 (tree=2, pred=0, substr=0))
+v4 = Reorder(v3; ordinals=[0, 1])
+v5 = GroupBy(v4; n_keys=1, aggs=[sum(#0)])
+v6 = Reorder(v5; ordinals=[1])
+v7 = ScalarAgg(v6; aggs=[max(#0)])
+v8 = CrossJoin(v5, v7; )
+v9 = Filter(v8; predicate=<Predicate>, out=[0, 1])
+v10 = EqJoin(v0, v9; lkeys=[0], rkeys=[0])
+v11 = Reorder(v10; ordinals=[0, 1, 2, 3, 0, 4])
+v12 = Project(v11; #items=5 (tree=5, pred=0, substr=0))
+v13 = Sort(v12; keys=[#0 ASC])
+return v13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/supplier.parquet
+Memory pool has initial size 14468710400 bytes.
+[step 0: SourceTable] -> 10000 rows x 4 cols
+Table with 4 columns and 10000 rows:
+Col0 (type: type_id::INT64, size: 10000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 10000)
+"Supplier#000000001" "Supplier#000000002" "Supplier#000000003" "Supplier#000000004" "Supplier#000000005" "Supplier#000000006" "Supplier#000000007" "Supplier#000000008" "Supplier#000000009" "Supplier#000000010" 
+Col2 (type: type_id::STRING, size: 10000)
+"sdrGnXCDRcfriBvY0KL,ipCanOTyK t NN1" "TRMhVHz3XiFuhapxucPo1" "BZ0kXcHUcHjx62L7CjZSql7gbWQ6RPn5X" "qGTQJXogS83a7MBnEweGHKevK" "lONEYAh9sFWAF75tO" "zaux5FTzToEg" " 0W7IPdkpWycUbQ9Adp6B" "S8AWPqjYlanEQlcDO2WV 97uCVtxCk" ",gJ6K2MKveYxQTN 2EMG3pzg" "9QtKQKXK24fBTYIsb2" 
+Col3 (type: type_id::STRING, size: 10000)
+"27-918-335-1736" "15-679-861-2259" "11-383-516-1199" "25-843-787-7479" "21-151-690-3663" "24-696-997-4969" "33-990-965-2201" "27-498-742-3860" "20-403-398-8662" "34-852-489-8585" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/lineitem.parquet
+[step 1: SourceTable] -> 6001215 rows x 4 cols
+Table with 4 columns and 6001215 rows:
+Col0 (type: type_id::INT64, size: 6001215)
+7706 7311 3701 4633 1534 638 1191 1798 6540 3474
+Col1 (type: type_id::FLOAT64, size: 6001215)
+21168.2 45983.2 13309.6 28955.6 22824.5 49620.2 44694.5 54058.1 46796.5 39890.9
+Col2 (type: type_id::FLOAT64, size: 6001215)
+0.04 0.09 0.1 0.09 0.1 0.07 0 0.06 0.1 0.06
+Col3 (type: type_id::INT32, size: 6001215)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+
+[step 2: Filter] -> 225954 rows x 3 cols
+Table with 3 columns and 225954 rows:
+Col0 (type: type_id::INT64, size: 225954)
+7706 3701 1534 638 5560 7758 9799 3074 9440 1759
+Col1 (type: type_id::FLOAT64, size: 225954)
+21168.2 13309.6 22824.5 49620.2 30690.9 11594.2 81639.9 31810 73943.8 43058.8
+Col2 (type: type_id::FLOAT64, size: 225954)
+0.04 0.1 0.1 0.07 0.03 0.08 0.1 0.03 0.08 0.06
+
+[step 3: Project] -> 225954 rows x 2 cols
+Table with 2 columns and 225954 rows:
+Col0 (type: type_id::INT64, size: 225954)
+7706 3701 1534 638 5560 7758 9799 3074 9440 1759
+Col1 (type: type_id::FLOAT64, size: 225954)
+20321.5 11978.6 20542 46146.7 29770.2 10666.6 73475.9 30855.7 68028.3 40475.2
+
+[step 4: Reorder] -> 225954 rows x 2 cols
+Table with 2 columns and 225954 rows:
+Col0 (type: type_id::INT64, size: 225954)
+7706 3701 1534 638 5560 7758 9799 3074 9440 1759
+Col1 (type: type_id::FLOAT64, size: 225954)
+20321.5 11978.6 20542 46146.7 29770.2 10666.6 73475.9 30855.7 68028.3 40475.2
+
+[GROUPBY DEBUG] rows=225954 groups_upper_bound=9223372036854775807 algo=1
+[step 5: GroupBy] -> 10000 rows x 2 cols
+Table with 2 columns and 10000 rows:
+Col0 (type: type_id::INT64, size: 10000)
+1889 7648 5509 2471 49 7954 8363 3257 1070 611
+Col1 (type: type_id::FLOAT64, size: 10000)
+906428 466444 785926 1.09143e+06 883214 934623 1.08029e+06 818451 983038 860718
+
+[step 6: Reorder] -> 10000 rows x 1 cols
+Table with 1 columns and 10000 rows:
+Col0 (type: type_id::FLOAT64, size: 10000)
+906428 466444 785926 1.09143e+06 883214 934623 1.08029e+06 818451 983038 860718
+
+[step 7: ScalarAgg] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+[step 8: CrossJoin] -> 10000 rows x 3 cols
+Table with 3 columns and 10000 rows:
+Col0 (type: type_id::INT64, size: 10000)
+1889 7648 5509 2471 49 7954 8363 3257 1070 611
+Col1 (type: type_id::FLOAT64, size: 10000)
+906428 466444 785926 1.09143e+06 883214 934623 1.08029e+06 818451 983038 860718
+Col2 (type: type_id::FLOAT64, size: 10000)
+1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06 1.77263e+06
+
+[step 9: Filter] -> 1 rows x 2 cols
+Table with 2 columns and 1 rows:
+Col0 (type: type_id::INT64, size: 1)
+8449
+Col1 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+[step 10: EqJoin] -> 1 rows x 5 cols
+Table with 5 columns and 1 rows:
+Col0 (type: type_id::INT64, size: 1)
+8449
+Col1 (type: type_id::STRING, size: 1)
+"Supplier#000008449" 
+Col2 (type: type_id::STRING, size: 1)
+"5BXWsJERA2mP5OyO4" 
+Col3 (type: type_id::STRING, size: 1)
+"20-469-856-8873" 
+Col4 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+[step 11: Reorder] -> 1 rows x 6 cols
+Table with 6 columns and 1 rows:
+Col0 (type: type_id::INT64, size: 1)
+8449
+Col1 (type: type_id::STRING, size: 1)
+"Supplier#000008449" 
+Col2 (type: type_id::STRING, size: 1)
+"5BXWsJERA2mP5OyO4" 
+Col3 (type: type_id::STRING, size: 1)
+"20-469-856-8873" 
+Col4 (type: type_id::INT64, size: 1)
+8449
+Col5 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+[step 12: Project] -> 1 rows x 5 cols
+Table with 5 columns and 1 rows:
+Col0 (type: type_id::INT64, size: 1)
+8449
+Col1 (type: type_id::STRING, size: 1)
+"Supplier#000008449" 
+Col2 (type: type_id::STRING, size: 1)
+"5BXWsJERA2mP5OyO4" 
+Col3 (type: type_id::STRING, size: 1)
+"20-469-856-8873" 
+Col4 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+[step 13: Sort] -> 1 rows x 5 cols
+Table with 5 columns and 1 rows:
+Col0 (type: type_id::INT64, size: 1)
+8449
+Col1 (type: type_id::STRING, size: 1)
+"Supplier#000008449" 
+Col2 (type: type_id::STRING, size: 1)
+"5BXWsJERA2mP5OyO4" 
+Col3 (type: type_id::STRING, size: 1)
+"20-469-856-8873" 
+Col4 (type: type_id::FLOAT64, size: 1)
+1.77263e+06
+
+Executed in 1452 ms.
+Result: 1 rows × 5 columns (showing 1)
+8449 | Supplier#000008449 | 5BXWsJERA2mP5OyO4 | 20-469-856-8873 | 1772627.208700
+VERIFY: comparing against /work/data/tpch//sf1/golden/q15.parquet
+VERIFY: OK

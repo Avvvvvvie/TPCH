@@ -1,0 +1,177 @@
+== TPC-H Q17 (SF=10) via IR pipeline ==
+IR built: 1 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 14 steps, 2 sources.
+
+-- IR (pre-rules) --
+Project(avg_yearly = (sum_price / 7))
+  Aggregate(aggs=[sum(l_extendedprice) AS sum_price])
+    Filter((l_quantity < thr))
+      InnerJoin(on=(l_partkey == l_partkey))
+        Project(l_partkey = l_partkey, thr = (0.2 * avg_qty))
+          Aggregate(keys=[l_partkey]; aggs=[avg(l_quantity) AS avg_qty])
+            InnerJoin(on=(p_partkey == l_partkey))
+              Filter((str_eq(p_brand, "Brand#23") && str_eq(p_container, "MED BOX")))
+                Scan(part [p_partkey, p_brand, p_container])
+              Scan(lineitem [l_orderkey, l_partkey, l_quantity, l_extendedprice])
+        InnerJoin(on=(p_partkey == l_partkey))
+          Filter((str_eq(p_brand, "Brand#23") && str_eq(p_container, "MED BOX")))
+            Scan(part [p_partkey, p_brand, p_container])
+          Scan(lineitem [l_orderkey, l_partkey, l_quantity, l_extendedprice])
+
+
+-- IR (post-rules) --
+Project(avg_yearly = (sum_price / 7))
+  Aggregate(aggs=[sum(l_extendedprice) AS sum_price])
+    Filter((l_quantity < thr))
+      InnerJoin(on=(l_partkey == l_partkey))
+        Project(l_partkey = l_partkey, thr = (0.2 * avg_qty))
+          Aggregate(keys=[l_partkey]; aggs=[avg(l_quantity) AS avg_qty])
+            InnerJoin(on=(p_partkey == l_partkey))
+              Filter((str_eq(p_brand, "Brand#23") && str_eq(p_container, "MED BOX")))
+                Scan(part [p_partkey, p_brand, p_container])
+              Scan(lineitem [l_partkey, l_quantity, l_extendedprice])
+        InnerJoin(on=(p_partkey == l_partkey))
+          Filter((str_eq(p_brand, "Brand#23") && str_eq(p_container, "MED BOX")))
+            Scan(part [p_partkey, p_brand, p_container])
+          Scan(lineitem [l_partkey, l_quantity, l_extendedprice])
+
+
+-- ExecPlan --
+// required sources: part lineitem
+v0 = SourceTable("part" cols=[p_partkey, p_brand, p_container])
+v1 = Filter(v0; predicate=<Predicate>, out=[0])
+v2 = SourceTable("lineitem" cols=[l_partkey, l_quantity, l_extendedprice])
+v3 = EqJoin(v1, v2; lkeys=[0], rkeys=[0])
+v4 = Reorder(v3; ordinals=[0, 0, 1, 2])
+v5 = Reorder(v4; ordinals=[1, 2])
+v6 = GroupBy(v5; n_keys=1, aggs=[avg(#0)])
+v7 = Project(v6; #items=2 (tree=2, pred=0, substr=0))
+v8 = EqJoin(v7, v4; lkeys=[0], rkeys=[1])
+v9 = Reorder(v8; ordinals=[0, 1, 2, 0, 3, 4])
+v10 = Filter(v9; predicate=<Predicate>, out=[5])
+v11 = Reorder(v10; ordinals=[0])
+v12 = ScalarAgg(v11; aggs=[sum(#0)])
+v13 = Project(v12; #items=1 (tree=1, pred=0, substr=0))
+return v13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/part.parquet
+[step 0: SourceTable] -> 2000000 rows x 3 cols
+Table with 3 columns and 2000000 rows:
+Col0 (type: type_id::INT64, size: 2000000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 2000000)
+"Brand#13" "Brand#13" "Brand#42" "Brand#34" "Brand#32" "Brand#24" "Brand#11" "Brand#44" "Brand#43" "Brand#54" 
+Col2 (type: type_id::STRING, size: 2000000)
+"JUMBO PKG" "LG CASE" "WRAP CASE" "MED DRUM" "SM PKG" "MED BAG" "SM BAG" "LG DRUM" "WRAP CASE" "LG CAN" 
+
+[step 1: Filter] -> 2044 rows x 1 cols
+Table with 1 columns and 2044 rows:
+Col0 (type: type_id::INT64, size: 2044)
+2409 2425 4880 5627 6079 7682 10687 11200 11256 11816
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/lineitem.parquet
+[step 2: SourceTable] -> 59986052 rows x 3 cols
+Table with 3 columns and 59986052 rows:
+Col0 (type: type_id::INT64, size: 59986052)
+1551894 673091 636998 21315 240267 156345 1061698 42970 190355 1284483
+Col1 (type: type_id::FLOAT64, size: 59986052)
+17 36 8 28 24 32 38 45 49 27
+Col2 (type: type_id::FLOAT64, size: 59986052)
+33078.9 38306.2 15479.7 34616.7 28974 44842.9 63066.3 86083.7 70822.2 39620.3
+
+[step 3: EqJoin] -> 61385 rows x 3 cols
+Table with 3 columns and 61385 rows:
+Col0 (type: type_id::INT64, size: 61385)
+1651262 1320720 630801 170165 757657 1435398 1552017 953452 1522527 841190
+Col1 (type: type_id::FLOAT64, size: 61385)
+31 50 44 9 10 9 8 22 33 32
+Col2 (type: type_id::FLOAT64, size: 61385)
+37608.6 87033 76197.9 11116.4 17146.2 11999.9 8551.52 33119 51131.8 36196.8
+
+[step 4: Reorder] -> 61385 rows x 4 cols
+Table with 4 columns and 61385 rows:
+Col0 (type: type_id::INT64, size: 61385)
+1651262 1320720 630801 170165 757657 1435398 1552017 953452 1522527 841190
+Col1 (type: type_id::INT64, size: 61385)
+1651262 1320720 630801 170165 757657 1435398 1552017 953452 1522527 841190
+Col2 (type: type_id::FLOAT64, size: 61385)
+31 50 44 9 10 9 8 22 33 32
+Col3 (type: type_id::FLOAT64, size: 61385)
+37608.6 87033 76197.9 11116.4 17146.2 11999.9 8551.52 33119 51131.8 36196.8
+
+[step 5: Reorder] -> 61385 rows x 2 cols
+Table with 2 columns and 61385 rows:
+Col0 (type: type_id::INT64, size: 61385)
+1651262 1320720 630801 170165 757657 1435398 1552017 953452 1522527 841190
+Col1 (type: type_id::FLOAT64, size: 61385)
+31 50 44 9 10 9 8 22 33 32
+
+[GROUPBY DEBUG] rows=61385 groups_upper_bound=9223372036854775807 algo=1
+[step 6: GroupBy] -> 2044 rows x 2 cols
+Table with 2 columns and 2044 rows:
+Col0 (type: type_id::INT64, size: 2044)
+1755593 1654976 133884 864119 1686183 401598 961889 1767251 1092059 1118770
+Col1 (type: type_id::FLOAT64, size: 2044)
+23.1111 25.2927 23.75 27.25 25.1034 28.5217 28.6875 25.84 24.4 22.3103
+
+[step 7: Project] -> 2044 rows x 2 cols
+Table with 2 columns and 2044 rows:
+Col0 (type: type_id::INT64, size: 2044)
+1755593 1654976 133884 864119 1686183 401598 961889 1767251 1092059 1118770
+Col1 (type: type_id::FLOAT64, size: 2044)
+4.62222 5.05854 4.75 5.45 5.02069 5.70435 5.7375 5.168 4.88 4.46207
+
+[step 8: EqJoin] -> 61385 rows x 5 cols
+Table with 5 columns and 61385 rows:
+Col0 (type: type_id::INT64, size: 61385)
+1731248 1432762 417685 1907116 1982186 1864127 30401 1836158 1121847 1426854
+Col1 (type: type_id::FLOAT64, size: 61385)
+4.93125 5.38571 4.93333 5.30556 4.56667 5.2 4.75294 5.32778 4.64667 5.17297
+Col2 (type: type_id::INT64, size: 61385)
+1731248 1432762 417685 1907116 1982186 1864127 30401 1836158 1121847 1426854
+Col3 (type: type_id::FLOAT64, size: 61385)
+19 27 32 49 13 20 19 42 44 24
+Col4 (type: type_id::FLOAT64, size: 61385)
+24304 45756.6 51285.1 55028 16485.2 21820.6 25296.6 45950.5 82226.8 42738.7
+
+[step 9: Reorder] -> 61385 rows x 6 cols
+Table with 6 columns and 61385 rows:
+Col0 (type: type_id::INT64, size: 61385)
+1731248 1432762 417685 1907116 1982186 1864127 30401 1836158 1121847 1426854
+Col1 (type: type_id::FLOAT64, size: 61385)
+4.93125 5.38571 4.93333 5.30556 4.56667 5.2 4.75294 5.32778 4.64667 5.17297
+Col2 (type: type_id::INT64, size: 61385)
+1731248 1432762 417685 1907116 1982186 1864127 30401 1836158 1121847 1426854
+Col3 (type: type_id::INT64, size: 61385)
+1731248 1432762 417685 1907116 1982186 1864127 30401 1836158 1121847 1426854
+Col4 (type: type_id::FLOAT64, size: 61385)
+19 27 32 49 13 20 19 42 44 24
+Col5 (type: type_id::FLOAT64, size: 61385)
+24304 45756.6 51285.1 55028 16485.2 21820.6 25296.6 45950.5 82226.8 42738.7
+
+[step 10: Filter] -> 5526 rows x 1 cols
+Table with 1 columns and 5526 rows:
+Col0 (type: type_id::FLOAT64, size: 5526)
+1876.86 4870.83 5329.12 3407.4 1366.22 6602.32 3461.12 4320.04 1218.22 3435.6
+
+[step 11: Reorder] -> 5526 rows x 1 cols
+Table with 1 columns and 5526 rows:
+Col0 (type: type_id::FLOAT64, size: 5526)
+1876.86 4870.83 5329.12 3407.4 1366.22 6602.32 3461.12 4320.04 1218.22 3435.6
+
+[step 12: ScalarAgg] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+2.30685e+07
+
+[step 13: Project] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+3.29549e+06
+
+Executed in 4217 ms.
+Result: 1 rows × 1 columns (showing 1)
+3295493.512857
+VERIFY: comparing against /work/data/tpch//sf10/golden/q17.parquet
+VERIFY: OK

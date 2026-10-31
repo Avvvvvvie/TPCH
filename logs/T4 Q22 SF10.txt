@@ -1,0 +1,181 @@
+== TPC-H Q22 (SF=10) via IR pipeline ==
+IR built: 3 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 14 steps, 2 sources.
+
+-- IR (pre-rules) --
+Sort[cntrycode ASC]
+  Aggregate(keys=[cntrycode]; aggs=[count_all(*) AS numcust, sum(c_acctbal) AS totacctbal])
+    LeftAntiJoin(on=(c_custkey == o_custkey))
+      Filter((c_acctbal > avg_acctbal))
+        CrossJoin
+          Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
+            Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+              Scan(customer [c_custkey, c_phone, c_acctbal])
+          Aggregate(aggs=[avg(c_acctbal) AS avg_acctbal])
+            Filter((c_acctbal > 0))
+              Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
+                Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+                  Scan(customer [c_custkey, c_phone, c_acctbal])
+      Scan(orders [o_custkey])
+
+
+-- IR (post-rules) --
+Sort[cntrycode ASC]
+  Aggregate(keys=[cntrycode]; aggs=[count_all(*) AS numcust, sum(c_acctbal) AS totacctbal])
+    LeftAntiJoin(on=(c_custkey == o_custkey))
+      Filter((c_acctbal > avg_acctbal))
+        CrossJoin
+          Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
+            Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+              Scan(customer [c_custkey, c_phone, c_acctbal])
+          Aggregate(aggs=[avg(c_acctbal) AS avg_acctbal])
+            Filter((c_acctbal > 0))
+              Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
+                Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+                  Scan(customer [c_custkey, c_phone, c_acctbal])
+      Scan(orders [o_custkey])
+
+
+-- ExecPlan --
+// required sources: customer orders
+v0 = SourceTable("customer" cols=[c_custkey, c_phone, c_acctbal])
+v1 = Project(v0; #items=3 (tree=2, pred=0, substr=1))
+v2 = Filter(v1; predicate=<Predicate>)
+v3 = Filter(v2; predicate=<Predicate>, out=[1])
+v4 = Reorder(v3; ordinals=[0])
+v5 = ScalarAgg(v4; aggs=[avg(#0)])
+v6 = CrossJoin(v2, v5; )
+v7 = Filter(v6; predicate=<Predicate>, out=[0, 1, 2])
+v8 = SourceTable("orders" cols=[o_custkey])
+v9 = AntiJoin(v7, v8; lkeys=[0], rkeys=[0])
+v10 = Reorder(v9; ordinals=[0, 1, 2])
+v11 = Reorder(v10; ordinals=[2, 1])
+v12 = GroupBy(v11; n_keys=1, aggs=[?(#-1), sum(#0)])
+v13 = Sort(v12; keys=[#0 ASC])
+return v13
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/customer.parquet
+[step 0: SourceTable] -> 1500000 rows x 3 cols
+Table with 3 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 1500000)
+"25-989-741-2988" "23-768-687-3665" "11-719-748-3364" "14-128-190-5944" "13-750-942-6364" "30-114-968-4951" "28-190-982-9759" "27-147-574-9335" "18-338-906-3675" "15-741-346-9870" 
+Col2 (type: type_id::FLOAT64, size: 1500000)
+711.56 121.65 7498.12 2866.83 794.47 7638.57 9561.95 6819.74 8324.07 2753.54
+
+[step 1: Project] -> 1500000 rows x 3 cols
+Table with 3 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::FLOAT64, size: 1500000)
+711.56 121.65 7498.12 2866.83 794.47 7638.57 9561.95 6819.74 8324.07 2753.54
+Col2 (type: type_id::STRING, size: 1500000)
+"25" "23" "11" "14" "13" "30" "28" "27" "18" "15" 
+
+[step 2: Filter] -> 419974 rows x 3 cols
+Table with 3 columns and 419974 rows:
+Col0 (type: type_id::INT64, size: 419974)
+2 5 6 9 12 13 21 22 23 24
+Col1 (type: type_id::FLOAT64, size: 419974)
+121.65 794.47 7638.57 8324.07 3396.49 3857.34 1428.25 591.98 3332.02 9255.67
+Col2 (type: type_id::STRING, size: 419974)
+"23" "13" "30" "18" "23" "13" "18" "13" "13" "23" 
+
+[step 3: Filter] -> 381776 rows x 1 cols
+Table with 1 columns and 381776 rows:
+Col0 (type: type_id::FLOAT64, size: 381776)
+121.65 794.47 7638.57 8324.07 3396.49 3857.34 1428.25 591.98 3332.02 9255.67
+
+[step 4: Reorder] -> 381776 rows x 1 cols
+Table with 1 columns and 381776 rows:
+Col0 (type: type_id::FLOAT64, size: 381776)
+121.65 794.47 7638.57 8324.07 3396.49 3857.34 1428.25 591.98 3332.02 9255.67
+
+[step 5: ScalarAgg] -> 1 rows x 1 cols
+Table with 1 columns and 1 rows:
+Col0 (type: type_id::FLOAT64, size: 1)
+4998.15
+
+[step 6: CrossJoin] -> 419974 rows x 4 cols
+Table with 4 columns and 419974 rows:
+Col0 (type: type_id::INT64, size: 419974)
+2 5 6 9 12 13 21 22 23 24
+Col1 (type: type_id::FLOAT64, size: 419974)
+121.65 794.47 7638.57 8324.07 3396.49 3857.34 1428.25 591.98 3332.02 9255.67
+Col2 (type: type_id::STRING, size: 419974)
+"23" "13" "30" "18" "23" "13" "18" "13" "13" "23" 
+Col3 (type: type_id::FLOAT64, size: 419974)
+4998.15 4998.15 4998.15 4998.15 4998.15 4998.15 4998.15 4998.15 4998.15 4998.15
+
+[step 7: Filter] -> 190691 rows x 3 cols
+Table with 3 columns and 190691 rows:
+Col0 (type: type_id::INT64, size: 190691)
+6 9 24 27 43 58 63 96 100 102
+Col1 (type: type_id::FLOAT64, size: 190691)
+7638.57 8324.07 9255.67 5679.84 9904.28 6478.46 9331.13 6323.92 9889.89 8462.17
+Col2 (type: type_id::STRING, size: 190691)
+"30" "18" "23" "13" "29" "23" "31" "18" "30" "29" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf10/orders.parquet
+[step 8: SourceTable] -> 15000000 rows x 1 cols
+Table with 1 columns and 15000000 rows:
+Col0 (type: type_id::INT64, size: 15000000)
+369001 780017 1233140 1367761 444848 556222 391343 1300570 669580 610001
+
+[step 9: AntiJoin] -> 63914 rows x 3 cols
+Table with 3 columns and 63914 rows:
+Col0 (type: type_id::INT64, size: 63914)
+6 9 24 27 63 96 102 129 135 162
+Col1 (type: type_id::FLOAT64, size: 63914)
+7638.57 8324.07 9255.67 5679.84 9331.13 6323.92 8462.17 9127.27 8732.91 6268.99
+Col2 (type: type_id::STRING, size: 63914)
+"30" "18" "23" "13" "31" "18" "29" "17" "29" "18" 
+
+[step 10: Reorder] -> 63914 rows x 3 cols
+Table with 3 columns and 63914 rows:
+Col0 (type: type_id::INT64, size: 63914)
+6 9 24 27 63 96 102 129 135 162
+Col1 (type: type_id::FLOAT64, size: 63914)
+7638.57 8324.07 9255.67 5679.84 9331.13 6323.92 8462.17 9127.27 8732.91 6268.99
+Col2 (type: type_id::STRING, size: 63914)
+"30" "18" "23" "13" "31" "18" "29" "17" "29" "18" 
+
+[step 11: Reorder] -> 63914 rows x 2 cols
+Table with 2 columns and 63914 rows:
+Col0 (type: type_id::STRING, size: 63914)
+"30" "18" "23" "13" "31" "18" "29" "17" "29" "18" 
+Col1 (type: type_id::FLOAT64, size: 63914)
+7638.57 8324.07 9255.67 5679.84 9331.13 6323.92 8462.17 9127.27 8732.91 6268.99
+
+[GROUPBY DEBUG] rows=63914 groups_upper_bound=9223372036854775807 algo=1
+[step 12: GroupBy] -> 7 rows x 3 cols
+Table with 3 columns and 7 rows:
+Col0 (type: type_id::STRING, size: 7)
+"30" "17" "31" "29" "13" "18" "23" 
+Col1 (type: type_id::INT64, size: 7)
+9343 9067 9086 9199 9025 9210 8984
+Col2 (type: type_id::FLOAT64, size: 7)
+7.01188e+07 6.80847e+07 6.81445e+07 6.90154e+07 6.75925e+07 6.93128e+07 6.76078e+07
+
+[step 13: Sort] -> 7 rows x 3 cols
+Table with 3 columns and 7 rows:
+Col0 (type: type_id::STRING, size: 7)
+"13" "17" "18" "23" "29" "30" "31" 
+Col1 (type: type_id::INT64, size: 7)
+9025 9067 9210 8984 9199 9343 9086
+Col2 (type: type_id::FLOAT64, size: 7)
+6.75925e+07 6.80847e+07 6.93128e+07 6.76078e+07 6.90154e+07 7.01188e+07 6.81445e+07
+
+Executed in 1481 ms.
+Result: 7 rows × 3 columns (showing 7)
+13 | 9025 | 67592468.280000
+17 | 9067 | 68084663.340000
+18 | 9210 | 69312783.610000
+23 | 8984 | 67607771.320000
+29 | 9199 | 69015438.260000
+30 | 9343 | 70118838.040000
+31 | 9086 | 68144525.380000
+VERIFY: comparing against /work/data/tpch//sf10/golden/q22.parquet
+VERIFY: OK

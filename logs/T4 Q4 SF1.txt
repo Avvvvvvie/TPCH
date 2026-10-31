@@ -1,0 +1,113 @@
+== TPC-H Q4 (SF=1) via IR pipeline ==
+IR built: 2 output columns.
+ExecPlan: 9 steps, 2 sources.
+
+-- IR (pre-rules) --
+Sort[o_orderpriority ASC]
+  Aggregate(keys=[o_orderpriority]; aggs=[count_all(*) AS order_count])
+    LeftSemiJoin(on=(o_orderkey == l_orderkey))
+      Filter(((o_orderdate >= 19930701) && (o_orderdate < 19931001)))
+        Scan(orders [o_orderkey, o_orderdate, o_orderpriority])
+      Filter((l_commitdate < l_receiptdate))
+        Scan(lineitem [l_orderkey, l_commitdate, l_receiptdate])
+
+
+-- IR (post-rules) --
+Sort[o_orderpriority ASC]
+  Aggregate(keys=[o_orderpriority]; aggs=[count_all(*) AS order_count])
+    LeftSemiJoin(on=(o_orderkey == l_orderkey))
+      Filter(((o_orderdate >= 19930701) && (o_orderdate < 19931001)))
+        Scan(orders [o_orderkey, o_orderdate, o_orderpriority])
+      Filter((l_commitdate < l_receiptdate))
+        Scan(lineitem [l_orderkey, l_commitdate, l_receiptdate])
+
+
+-- ExecPlan --
+// required sources: orders lineitem
+v0 = SourceTable("orders" cols=[o_orderkey, o_orderdate, o_orderpriority])
+v1 = Filter(v0; predicate=<Predicate>, out=[0, 2])
+v2 = SourceTable("lineitem" cols=[l_orderkey, l_commitdate, l_receiptdate])
+v3 = Filter(v2; predicate=<Predicate>, out=[0])
+v4 = SemiJoin(v1, v3; lkeys=[0], rkeys=[0])
+v5 = Reorder(v4; ordinals=[0, 1])
+v6 = Reorder(v5; ordinals=[1])
+v7 = GroupBy(v6; n_keys=1, aggs=[?(#-1)])
+v8 = Sort(v7; keys=[#0 ASC])
+return v8
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/orders.parquet
+Memory pool has initial size 14468710400 bytes.
+[step 0: SourceTable] -> 1500000 rows x 3 cols
+Table with 3 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::INT32, size: 1500000)
+19960102 19961201 19931014 19951011 19940730 19920221 19960110 19950716 19931027 19980721
+Col2 (type: type_id::STRING, size: 1500000)
+"5-LOW" "1-URGENT" "5-LOW" "5-LOW" "5-LOW" "4-NOT SPECIFIED" "2-HIGH" "2-HIGH" "3-MEDIUM" "3-MEDIUM" 
+
+[step 1: Filter] -> 57218 rows x 2 cols
+Table with 2 columns and 57218 rows:
+Col0 (type: type_id::INT64, size: 57218)
+193 259 294 358 416 515 641 711 773 999
+Col1 (type: type_id::STRING, size: 57218)
+"1-URGENT" "4-NOT SPECIFIED" "3-MEDIUM" "2-HIGH" "5-LOW" "4-NOT SPECIFIED" "5-LOW" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/lineitem.parquet
+[step 2: SourceTable] -> 6001215 rows x 3 cols
+Table with 3 columns and 6001215 rows:
+Col0 (type: type_id::INT64, size: 6001215)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::INT32, size: 6001215)
+19960212 19960228 19960305 19960330 19960314 19960207 19970114 19940104 19931220 19931122
+Col2 (type: type_id::INT32, size: 6001215)
+19960322 19960420 19960131 19960516 19960401 19960203 19970202 19940223 19931124 19940123
+
+[step 3: Filter] -> 3793296 rows x 1 cols
+Table with 1 columns and 3793296 rows:
+Col0 (type: type_id::INT64, size: 3793296)
+1 1 1 1 2 3 3 4 5 5
+
+[step 4: SemiJoin] -> 52523 rows x 2 cols
+Table with 2 columns and 52523 rows:
+Col0 (type: type_id::INT64, size: 52523)
+193 259 358 416 515 641 711 773 999 1350
+Col1 (type: type_id::STRING, size: 52523)
+"1-URGENT" "4-NOT SPECIFIED" "2-HIGH" "5-LOW" "4-NOT SPECIFIED" "5-LOW" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" "1-URGENT" 
+
+[step 5: Reorder] -> 52523 rows x 2 cols
+Table with 2 columns and 52523 rows:
+Col0 (type: type_id::INT64, size: 52523)
+193 259 358 416 515 641 711 773 999 1350
+Col1 (type: type_id::STRING, size: 52523)
+"1-URGENT" "4-NOT SPECIFIED" "2-HIGH" "5-LOW" "4-NOT SPECIFIED" "5-LOW" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" "1-URGENT" 
+
+[step 6: Reorder] -> 52523 rows x 1 cols
+Table with 1 columns and 52523 rows:
+Col0 (type: type_id::STRING, size: 52523)
+"1-URGENT" "4-NOT SPECIFIED" "2-HIGH" "5-LOW" "4-NOT SPECIFIED" "5-LOW" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" "1-URGENT" 
+
+[GROUPBY DEBUG] rows=52523 groups_upper_bound=9223372036854775807 algo=1
+[step 7: GroupBy] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::STRING, size: 5)
+"3-MEDIUM" "2-HIGH" "5-LOW" "4-NOT SPECIFIED" "1-URGENT" 
+Col1 (type: type_id::INT64, size: 5)
+10410 10476 10487 10556 10594
+
+[step 8: Sort] -> 5 rows x 2 cols
+Table with 2 columns and 5 rows:
+Col0 (type: type_id::STRING, size: 5)
+"1-URGENT" "2-HIGH" "3-MEDIUM" "4-NOT SPECIFIED" "5-LOW" 
+Col1 (type: type_id::INT64, size: 5)
+10594 10476 10410 10556 10487
+
+Executed in 1557 ms.
+Result: 5 rows × 2 columns (showing 5)
+1-URGENT | 10594
+2-HIGH | 10476
+3-MEDIUM | 10410
+4-NOT SPECIFIED | 10556
+5-LOW | 10487
+VERIFY: comparing against /work/data/tpch//sf1/golden/q04.parquet
+VERIFY: OK

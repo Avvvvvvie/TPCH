@@ -1,0 +1,140 @@
+== TPC-H Q12 (SF=1) via IR pipeline ==
+IR built: 3 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 10 steps, 2 sources.
+
+-- IR (pre-rules) --
+Sort[l_shipmode ASC]
+  Aggregate(keys=[l_shipmode]; aggs=[sum(high) AS high_line_count, sum(low) AS low_line_count])
+    Project(l_shipmode = l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1))
+      Project(l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, "1-URGENT") || str_eq(o_orderpriority, "2-HIGH")))
+        InnerJoin(on=(o_orderkey == l_orderkey))
+          Scan(orders [o_orderkey, o_orderpriority])
+          Filter(((((str_in(l_shipmode, ["MAIL", "SHIP"]) && (l_commitdate < l_receiptdate)) && (l_shipdate < l_commitdate)) && (l_receiptdate >= 19940101)) && (l_receiptdate < 19950101)))
+            Scan(lineitem [l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate])
+
+
+-- IR (post-rules) --
+Sort[l_shipmode ASC]
+  Aggregate(keys=[l_shipmode]; aggs=[sum(high) AS high_line_count, sum(low) AS low_line_count])
+    Project(l_shipmode = l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1))
+      Project(l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, "1-URGENT") || str_eq(o_orderpriority, "2-HIGH")))
+        InnerJoin(on=(o_orderkey == l_orderkey))
+          Scan(orders [o_orderkey, o_orderpriority])
+          Filter(((((str_in(l_shipmode, ["MAIL", "SHIP"]) && (l_commitdate < l_receiptdate)) && (l_shipdate < l_commitdate)) && (l_receiptdate >= 19940101)) && (l_receiptdate < 19950101)))
+            Scan(lineitem [l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate])
+
+
+-- ExecPlan --
+// required sources: orders lineitem
+v0 = SourceTable("orders" cols=[o_orderkey, o_orderpriority])
+v1 = SourceTable("lineitem" cols=[l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate])
+v2 = Filter(v1; predicate=<Predicate>, out=[0, 1])
+v3 = EqJoin(v0, v2; lkeys=[0], rkeys=[0])
+v4 = Reorder(v3; ordinals=[0, 1, 0, 2])
+v5 = Project(v4; #items=2 (tree=1, pred=1, substr=0))
+v6 = Project(v5; #items=3 (tree=3, pred=0, substr=0))
+v7 = Reorder(v6; ordinals=[0, 1, 2])
+v8 = GroupBy(v7; n_keys=1, aggs=[sum(#0), sum(#1)])
+v9 = Sort(v8; keys=[#0 ASC])
+return v9
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/orders.parquet
+[step 0: SourceTable] -> 1500000 rows x 2 cols
+Table with 2 columns and 1500000 rows:
+Col0 (type: type_id::INT64, size: 1500000)
+1 2 3 4 5 6 7 32 33 34
+Col1 (type: type_id::STRING, size: 1500000)
+"5-LOW" "1-URGENT" "5-LOW" "5-LOW" "5-LOW" "4-NOT SPECIFIED" "2-HIGH" "2-HIGH" "3-MEDIUM" "3-MEDIUM" 
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/lineitem.parquet
+[step 1: SourceTable] -> 6001215 rows x 5 cols
+Table with 5 columns and 6001215 rows:
+Col0 (type: type_id::INT64, size: 6001215)
+1 1 1 1 1 1 2 3 3 3
+Col1 (type: type_id::STRING, size: 6001215)
+"TRUCK" "MAIL" "REG AIR" "AIR" "FOB" "MAIL" "RAIL" "AIR" "RAIL" "SHIP" 
+Col2 (type: type_id::INT32, size: 6001215)
+19960212 19960228 19960305 19960330 19960314 19960207 19970114 19940104 19931220 19931122
+Col3 (type: type_id::INT32, size: 6001215)
+19960322 19960420 19960131 19960516 19960401 19960203 19970202 19940223 19931124 19940123
+Col4 (type: type_id::INT32, size: 6001215)
+19960313 19960412 19960129 19960421 19960330 19960130 19970128 19940202 19931109 19940116
+
+[step 2: Filter] -> 30988 rows x 2 cols
+Table with 2 columns and 30988 rows:
+Col0 (type: type_id::INT64, size: 30988)
+256 807 902 1059 1125 1218 1255 1762 1985 2144
+Col1 (type: type_id::STRING, size: 30988)
+"SHIP" "SHIP" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "SHIP" "SHIP" "SHIP" 
+
+[step 3: EqJoin] -> 30988 rows x 3 cols
+Table with 3 columns and 30988 rows:
+Col0 (type: type_id::INT64, size: 30988)
+30759 31171 31296 31652 31715 31715 31941 32037 29092 29350
+Col1 (type: type_id::STRING, size: 30988)
+"4-NOT SPECIFIED" "4-NOT SPECIFIED" "1-URGENT" "5-LOW" "4-NOT SPECIFIED" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" "5-LOW" "2-HIGH" 
+Col2 (type: type_id::STRING, size: 30988)
+"SHIP" "MAIL" "MAIL" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "MAIL" "MAIL" 
+
+[step 4: Reorder] -> 30988 rows x 4 cols
+Table with 4 columns and 30988 rows:
+Col0 (type: type_id::INT64, size: 30988)
+30759 31171 31296 31652 31715 31715 31941 32037 29092 29350
+Col1 (type: type_id::STRING, size: 30988)
+"4-NOT SPECIFIED" "4-NOT SPECIFIED" "1-URGENT" "5-LOW" "4-NOT SPECIFIED" "4-NOT SPECIFIED" "3-MEDIUM" "5-LOW" "5-LOW" "2-HIGH" 
+Col2 (type: type_id::INT64, size: 30988)
+30759 31171 31296 31652 31715 31715 31941 32037 29092 29350
+Col3 (type: type_id::STRING, size: 30988)
+"SHIP" "MAIL" "MAIL" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "MAIL" "MAIL" 
+
+[step 5: Project] -> 30988 rows x 2 cols
+Table with 2 columns and 30988 rows:
+Col0 (type: type_id::STRING, size: 30988)
+"SHIP" "MAIL" "MAIL" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "MAIL" "MAIL" 
+Col1 (type: type_id::BOOL8, size: 30988)
+false false true false false false false false false true
+
+[step 6: Project] -> 30988 rows x 3 cols
+Table with 3 columns and 30988 rows:
+Col0 (type: type_id::STRING, size: 30988)
+"SHIP" "MAIL" "MAIL" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "MAIL" "MAIL" 
+Col1 (type: type_id::INT64, size: 30988)
+0 0 1 0 0 0 0 0 0 1
+Col2 (type: type_id::INT64, size: 30988)
+1 1 0 1 1 1 1 1 1 0
+
+[step 7: Reorder] -> 30988 rows x 3 cols
+Table with 3 columns and 30988 rows:
+Col0 (type: type_id::STRING, size: 30988)
+"SHIP" "MAIL" "MAIL" "MAIL" "MAIL" "MAIL" "SHIP" "MAIL" "MAIL" "MAIL" 
+Col1 (type: type_id::INT64, size: 30988)
+0 0 1 0 0 0 0 0 0 1
+Col2 (type: type_id::INT64, size: 30988)
+1 1 0 1 1 1 1 1 1 0
+
+[GROUPBY DEBUG] rows=30988 groups_upper_bound=9223372036854775807 algo=1
+[step 8: GroupBy] -> 2 rows x 3 cols
+Table with 3 columns and 2 rows:
+Col0 (type: type_id::STRING, size: 2)
+"MAIL" "SHIP" 
+Col1 (type: type_id::INT64, size: 2)
+6202 6200
+Col2 (type: type_id::INT64, size: 2)
+9324 9262
+
+[step 9: Sort] -> 2 rows x 3 cols
+Table with 3 columns and 2 rows:
+Col0 (type: type_id::STRING, size: 2)
+"MAIL" "SHIP" 
+Col1 (type: type_id::INT64, size: 2)
+6202 6200
+Col2 (type: type_id::INT64, size: 2)
+9324 9262
+
+Executed in 1092 ms.
+Result: 2 rows × 3 columns (showing 2)
+MAIL | 6202 | 9324
+SHIP | 6200 | 9262
+VERIFY: comparing against /work/data/tpch//sf1/golden/q12.parquet
+VERIFY: OK

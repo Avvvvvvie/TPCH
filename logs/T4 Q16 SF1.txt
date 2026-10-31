@@ -1,0 +1,200 @@
+== TPC-H Q16 (SF=1) via IR pipeline ==
+IR built: 4 output columns.
+Memory pool has initial size 14468710400 bytes.
+ExecPlan: 13 steps, 3 sources.
+
+-- IR (pre-rules) --
+Sort[supplier_cnt DESC, p_brand ASC, p_type ASC, p_size ASC]
+  Aggregate(keys=[p_brand, p_type, p_size]; aggs=[count_distinct(ps_suppkey) AS supplier_cnt])
+    InnerJoin(on=(p_partkey == ps_partkey))
+      Filter(((!str_eq(p_brand, "Brand#45") && !startswith(p_type, "MEDIUM POLISHED")) && ((((((((p_size == 49) || (p_size == 14)) || (p_size == 23)) || (p_size == 45)) || (p_size == 19)) || (p_size == 3)) || (p_size == 36)) || (p_size == 9))))
+        Scan(part [p_partkey, p_brand, p_type, p_size])
+      LeftAntiJoin(on=(ps_suppkey == s_suppkey))
+        Scan(partsupp [ps_partkey, ps_suppkey])
+        Filter(contains_multiple(s_comment, ["Customer", "Complaints"]))
+          Scan(supplier [s_suppkey, s_comment])
+
+
+-- IR (post-rules) --
+Sort[supplier_cnt DESC, p_brand ASC, p_type ASC, p_size ASC]
+  Aggregate(keys=[p_brand, p_type, p_size]; aggs=[count_all(*) AS supplier_cnt])
+    Distinct(keys=[p_brand, p_type, p_size, ps_suppkey])
+      InnerJoin(on=(p_partkey == ps_partkey))
+        Filter(((!str_eq(p_brand, "Brand#45") && !startswith(p_type, "MEDIUM POLISHED")) && ((((((((p_size == 49) || (p_size == 14)) || (p_size == 23)) || (p_size == 45)) || (p_size == 19)) || (p_size == 3)) || (p_size == 36)) || (p_size == 9))))
+          Scan(part [p_partkey, p_brand, p_type, p_size])
+        LeftAntiJoin(on=(ps_suppkey == s_suppkey))
+          Scan(partsupp [ps_partkey, ps_suppkey])
+          Filter(contains_multiple(s_comment, ["Customer", "Complaints"]))
+            Scan(supplier [s_suppkey, s_comment])
+
+
+-- ExecPlan --
+// required sources: part partsupp supplier
+v0 = SourceTable("part" cols=[p_partkey, p_brand, p_type, p_size])
+v1 = Filter(v0; predicate=<Predicate>)
+v2 = SourceTable("partsupp" cols=[ps_partkey, ps_suppkey])
+v3 = SourceTable("supplier" cols=[s_suppkey, s_comment])
+v4 = Filter(v3; predicate=<Predicate>, out=[0])
+v5 = AntiJoin(v2, v4; lkeys=[1], rkeys=[0])
+v6 = Reorder(v5; ordinals=[1, 0])
+v7 = EqJoin(v1, v6; lkeys=[0], rkeys=[0])
+v8 = Reorder(v7; ordinals=[0, 1, 2, 3, 0, 4])
+v9 = Distinct(v8; keys=[1, 2, 3, 5])
+v10 = Reorder(v9; ordinals=[0, 1, 2])
+v11 = GroupBy(v10; n_keys=3, aggs=[?(#-1)])
+v12 = Sort(v11; keys=[#3 DESC, #0 ASC, #1 ASC, #2 ASC])
+return v12
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/part.parquet
+[step 0: SourceTable] -> 200000 rows x 4 cols
+Table with 4 columns and 200000 rows:
+Col0 (type: type_id::INT64, size: 200000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 200000)
+"Brand#13" "Brand#13" "Brand#42" "Brand#34" "Brand#32" "Brand#24" "Brand#11" "Brand#44" "Brand#43" "Brand#54" 
+Col2 (type: type_id::STRING, size: 200000)
+"PROMO BURNISHED COPPER" "LARGE BRUSHED BRASS" "STANDARD POLISHED BRASS" "SMALL PLATED BRASS" "STANDARD POLISHED TIN" "PROMO PLATED STEEL" "SMALL PLATED COPPER" "PROMO BURNISHED TIN" "SMALL BURNISHED STEEL" "LARGE BURNISHED STEEL" 
+Col3 (type: type_id::INT32, size: 200000)
+7 1 21 14 15 4 45 41 12 44
+
+[step 1: Filter] -> 29581 rows x 4 cols
+Table with 4 columns and 29581 rows:
+Col0 (type: type_id::INT64, size: 29581)
+4 7 15 22 25 28 35 36 42 45
+Col1 (type: type_id::STRING, size: 29581)
+"Brand#34" "Brand#11" "Brand#15" "Brand#43" "Brand#55" "Brand#44" "Brand#43" "Brand#25" "Brand#52" "Brand#43" 
+Col2 (type: type_id::STRING, size: 29581)
+"SMALL PLATED BRASS" "SMALL PLATED COPPER" "LARGE ANODIZED BRASS" "PROMO POLISHED BRASS" "STANDARD BRUSHED COPPER" "SMALL PLATED COPPER" "MEDIUM ANODIZED BRASS" "SMALL BURNISHED COPPER" "MEDIUM BURNISHED TIN" "SMALL BRUSHED NICKEL" 
+Col3 (type: type_id::INT32, size: 29581)
+14 45 45 19 3 19 14 3 45 9
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/partsupp.parquet
+[step 2: SourceTable] -> 800000 rows x 2 cols
+Table with 2 columns and 800000 rows:
+Col0 (type: type_id::INT64, size: 800000)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 800000)
+2 2502 5002 7502 3 2503 5003 7503 4 2504
+
+[TpchTableReader] Opening Parquet file: /work/data/tpch/sf1/supplier.parquet
+[step 3: SourceTable] -> 10000 rows x 2 cols
+Table with 2 columns and 10000 rows:
+Col0 (type: type_id::INT64, size: 10000)
+1 2 3 4 5 6 7 8 9 10
+Col1 (type: type_id::STRING, size: 10000)
+" instructions. slyly unusual" " the pending packages. furiously expres" "ong the fluffily idle packages: bold foxes mold silent package" "al braids affix through the regular" "accounts. instructions ha" " sleep fluffily against the blithely special dugouts. furiously express th" "ke across the slyly ironic packages. carefully special pinto beans wake blithely. even deposits los" "iously about the bold packages. " "asymptotes cajole along the furiously bold deposits. iron" "ronic pinto beans. slyly even i" 
+
+[step 4: Filter] -> 4 rows x 1 cols
+Table with 1 columns and 4 rows:
+Col0 (type: type_id::INT64, size: 4)
+358 2820 3804 9504
+
+[step 5: AntiJoin] -> 799680 rows x 2 cols
+Table with 2 columns and 799680 rows:
+Col0 (type: type_id::INT64, size: 799680)
+2 2502 5002 7502 3 2503 5003 7503 4 2504
+Col1 (type: type_id::INT64, size: 799680)
+1 1 1 1 2 2 2 2 3 3
+
+[step 6: Reorder] -> 799680 rows x 2 cols
+Table with 2 columns and 799680 rows:
+Col0 (type: type_id::INT64, size: 799680)
+1 1 1 1 2 2 2 2 3 3
+Col1 (type: type_id::INT64, size: 799680)
+2 2502 5002 7502 3 2503 5003 7503 4 2504
+
+[step 7: EqJoin] -> 118274 rows x 5 cols
+Table with 5 columns and 118274 rows:
+Col0 (type: type_id::INT64, size: 118274)
+35 35 35 35 36 36 36 36 277 277
+Col1 (type: type_id::STRING, size: 118274)
+"Brand#43" "Brand#43" "Brand#43" "Brand#43" "Brand#25" "Brand#25" "Brand#25" "Brand#25" "Brand#43" "Brand#43" 
+Col2 (type: type_id::STRING, size: 118274)
+"MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "ECONOMY ANODIZED NICKEL" "ECONOMY ANODIZED NICKEL" 
+Col3 (type: type_id::INT32, size: 118274)
+14 14 14 14 3 3 3 3 49 49
+Col4 (type: type_id::INT64, size: 118274)
+36 2536 5036 7536 37 2537 5037 7537 278 2778
+
+[step 8: Reorder] -> 118274 rows x 6 cols
+Table with 6 columns and 118274 rows:
+Col0 (type: type_id::INT64, size: 118274)
+35 35 35 35 36 36 36 36 277 277
+Col1 (type: type_id::STRING, size: 118274)
+"Brand#43" "Brand#43" "Brand#43" "Brand#43" "Brand#25" "Brand#25" "Brand#25" "Brand#25" "Brand#43" "Brand#43" 
+Col2 (type: type_id::STRING, size: 118274)
+"MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "MEDIUM ANODIZED BRASS" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "ECONOMY ANODIZED NICKEL" "ECONOMY ANODIZED NICKEL" 
+Col3 (type: type_id::INT32, size: 118274)
+14 14 14 14 3 3 3 3 49 49
+Col4 (type: type_id::INT64, size: 118274)
+35 35 35 35 36 36 36 36 277 277
+Col5 (type: type_id::INT64, size: 118274)
+36 2536 5036 7536 37 2537 5037 7537 278 2778
+
+[step 9: Distinct] -> 118250 rows x 4 cols
+Table with 4 columns and 118250 rows:
+Col0 (type: type_id::STRING, size: 118250)
+"Brand#41" "Brand#41" "Brand#41" "Brand#12" "Brand#12" "Brand#12" "Brand#42" "Brand#42" "Brand#42" "Brand#31" 
+Col1 (type: type_id::STRING, size: 118250)
+"STANDARD ANODIZED STEEL" "STANDARD ANODIZED STEEL" "STANDARD ANODIZED STEEL" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL POLISHED NICKEL" "SMALL POLISHED NICKEL" "SMALL POLISHED NICKEL" "SMALL BURNISHED NICKEL" 
+Col2 (type: type_id::INT32, size: 118250)
+45 45 45 23 23 23 23 23 23 23
+Col3 (type: type_id::INT64, size: 118250)
+6506 9008 1510 6306 8808 1310 3805 6307 8809 4120
+
+[step 10: Reorder] -> 118250 rows x 3 cols
+Table with 3 columns and 118250 rows:
+Col0 (type: type_id::STRING, size: 118250)
+"Brand#41" "Brand#41" "Brand#41" "Brand#12" "Brand#12" "Brand#12" "Brand#42" "Brand#42" "Brand#42" "Brand#31" 
+Col1 (type: type_id::STRING, size: 118250)
+"STANDARD ANODIZED STEEL" "STANDARD ANODIZED STEEL" "STANDARD ANODIZED STEEL" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL BURNISHED COPPER" "SMALL POLISHED NICKEL" "SMALL POLISHED NICKEL" "SMALL POLISHED NICKEL" "SMALL BURNISHED NICKEL" 
+Col2 (type: type_id::INT32, size: 118250)
+45 45 45 23 23 23 23 23 23 23
+
+[GROUPBY DEBUG] rows=118250 groups_upper_bound=9223372036854775807 algo=1
+[step 11: GroupBy] -> 18314 rows x 4 cols
+Table with 4 columns and 18314 rows:
+Col0 (type: type_id::STRING, size: 18314)
+"Brand#14" "Brand#13" "Brand#12" "Brand#55" "Brand#22" "Brand#15" "Brand#11" "Brand#13" "Brand#52" "Brand#53" 
+Col1 (type: type_id::STRING, size: 18314)
+"LARGE ANODIZED BRASS" "PROMO ANODIZED BRASS" "PROMO POLISHED TIN" "SMALL BRUSHED BRASS" "STANDARD PLATED BRASS" "ECONOMY BRUSHED STEEL" "SMALL PLATED STEEL" "MEDIUM BURNISHED STEEL" "LARGE PLATED STEEL" "PROMO PLATED COPPER" 
+Col2 (type: type_id::INT32, size: 18314)
+19 36 3 19 9 19 9 19 19 49
+Col3 (type: type_id::INT64, size: 18314)
+8 4 12 8 16 16 8 8 4 8
+
+[step 12: Sort] -> 18314 rows x 4 cols
+Table with 4 columns and 18314 rows:
+Col0 (type: type_id::STRING, size: 18314)
+"Brand#41" "Brand#54" "Brand#11" "Brand#11" "Brand#15" "Brand#15" "Brand#15" "Brand#21" "Brand#22" "Brand#22" 
+Col1 (type: type_id::STRING, size: 18314)
+"MEDIUM BRUSHED TIN" "STANDARD BRUSHED COPPER" "STANDARD BRUSHED TIN" "STANDARD BURNISHED BRASS" "MEDIUM ANODIZED NICKEL" "SMALL ANODIZED BRASS" "SMALL BURNISHED NICKEL" "MEDIUM ANODIZED COPPER" "SMALL BRUSHED NICKEL" "SMALL BURNISHED BRASS" 
+Col2 (type: type_id::INT32, size: 18314)
+3 14 23 36 3 45 19 3 3 19
+Col3 (type: type_id::INT64, size: 18314)
+28 27 24 24 24 24 24 24 24 24
+
+Executed in 388 ms.
+Result: 18314 rows × 4 columns (showing 20)
+Brand#41 | MEDIUM BRUSHED TIN | 3 | 28
+Brand#54 | STANDARD BRUSHED COPPER | 14 | 27
+Brand#11 | STANDARD BRUSHED TIN | 23 | 24
+Brand#11 | STANDARD BURNISHED BRASS | 36 | 24
+Brand#15 | MEDIUM ANODIZED NICKEL | 3 | 24
+Brand#15 | SMALL ANODIZED BRASS | 45 | 24
+Brand#15 | SMALL BURNISHED NICKEL | 19 | 24
+Brand#21 | MEDIUM ANODIZED COPPER | 3 | 24
+Brand#22 | SMALL BRUSHED NICKEL | 3 | 24
+Brand#22 | SMALL BURNISHED BRASS | 19 | 24
+Brand#25 | MEDIUM BURNISHED COPPER | 36 | 24
+Brand#31 | PROMO POLISHED COPPER | 36 | 24
+Brand#33 | LARGE POLISHED TIN | 23 | 24
+Brand#33 | PROMO POLISHED STEEL | 14 | 24
+Brand#35 | PROMO BRUSHED NICKEL | 14 | 24
+Brand#41 | ECONOMY BRUSHED STEEL | 9 | 24
+Brand#41 | ECONOMY POLISHED TIN | 19 | 24
+Brand#41 | LARGE PLATED COPPER | 36 | 24
+Brand#42 | ECONOMY PLATED BRASS | 3 | 24
+Brand#42 | STANDARD POLISHED TIN | 49 | 24
+VERIFY: comparing against /work/data/tpch//sf1/golden/q16.parquet
+VERIFY: OK
