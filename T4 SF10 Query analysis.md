@@ -232,7 +232,7 @@ flowchart TD
     ir_8 --> ir_9
     ir_10["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_9 --> ir_10
-    ir_11["Filter<br/>str_eq(r_name, &quot;EUROPE&quot;)"]
+    ir_11["Filter<br/>str_eq(r_name, #quot;EUROPE#quot;)"]
     ir_10 --> ir_11
     ir_12["Scan<br/>region · r_regionkey, r_name"]
     ir_11 --> ir_12
@@ -250,7 +250,7 @@ flowchart TD
     ir_17 --> ir_18
     ir_19["Project<br/>p_partkey = p_partkey, p_mfgr = p_mfgr"]
     ir_17 --> ir_19
-    ir_20["Filter<br/>endswith(p_type, &quot;BRASS&quot;)"]
+    ir_20["Filter<br/>endswith(p_type, #quot;BRASS#quot;)"]
     ir_19 --> ir_20
     ir_21["Filter<br/>(p_size == 15)"]
     ir_20 --> ir_21
@@ -264,7 +264,7 @@ flowchart TD
     ir_24 --> ir_25
     ir_26["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_25 --> ir_26
-    ir_27["Filter<br/>str_eq(r_name, &quot;EUROPE&quot;)"]
+    ir_27["Filter<br/>str_eq(r_name, #quot;EUROPE#quot;)"]
     ir_26 --> ir_27
     ir_28["Scan<br/>region · r_regionkey, r_name"]
     ir_27 --> ir_28
@@ -282,7 +282,7 @@ flowchart TD
     ir_33 --> ir_34
     ir_35["Project<br/>p_partkey = p_partkey, p_mfgr = p_mfgr"]
     ir_33 --> ir_35
-    ir_36["Filter<br/>endswith(p_type, &quot;BRASS&quot;)"]
+    ir_36["Filter<br/>endswith(p_type, #quot;BRASS#quot;)"]
     ir_35 --> ir_36
     ir_37["Filter<br/>(p_size == 15)"]
     ir_36 --> ir_37
@@ -486,7 +486,7 @@ flowchart TD
     ir_4 --> ir_5
     ir_6["InnerJoin<br/>on=(c_custkey == o_custkey)"]
     ir_5 --> ir_6
-    ir_7["Filter<br/>str_eq(c_mktsegment, &quot;BUILDING&quot;)"]
+    ir_7["Filter<br/>str_eq(c_mktsegment, #quot;BUILDING#quot;)"]
     ir_6 --> ir_7
     ir_8["Scan<br/>customer · c_custkey, c_mktsegment"]
     ir_7 --> ir_8
@@ -792,7 +792,7 @@ flowchart TD
     ir_4 --> ir_11
     ir_12["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_11 --> ir_12
-    ir_13["Filter<br/>str_eq(r_name, &quot;ASIA&quot;)"]
+    ir_13["Filter<br/>str_eq(r_name, #quot;ASIA#quot;)"]
     ir_12 --> ir_13
     ir_14["Scan<br/>region · r_regionkey, r_name"]
     ir_13 --> ir_14
@@ -1080,7 +1080,7 @@ flowchart TD
     ir_0 --> ir_1
     ir_2["Project<br/>supp_nation = n_name#12, cust_nation = n_name#14, l_year = year(l_shipdate), volume = (l_extendedprice * (1..."]
     ir_1 --> ir_2
-    ir_3["Filter<br/>((str_eq(n_name#12, &quot;FRANCE&quot;) &amp;&amp; str_eq(n_name#14, &quot;GERMANY&quot;)) || (str_eq(n_name#12, &quot;GERMANY&quot;) &amp;&amp; str_eq(n..."]
+    ir_3["Filter<br/>((str_eq(n_name#12, #quot;FRANCE#quot;) &amp;&amp; str_eq(n_name#14, #quot;GERMANY#quot;)) || (str_eq(n_name#12, #quot;GERMANY#quot;) &amp;&amp; str_eq(n..."]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(o_custkey == c_custkey)"]
     ir_3 --> ir_4
@@ -1090,7 +1090,7 @@ flowchart TD
     ir_5 --> ir_6
     ir_7["InnerJoin<br/>on=(n_nationkey#11 == s_nationkey)"]
     ir_6 --> ir_7
-    ir_8["Filter<br/>str_in(n_name#12, [&quot;FRANCE&quot;, &quot;GERMANY&quot;])"]
+    ir_8["Filter<br/>str_in(n_name#12, [#quot;FRANCE#quot;, #quot;GERMANY#quot;])"]
     ir_7 --> ir_8
     ir_9["Scan<br/>nation · n_nationkey, n_name"]
     ir_8 --> ir_9
@@ -1104,7 +1104,7 @@ flowchart TD
     ir_5 --> ir_13
     ir_14["InnerJoin<br/>on=(n_nationkey#13 == c_nationkey)"]
     ir_4 --> ir_14
-    ir_15["Filter<br/>str_in(n_name#14, [&quot;FRANCE&quot;, &quot;GERMANY&quot;])"]
+    ir_15["Filter<br/>str_in(n_name#14, [#quot;FRANCE#quot;, #quot;GERMANY#quot;])"]
     ir_14 --> ir_15
     ir_16["Scan<br/>nation · n_nationkey, n_name"]
     ir_15 --> ir_16
@@ -1306,7 +1306,7 @@ flowchart TD
     ir_1 --> ir_2
     ir_3["Project<br/>o_year = o_year, volume = volume, brazil_volume = case(is_brazil, volume, 0)"]
     ir_2 --> ir_3
-    ir_4["Project<br/>o_year = o_year, volume = volume, is_brazil = str_eq(n_name, &quot;BRAZIL&quot;)"]
+    ir_4["Project<br/>o_year = o_year, volume = volume, is_brazil = str_eq(n_name, #quot;BRAZIL#quot;)"]
     ir_3 --> ir_4
     ir_5["Project<br/>o_year = year(o_orderdate), volume = (l_extendedprice * (1 - l_discount)), nation = n_name"]
     ir_4 --> ir_5
@@ -1324,7 +1324,7 @@ flowchart TD
     ir_10 --> ir_11
     ir_12["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_11 --> ir_12
-    ir_13["Filter<br/>str_eq(r_name, &quot;AMERICA&quot;)"]
+    ir_13["Filter<br/>str_eq(r_name, #quot;AMERICA#quot;)"]
     ir_12 --> ir_13
     ir_14["Scan<br/>region · r_regionkey, r_name"]
     ir_13 --> ir_14
@@ -1338,7 +1338,7 @@ flowchart TD
     ir_17 --> ir_18
     ir_19["Scan<br/>lineitem · l_orderkey, l_partkey, l_suppkey, l_extendedprice, l_discount"]
     ir_9 --> ir_19
-    ir_20["Filter<br/>str_eq(p_type, &quot;ECONOMY ANODIZED STEEL&quot;)"]
+    ir_20["Filter<br/>str_eq(p_type, #quot;ECONOMY ANODIZED STEEL#quot;)"]
     ir_8 --> ir_20
     ir_21["Scan<br/>part · p_partkey, p_type"]
     ir_20 --> ir_21
@@ -1569,7 +1569,7 @@ flowchart TD
     ir_7 --> ir_8
     ir_9["InnerJoin<br/>on=(p_partkey == l_partkey)"]
     ir_8 --> ir_9
-    ir_10["Filter<br/>contains(p_name, &quot;green&quot;)"]
+    ir_10["Filter<br/>contains(p_name, #quot;green#quot;)"]
     ir_9 --> ir_10
     ir_11["Scan<br/>part · p_partkey, p_name"]
     ir_10 --> ir_11
@@ -1770,7 +1770,7 @@ flowchart TD
     ir_7 --> ir_8
     ir_9["InnerJoin<br/>on=(l_orderkey == o_orderkey)"]
     ir_8 --> ir_9
-    ir_10["Filter<br/>str_eq(l_returnflag, &quot;R&quot;)"]
+    ir_10["Filter<br/>str_eq(l_returnflag, #quot;R#quot;)"]
     ir_9 --> ir_10
     ir_11["Scan<br/>lineitem · l_orderkey, l_returnflag, l_extendedprice, l_discount"]
     ir_10 --> ir_11
@@ -1950,7 +1950,7 @@ flowchart TD
     ir_6 --> ir_7
     ir_8["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_6 --> ir_8
-    ir_9["Filter<br/>str_eq(n_name, &quot;GERMANY&quot;)"]
+    ir_9["Filter<br/>str_eq(n_name, #quot;GERMANY#quot;)"]
     ir_8 --> ir_9
     ir_10["Scan<br/>nation · n_nationkey, n_name"]
     ir_9 --> ir_10
@@ -1968,7 +1968,7 @@ flowchart TD
     ir_15 --> ir_16
     ir_17["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_15 --> ir_17
-    ir_18["Filter<br/>str_eq(n_name, &quot;GERMANY&quot;)"]
+    ir_18["Filter<br/>str_eq(n_name, #quot;GERMANY#quot;)"]
     ir_17 --> ir_18
     ir_19["Scan<br/>nation · n_nationkey, n_name"]
     ir_18 --> ir_19
@@ -2133,13 +2133,13 @@ flowchart TD
     ir_0 --> ir_1
     ir_2["Project<br/>l_shipmode = l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1)"]
     ir_1 --> ir_2
-    ir_3["Project<br/>l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, &quot;1-URGENT&quot;) || str_eq(o_orderpriority, &quot;2-HIGH&quot;))"]
+    ir_3["Project<br/>l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, #quot;1-URGENT#quot;) || str_eq(o_orderpriority, #quot;2-HIGH#quot;))"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(o_orderkey == l_orderkey)"]
     ir_3 --> ir_4
     ir_5["Scan<br/>orders · o_orderkey, o_orderpriority"]
     ir_4 --> ir_5
-    ir_6["Filter<br/>((((str_in(l_shipmode, [&quot;MAIL&quot;, &quot;SHIP&quot;]) &amp;&amp; (l_commitdate &lt; l_receiptdate)) &amp;&amp; (l_shipdate &lt; l_commitdate))..."]
+    ir_6["Filter<br/>((((str_in(l_shipmode, [#quot;MAIL#quot;, #quot;SHIP#quot;]) &amp;&amp; (l_commitdate &lt; l_receiptdate)) &amp;&amp; (l_shipdate &lt; l_commitdate))..."]
     ir_4 --> ir_6
     ir_7["Scan<br/>lineitem · l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate"]
     ir_6 --> ir_7
@@ -2277,7 +2277,7 @@ flowchart TD
     ir_3 --> ir_4
     ir_5["Scan<br/>customer · c_custkey"]
     ir_4 --> ir_5
-    ir_6["Filter<br/>!contains_multiple(o_comment, [&quot;special&quot;, &quot;requests&quot;])"]
+    ir_6["Filter<br/>!contains_multiple(o_comment, [#quot;special#quot;, #quot;requests#quot;])"]
     ir_4 --> ir_6
     ir_7["Scan<br/>orders · o_custkey, o_comment"]
     ir_6 --> ir_7
@@ -2287,7 +2287,7 @@ flowchart TD
     ir_8 --> ir_9
     ir_10["Scan<br/>customer · c_custkey"]
     ir_9 --> ir_10
-    ir_11["Filter<br/>!contains_multiple(o_comment, [&quot;special&quot;, &quot;requests&quot;])"]
+    ir_11["Filter<br/>!contains_multiple(o_comment, [#quot;special#quot;, #quot;requests#quot;])"]
     ir_9 --> ir_11
     ir_12["Scan<br/>orders · o_custkey, o_comment"]
     ir_11 --> ir_12
@@ -2422,7 +2422,7 @@ flowchart TD
     ir_0 --> ir_1
     ir_2["Project<br/>promo_volume = case(is_promo, disc_price, 0), volume = disc_price"]
     ir_1 --> ir_2
-    ir_3["Project<br/>disc_price = (l_extendedprice * (1 - l_discount)), is_promo = startswith(p_type, &quot;PROMO&quot;)"]
+    ir_3["Project<br/>disc_price = (l_extendedprice * (1 - l_discount)), is_promo = startswith(p_type, #quot;PROMO#quot;)"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(l_partkey == p_partkey)"]
     ir_3 --> ir_4
@@ -2745,7 +2745,7 @@ flowchart TD
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(p_partkey == ps_partkey)"]
     ir_2 --> ir_3
-    ir_4["Filter<br/>((!str_eq(p_brand, &quot;Brand#45&quot;) &amp;&amp; !startswith(p_type, &quot;MEDIUM POLISHED&quot;)) &amp;&amp; ((((((((p_size == 49) || (p_si..."]
+    ir_4["Filter<br/>((!str_eq(p_brand, #quot;Brand#45#quot;) &amp;&amp; !startswith(p_type, #quot;MEDIUM POLISHED#quot;)) &amp;&amp; ((((((((p_size == 49) || (p_si..."]
     ir_3 --> ir_4
     ir_5["Scan<br/>part · p_partkey, p_brand, p_type, p_size"]
     ir_4 --> ir_5
@@ -2753,7 +2753,7 @@ flowchart TD
     ir_3 --> ir_6
     ir_7["Scan<br/>partsupp · ps_partkey, ps_suppkey"]
     ir_6 --> ir_7
-    ir_8["Filter<br/>contains_multiple(s_comment, [&quot;Customer&quot;, &quot;Complaints&quot;])"]
+    ir_8["Filter<br/>contains_multiple(s_comment, [#quot;Customer#quot;, #quot;Complaints#quot;])"]
     ir_6 --> ir_8
     ir_9["Scan<br/>supplier · s_suppkey, s_comment"]
     ir_8 --> ir_9
@@ -2901,7 +2901,7 @@ flowchart TD
     ir_4 --> ir_5
     ir_6["InnerJoin<br/>on=(p_partkey == l_partkey)"]
     ir_5 --> ir_6
-    ir_7["Filter<br/>(str_eq(p_brand, &quot;Brand#23&quot;) &amp;&amp; str_eq(p_container, &quot;MED BOX&quot;))"]
+    ir_7["Filter<br/>(str_eq(p_brand, #quot;Brand#23#quot;) &amp;&amp; str_eq(p_container, #quot;MED BOX#quot;))"]
     ir_6 --> ir_7
     ir_8["Scan<br/>part · p_partkey, p_brand, p_container"]
     ir_7 --> ir_8
@@ -2909,7 +2909,7 @@ flowchart TD
     ir_6 --> ir_9
     ir_10["InnerJoin<br/>on=(p_partkey == l_partkey)"]
     ir_3 --> ir_10
-    ir_11["Filter<br/>(str_eq(p_brand, &quot;Brand#23&quot;) &amp;&amp; str_eq(p_container, &quot;MED BOX&quot;))"]
+    ir_11["Filter<br/>(str_eq(p_brand, #quot;Brand#23#quot;) &amp;&amp; str_eq(p_container, #quot;MED BOX#quot;))"]
     ir_10 --> ir_11
     ir_12["Scan<br/>part · p_partkey, p_brand, p_container"]
     ir_11 --> ir_12
@@ -3220,13 +3220,13 @@ flowchart TD
     ir_0["Aggregate<br/>aggs=[sum(disc_price) AS revenue]"]
     ir_1["Project<br/>disc_price = (l_extendedprice * (1 - l_discount))"]
     ir_0 --> ir_1
-    ir_2["Filter<br/>(((((((str_eq(p_brand, &quot;Brand#12&quot;) &amp;&amp; str_in(p_container, [&quot;SM CASE&quot;, &quot;SM BOX&quot;, &quot;SM PACK&quot;, &quot;SM PKG&quot;])) &amp;&amp; (..."]
+    ir_2["Filter<br/>(((((((str_eq(p_brand, #quot;Brand#12#quot;) &amp;&amp; str_in(p_container, [#quot;SM CASE#quot;, #quot;SM BOX#quot;, #quot;SM PACK#quot;, #quot;SM PKG#quot;])) &amp;&amp; (..."]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(l_partkey == p_partkey)"]
     ir_2 --> ir_3
     ir_4["Project<br/>l_partkey = l_partkey, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount"]
     ir_3 --> ir_4
-    ir_5["Filter<br/>(str_in(l_shipmode, [&quot;AIR&quot;, &quot;AIR REG&quot;]) &amp;&amp; str_eq(l_shipinstruct, &quot;DELIVER IN PERSON&quot;))"]
+    ir_5["Filter<br/>(str_in(l_shipmode, [#quot;AIR#quot;, #quot;AIR REG#quot;]) &amp;&amp; str_eq(l_shipinstruct, #quot;DELIVER IN PERSON#quot;))"]
     ir_4 --> ir_5
     ir_6["Scan<br/>lineitem · l_partkey, l_quantity, l_extendedprice, l_discount, l_shipmode, l_shipinstruct"]
     ir_5 --> ir_6
@@ -3394,7 +3394,7 @@ flowchart TD
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_3 --> ir_4
-    ir_5["Filter<br/>str_eq(n_name, &quot;CANADA&quot;)"]
+    ir_5["Filter<br/>str_eq(n_name, #quot;CANADA#quot;)"]
     ir_4 --> ir_5
     ir_6["Scan<br/>nation · n_nationkey, n_name"]
     ir_5 --> ir_6
@@ -3424,13 +3424,13 @@ flowchart TD
     ir_16 --> ir_18
     ir_19["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_18 --> ir_19
-    ir_20["Filter<br/>str_eq(n_name, &quot;CANADA&quot;)"]
+    ir_20["Filter<br/>str_eq(n_name, #quot;CANADA#quot;)"]
     ir_19 --> ir_20
     ir_21["Scan<br/>nation · n_nationkey, n_name"]
     ir_20 --> ir_21
     ir_22["Scan<br/>supplier · s_suppkey, s_name, s_address, s_nationkey"]
     ir_19 --> ir_22
-    ir_23["Filter<br/>startswith(p_name, &quot;forest&quot;)"]
+    ir_23["Filter<br/>startswith(p_name, #quot;forest#quot;)"]
     ir_15 --> ir_23
     ir_24["Scan<br/>part · p_partkey, p_name"]
     ir_23 --> ir_24
@@ -3448,13 +3448,13 @@ flowchart TD
     ir_28 --> ir_30
     ir_31["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_30 --> ir_31
-    ir_32["Filter<br/>str_eq(n_name, &quot;CANADA&quot;)"]
+    ir_32["Filter<br/>str_eq(n_name, #quot;CANADA#quot;)"]
     ir_31 --> ir_32
     ir_33["Scan<br/>nation · n_nationkey, n_name"]
     ir_32 --> ir_33
     ir_34["Scan<br/>supplier · s_suppkey, s_name, s_address, s_nationkey"]
     ir_31 --> ir_34
-    ir_35["Filter<br/>startswith(p_name, &quot;forest&quot;)"]
+    ir_35["Filter<br/>startswith(p_name, #quot;forest#quot;)"]
     ir_27 --> ir_35
     ir_36["Scan<br/>part · p_partkey, p_name"]
     ir_35 --> ir_36
@@ -3674,7 +3674,7 @@ flowchart TD
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_2 --> ir_3
-    ir_4["Filter<br/>str_eq(n_name, &quot;SAUDI ARABIA&quot;)"]
+    ir_4["Filter<br/>str_eq(n_name, #quot;SAUDI ARABIA#quot;)"]
     ir_3 --> ir_4
     ir_5["Scan<br/>nation · n_nationkey, n_name"]
     ir_4 --> ir_5
@@ -3710,7 +3710,7 @@ flowchart TD
     ir_19 --> ir_20
     ir_21["Scan<br/>supplier · s_suppkey, s_name, s_nationkey"]
     ir_7 --> ir_21
-    ir_22["Filter<br/>str_eq(o_orderstatus, &quot;F&quot;)"]
+    ir_22["Filter<br/>str_eq(o_orderstatus, #quot;F#quot;)"]
     ir_6 --> ir_22
     ir_23["Scan<br/>orders · o_orderkey, o_orderstatus"]
     ir_22 --> ir_23
@@ -3919,7 +3919,7 @@ flowchart TD
     ir_2 --> ir_3
     ir_4["CrossJoin"]
     ir_3 --> ir_4
-    ir_5["Filter<br/>str_in(cntrycode, [&quot;13&quot;, &quot;31&quot;, &quot;23&quot;, &quot;29&quot;, &quot;30&quot;, &quot;18&quot;, &quot;17&quot;])"]
+    ir_5["Filter<br/>str_in(cntrycode, [#quot;13#quot;, #quot;31#quot;, #quot;23#quot;, #quot;29#quot;, #quot;30#quot;, #quot;18#quot;, #quot;17#quot;])"]
     ir_4 --> ir_5
     ir_6["Project<br/>c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
     ir_5 --> ir_6
@@ -3929,7 +3929,7 @@ flowchart TD
     ir_4 --> ir_8
     ir_9["Filter<br/>(c_acctbal &gt; 0)"]
     ir_8 --> ir_9
-    ir_10["Filter<br/>str_in(cntrycode, [&quot;13&quot;, &quot;31&quot;, &quot;23&quot;, &quot;29&quot;, &quot;30&quot;, &quot;18&quot;, &quot;17&quot;])"]
+    ir_10["Filter<br/>str_in(cntrycode, [#quot;13#quot;, #quot;31#quot;, #quot;23#quot;, #quot;29#quot;, #quot;30#quot;, #quot;18#quot;, #quot;17#quot;])"]
     ir_9 --> ir_10
     ir_11["Project<br/>c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
     ir_10 --> ir_11

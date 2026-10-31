@@ -657,7 +657,7 @@ def make_ir_graph(ir_text: str) -> str:
         if len(details) > 110:
             details = f"{details[:107]}..."
 
-        label = html.escape(details, quote=True)
+        label = html.escape(details, quote=False).replace('"', "#quot;")
         label = f"{operation}<br/>{label}" if label else operation
         lines.append(f'    ir_{node_id}["{label}"]')
         if parent_id is not None:
