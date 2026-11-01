@@ -274,9 +274,8 @@ def get_step_selectivity(
             return format_selectivity(step_rows / previous_rows)
     elif ("Join" in operation or operation == "CrossJoin") and len(inputs) >= 2:
         left_rows = int(step_by_id[int(inputs[0])]["rows"])
-        right_rows = int(step_by_id[int(inputs[1])]["rows"])
-        if left_rows and right_rows:
-            return format_selectivity(step_rows / (left_rows * right_rows))
+        if left_rows:
+            return format_selectivity(step_rows / left_rows)
     return ""
 
 

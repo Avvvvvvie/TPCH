@@ -2,6 +2,8 @@
 
 `generate.py` combines TPCH queries, notes, execution logs, benchmark CSVs, and runtime charts from Eiger/GaMax to generate query analysis reports. It discovers device and scale factor combinations from chart filenames in `charts/`, then creates chart crops and reports for each combination.
 
+For joins, reported selectivity is output rows divided by left-input rows; it is not a true match rate.
+
 ## Folders
 
 - `queries/` SQL for Q1–Q22.

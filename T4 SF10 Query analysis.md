@@ -310,7 +310,7 @@ flowchart TD
 | 0 | SourceTable | 5 | 2 | region |  |  |  |  |  |
 | 1 | Filter | 1 | 1 | < | 20% | 0.0493819 | 0.0493819 | nofuse | nofuse |
 | 2 | SourceTable | 25 | 3 | nation |  |  |  |  |  |
-| 3 | EqJoin | 5 | 3 | region⋈nation | 20% | 0.140861 | 0.140861 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 5 | 3 | region⋈nation | 500% | 0.140861 | 0.140861 | hash_gfur | hash_gfur |
 | 4 | Reorder | 5 | 4 |  |  | 0.00705179 | 0.00705179 |  |  |
 | 5 | Project | 5 | 2 |  |  | 0.0621196 | 0.0621196 | nofuse | nofuse |
 | 6 | SourceTable | 100000 | 7 | supplier |  |  |  |  |  |
@@ -319,18 +319,18 @@ flowchart TD
 | 9 | Filter | 39575 | 3 | < | 1.98% | 0.781625 | 0.781625 | nofuse | nofuse |
 | 10 | Filter | 7854 | 2 | < | 19.8% | 0.160744 | 0.160744 | nofuse | nofuse |
 | 11 | Project | 7854 | 2 |  |  | 0.00236042 | 0.00236042 | nofuse | nofuse |
-| 12 | EqJoin | 31416 | 4 | partsupp⋈part | 0.00005% | 6.87367 | 6.87367 | hash_gfur | hash_gfur |
+| 12 | EqJoin | 31416 | 4 | partsupp⋈part | 0.393% | 6.87367 | 6.87367 | hash_gfur | hash_gfur |
 | 13 | Reorder | 31416 | 5 |  |  | 0.00728421 | 0.00728421 |  |  |
-| 14 | EqJoin | 31416 | 11 | supplier⋈(partsupp⋈part) | 0.001% | 1.00285 | 1.00285 | hash_gfur | hash_gfur |
+| 14 | EqJoin | 31416 | 11 | supplier⋈(partsupp⋈part) | 31.4% | 1.00285 | 1.00285 | hash_gfur | hash_gfur |
 | 15 | Reorder | 31416 | 12 |  |  | 0.0165432 | 0.0165432 |  |  |
 | 16 | Project | 31416 | 9 |  |  | 0.554563 | 0.554563 | nofuse | nofuse |
-| 17 | EqJoin | 6351 | 10 | (region⋈nation)⋈(supplier⋈(partsupp⋈part)) | 4.04% | 0.52478 | 0.52478 | hash_gfur | hash_gfur |
+| 17 | EqJoin | 6351 | 10 | (region⋈nation)⋈(supplier⋈(partsupp⋈part)) | 1.27e+05% | 0.52478 | 0.52478 | hash_gfur | hash_gfur |
 | 18 | Reorder | 6351 | 11 |  |  | 0.0171646 | 0.0171646 |  |  |
 | 19 | Project | 6351 | 9 |  |  | 0.405231 | 0.405231 | nofuse | nofuse |
 | 20 | Reorder | 6351 | 2 |  |  | 0.0266762 | 0.0266762 |  |  |
 | 21 | GroupBy | 4667 | 2 | < | 73.5% | 0.181685 | 0.149288 | hash | sort_gftr_opt |
 | 22 | Project | 4667 | 2 |  |  | 0.00282863 | 0.00282863 | nofuse | nofuse |
-| 23 | EqJoin | 6351 | 10 | ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) ⋈ ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) | 0.0214% | 0.474924 | 0.474924 | hash_gfur | hash_gfur |
+| 23 | EqJoin | 6351 | 10 | ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) ⋈ ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) | 136% | 0.474924 | 0.474924 | hash_gfur | hash_gfur |
 | 24 | Reorder | 6351 | 11 |  |  | 0.0170223 | 0.0170223 |  |  |
 | 25 | Filter | 4667 | 9 | < | 73.5% | 0.485811 | 0.485811 | nofuse | nofuse |
 | 26 | Project | 4667 | 8 |  |  | 0.00460547 | 0.00460547 | nofuse | nofuse |
@@ -343,7 +343,7 @@ flowchart TD
     step_1["1 · Filter · 20%<br/>1 rows × 1 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>nation<br/>25 rows × 3 cols"]
-    step_3["3 · EqJoin · 20%<br/>5 rows × 3 cols"]
+    step_3["3 · EqJoin · 500%<br/>5 rows × 3 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>5 rows × 4 cols"]
@@ -359,19 +359,19 @@ flowchart TD
     step_9 --> step_10
     step_11["11 · Project<br/>7,854 rows × 2 cols"]
     step_10 --> step_11
-    step_12["12 · EqJoin · 0.00005%<br/>31,416 rows × 4 cols"]
+    step_12["12 · EqJoin · 0.393%<br/>31,416 rows × 4 cols"]
     step_7 --> step_12
     step_11 --> step_12
     step_13["13 · Reorder<br/>31,416 rows × 5 cols"]
     step_12 --> step_13
-    step_14["14 · EqJoin · 0.001%<br/>31,416 rows × 11 cols"]
+    step_14["14 · EqJoin · 31.4%<br/>31,416 rows × 11 cols"]
     step_6 --> step_14
     step_13 --> step_14
     step_15["15 · Reorder<br/>31,416 rows × 12 cols"]
     step_14 --> step_15
     step_16["16 · Project<br/>31,416 rows × 9 cols"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 4.04%<br/>6,351 rows × 10 cols"]
+    step_17["17 · EqJoin · 1.27e+05%<br/>6,351 rows × 10 cols"]
     step_5 --> step_17
     step_16 --> step_17
     step_18["18 · Reorder<br/>6,351 rows × 11 cols"]
@@ -384,7 +384,7 @@ flowchart TD
     step_20 --> step_21
     step_22["22 · Project<br/>4,667 rows × 2 cols"]
     step_21 --> step_22
-    step_23["23 · EqJoin · 0.0214%<br/>6,351 rows × 10 cols"]
+    step_23["23 · EqJoin · 136%<br/>6,351 rows × 10 cols"]
     step_22 --> step_23
     step_19 --> step_23
     step_24["24 · Reorder<br/>6,351 rows × 11 cols"]
@@ -523,11 +523,11 @@ flowchart TD
 | 1 | Filter | 300276 | 1 | < | 20% | 0.31404 | 0.31404 | fuse | fuse |
 | 2 | SourceTable | 15000000 | 4 | orders |  |  |  |  |  |
 | 3 | Filter | 7289442 | 4 | < | 48.6% | 3.69772 | 2.94776 | fuse | nofuse |
-| 4 | EqJoin | 1461923 | 4 | customer⋈orders | 0.0000668% | 12.6894 | 12.6894 | hash_gfur | hash_gfur |
+| 4 | EqJoin | 1461923 | 4 | customer⋈orders | 487% | 12.6894 | 12.6894 | hash_gfur | hash_gfur |
 | 5 | Reorder | 1461923 | 5 |  |  | 0.001904 | 0.001904 |  |  |
 | 6 | SourceTable | 59986052 | 4 | lineitem |  |  |  |  |  |
 | 7 | Filter | 32334250 | 3 | < | 53.9% | 14.9623 | 11.948 | fuse | nofuse |
-| 8 | EqJoin | 302114 | 7 | (customer⋈orders)⋈lineitem | 0.000000639% | 30.8889 | 30.8889 | hash_gfur | hash_gfur |
+| 8 | EqJoin | 302114 | 7 | (customer⋈orders)⋈lineitem | 20.7% | 30.8889 | 30.8889 | hash_gfur | hash_gfur |
 | 9 | Reorder | 302114 | 8 |  |  | 0.002064 | 0.002064 |  |  |
 | 10 | Project | 302114 | 4 |  |  | 0.123448 | 0.123448 | nofuse | nofuse |
 | 11 | Reorder | 302114 | 4 |  |  | 0.001812 | 0.001812 |  |  |
@@ -544,7 +544,7 @@ flowchart TD
     step_2["2 · SourceTable<br/>orders<br/>15,000,000 rows × 4 cols"]
     step_3["3 · Filter · 48.6%<br/>7,289,442 rows × 4 cols"]
     step_2 --> step_3
-    step_4["4 · EqJoin · 0.0000668%<br/>1,461,923 rows × 4 cols"]
+    step_4["4 · EqJoin · 487%<br/>1,461,923 rows × 4 cols"]
     step_1 --> step_4
     step_3 --> step_4
     step_5["5 · Reorder<br/>1,461,923 rows × 5 cols"]
@@ -552,7 +552,7 @@ flowchart TD
     step_6["6 · SourceTable<br/>lineitem<br/>59,986,052 rows × 4 cols"]
     step_7["7 · Filter · 53.9%<br/>32,334,250 rows × 3 cols"]
     step_6 --> step_7
-    step_8["8 · EqJoin · 0.000000639%<br/>302,114 rows × 7 cols"]
+    step_8["8 · EqJoin · 20.7%<br/>302,114 rows × 7 cols"]
     step_5 --> step_8
     step_7 --> step_8
     step_9["9 · Reorder<br/>302,114 rows × 8 cols"]
@@ -671,7 +671,7 @@ flowchart TD
 | 1 | Filter | 573671 | 2 | < | 3.82% | 4.36072 | 3.35254 | fuse | nofuse |
 | 2 | SourceTable | 59986052 | 3 | lineitem |  |  |  |  |  |
 | 3 | Filter | 37929348 | 1 | < | 63.2% | 6.98947 | 5.87889 | fuse | nofuse |
-| 4 | SemiJoin | 526040 | 2 | orders⋈lineitem | 0.00000242% | 26.8662 | 26.8662 |  |  |
+| 4 | SemiJoin | 526040 | 2 | orders⋈lineitem | 91.7% | 26.8662 | 26.8662 |  |  |
 | 5 | Reorder | 526040 | 2 |  |  | 0.00768 | 0.00768 |  |  |
 | 6 | Reorder | 526040 | 1 |  |  | 0.00191262 | 0.00191262 |  |  |
 | 7 | GroupBy | 5 | 2 | < | 0.00095% | 0.482398 | 0.482398 | hash | hash |
@@ -686,7 +686,7 @@ flowchart TD
     step_2["2 · SourceTable<br/>lineitem<br/>59,986,052 rows × 3 cols"]
     step_3["3 · Filter · 63.2%<br/>37,929,348 rows × 1 cols"]
     step_2 --> step_3
-    step_4["4 · SemiJoin · 0.00000242%<br/>526,040 rows × 2 cols"]
+    step_4["4 · SemiJoin · 91.7%<br/>526,040 rows × 2 cols"]
     step_1 --> step_4
     step_3 --> step_4
     step_5["5 · Reorder<br/>526,040 rows × 2 cols"]
@@ -828,20 +828,20 @@ flowchart TD
 | 0 | SourceTable | 1500000 | 2 | customer |  |  |  |  |  |
 | 1 | SourceTable | 15000000 | 3 | orders |  |  |  |  |  |
 | 2 | Filter | 2275919 | 2 | < | 15.2% | 3.55093 | 2.35943 | fuse | nofuse |
-| 3 | EqJoin | 2275919 | 3 | customer⋈orders | 0.0000667% | 12.5685 | 12.5685 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 2275919 | 3 | customer⋈orders | 152% | 12.5685 | 12.5685 | hash_gfur | hash_gfur |
 | 4 | Reorder | 2275919 | 4 |  |  | 0.001864 | 0.001864 |  |  |
 | 5 | SourceTable | 59986052 | 4 | lineitem |  |  |  |  |  |
-| 6 | EqJoin | 9103367 | 7 | (customer⋈orders)⋈lineitem | 0.00000667% | 66.4261 | 66.4261 | hash_gfur | hash_gfur |
+| 6 | EqJoin | 9103367 | 7 | (customer⋈orders)⋈lineitem | 400% | 66.4261 | 66.4261 | hash_gfur | hash_gfur |
 | 7 | Reorder | 9103367 | 8 |  |  | 0.002176 | 0.002176 |  |  |
 | 8 | SourceTable | 5 | 2 | region |  |  |  |  |  |
 | 9 | Filter | 1 | 1 | < | 20% | 0.057248 | 0.057248 | fuse | fuse |
 | 10 | SourceTable | 25 | 3 | nation |  |  |  |  |  |
-| 11 | EqJoin | 5 | 3 | region⋈nation | 20% | 0.162176 | 0.162176 | hash_gfur | hash_gfur |
+| 11 | EqJoin | 5 | 3 | region⋈nation | 500% | 0.162176 | 0.162176 | hash_gfur | hash_gfur |
 | 12 | Reorder | 5 | 4 |  |  | 0.00712 | 0.00712 |  |  |
 | 13 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
-| 14 | EqJoin | 20037 | 5 | (region⋈nation)⋈supplier | 4.01% | 0.250944 | 0.250944 | hash_gfur | hash_gfur |
+| 14 | EqJoin | 20037 | 5 | (region⋈nation)⋈supplier | 4.01e+05% | 0.250944 | 0.250944 | hash_gfur | hash_gfur |
 | 15 | Reorder | 20037 | 6 |  |  | 0.006408 | 0.006408 |  |  |
-| 16 | EqJoin | 1825042 | 13 | ((customer⋈orders)⋈lineitem)⋈((region⋈nation) ⋈ supplier) | 0.001% | 56.1677 | 56.1677 | hash_gfur | hash_gfur |
+| 16 | EqJoin | 1825042 | 13 | ((customer⋈orders)⋈lineitem)⋈((region⋈nation) ⋈ supplier) | 20% | 56.1677 | 56.1677 | hash_gfur | hash_gfur |
 | 17 | Reorder | 1825042 | 14 |  |  | 0.007792 | 0.007792 |  |  |
 | 18 | Filter | 72985 | 3 | < | 4% | 0.700368 | 0.631832 | fuse | nofuse |
 | 19 | Project | 72985 | 2 |  |  | 0.041488 | 0.041488 | nofuse | nofuse |
@@ -856,13 +856,13 @@ flowchart TD
     step_1["1 · SourceTable<br/>orders<br/>15,000,000 rows × 3 cols"]
     step_2["2 · Filter · 15.2%<br/>2,275,919 rows × 2 cols"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 0.0000667%<br/>2,275,919 rows × 3 cols"]
+    step_3["3 · EqJoin · 152%<br/>2,275,919 rows × 3 cols"]
     step_0 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>2,275,919 rows × 4 cols"]
     step_3 --> step_4
     step_5["5 · SourceTable<br/>lineitem<br/>59,986,052 rows × 4 cols"]
-    step_6["6 · EqJoin · 0.00000667%<br/>9,103,367 rows × 7 cols"]
+    step_6["6 · EqJoin · 400%<br/>9,103,367 rows × 7 cols"]
     step_4 --> step_6
     step_5 --> step_6
     step_7["7 · Reorder<br/>9,103,367 rows × 8 cols"]
@@ -871,18 +871,18 @@ flowchart TD
     step_9["9 · Filter · 20%<br/>1 rows × 1 cols"]
     step_8 --> step_9
     step_10["10 · SourceTable<br/>nation<br/>25 rows × 3 cols"]
-    step_11["11 · EqJoin · 20%<br/>5 rows × 3 cols"]
+    step_11["11 · EqJoin · 500%<br/>5 rows × 3 cols"]
     step_9 --> step_11
     step_10 --> step_11
     step_12["12 · Reorder<br/>5 rows × 4 cols"]
     step_11 --> step_12
     step_13["13 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
-    step_14["14 · EqJoin · 4.01%<br/>20,037 rows × 5 cols"]
+    step_14["14 · EqJoin · 4.01e+05%<br/>20,037 rows × 5 cols"]
     step_12 --> step_14
     step_13 --> step_14
     step_15["15 · Reorder<br/>20,037 rows × 6 cols"]
     step_14 --> step_15
-    step_16["16 · EqJoin · 0.001%<br/>1,825,042 rows × 13 cols"]
+    step_16["16 · EqJoin · 20%<br/>1,825,042 rows × 13 cols"]
     step_7 --> step_16
     step_15 --> step_16
     step_17["17 · Reorder<br/>1,825,042 rows × 14 cols"]
@@ -911,6 +911,10 @@ flowchart TD
     class step_22 ordering
 ```
 
+
+## Notes
+
+- Region and supplier could be filtered from lineitem first before joining
 
 ## Runtime breakdown
 
@@ -1142,21 +1146,21 @@ flowchart TD
 | 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
 | 1 | Filter | 2 | 2 | < | 8% | 0.136859 | 0.136859 | fuse | fuse |
 | 2 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
-| 3 | EqJoin | 8010 | 3 | nation⋈supplier | 4% | 0.19464 | 0.19464 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 8010 | 3 | nation⋈supplier | 4e+05% | 0.19464 | 0.19464 | hash_gfur | hash_gfur |
 | 4 | Reorder | 8010 | 4 |  |  | 0.00575467 | 0.00575467 |  |  |
 | 5 | SourceTable | 59986052 | 5 | lineitem |  |  |  |  |  |
 | 6 | Filter | 18230325 | 5 | < | 30.4% | 20.7792 | 16.0126 | fuse | nofuse |
-| 7 | EqJoin | 1460257 | 8 | (nation⋈supplier)⋈lineitem | 0.001% | 15.1967 | 15.1967 | hash_gfur | hash_gfur |
+| 7 | EqJoin | 1460257 | 8 | (nation⋈supplier)⋈lineitem | 1.82e+04% | 15.1967 | 15.1967 | hash_gfur | hash_gfur |
 | 8 | Reorder | 1460257 | 9 |  |  | 0.00783467 | 0.00783467 |  |  |
 | 9 | SourceTable | 15000000 | 2 | orders |  |  |  |  |  |
-| 10 | EqJoin | 1460257 | 10 | ((nation⋈supplier)⋈lineitem)⋈orders | 0.00000667% | 42.3044 | 42.3044 | hash_gfur | hash_gfur |
+| 10 | EqJoin | 1460257 | 10 | ((nation⋈supplier)⋈lineitem)⋈orders | 100% | 42.3044 | 42.3044 | hash_gfur | hash_gfur |
 | 11 | Reorder | 1460257 | 11 |  |  | 0.007248 | 0.007248 |  |  |
 | 12 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
 | 13 | Filter | 2 | 2 | < | 8% | 0.137792 | 0.137792 | fuse | fuse |
 | 14 | SourceTable | 1500000 | 2 | customer |  |  |  |  |  |
-| 15 | EqJoin | 120469 | 3 | nation⋈customer | 4.02% | 1.04668 | 1.04668 | hash_gfur | hash_gfur |
+| 15 | EqJoin | 120469 | 3 | nation⋈customer | 6.02e+06% | 1.04668 | 1.04668 | hash_gfur | hash_gfur |
 | 16 | Reorder | 120469 | 4 |  |  | 0.006192 | 0.006192 |  |  |
-| 17 | EqJoin | 117014 | 14 | (((nation⋈supplier)⋈lineitem)⋈orders)⋈(nation ⋈ customer) | 0.0000665% | 3.37125 | 3.37125 | hash_gfur | hash_gfur |
+| 17 | EqJoin | 117014 | 14 | (((nation⋈supplier)⋈lineitem)⋈orders)⋈(nation ⋈ customer) | 8.01% | 3.37125 | 3.37125 | hash_gfur | hash_gfur |
 | 18 | Reorder | 117014 | 15 |  |  | 0.00813333 | 0.00813333 |  |  |
 | 19 | Filter | 58365 | 5 | < | 49.9% | 0.421419 | 0.421419 | fuse | fuse |
 | 20 | Project | 58365 | 4 |  |  | 0.0526347 | 0.0526347 | nofuse | nofuse |
@@ -1171,7 +1175,7 @@ flowchart TD
     step_1["1 · Filter · 8%<br/>2 rows × 2 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
-    step_3["3 · EqJoin · 4%<br/>8,010 rows × 3 cols"]
+    step_3["3 · EqJoin · 4e+05%<br/>8,010 rows × 3 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>8,010 rows × 4 cols"]
@@ -1179,13 +1183,13 @@ flowchart TD
     step_5["5 · SourceTable<br/>lineitem<br/>59,986,052 rows × 5 cols"]
     step_6["6 · Filter · 30.4%<br/>18,230,325 rows × 5 cols"]
     step_5 --> step_6
-    step_7["7 · EqJoin · 0.001%<br/>1,460,257 rows × 8 cols"]
+    step_7["7 · EqJoin · 1.82e+04%<br/>1,460,257 rows × 8 cols"]
     step_4 --> step_7
     step_6 --> step_7
     step_8["8 · Reorder<br/>1,460,257 rows × 9 cols"]
     step_7 --> step_8
     step_9["9 · SourceTable<br/>orders<br/>15,000,000 rows × 2 cols"]
-    step_10["10 · EqJoin · 0.00000667%<br/>1,460,257 rows × 10 cols"]
+    step_10["10 · EqJoin · 100%<br/>1,460,257 rows × 10 cols"]
     step_8 --> step_10
     step_9 --> step_10
     step_11["11 · Reorder<br/>1,460,257 rows × 11 cols"]
@@ -1194,12 +1198,12 @@ flowchart TD
     step_13["13 · Filter · 8%<br/>2 rows × 2 cols"]
     step_12 --> step_13
     step_14["14 · SourceTable<br/>customer<br/>1,500,000 rows × 2 cols"]
-    step_15["15 · EqJoin · 4.02%<br/>120,469 rows × 3 cols"]
+    step_15["15 · EqJoin · 6.02e+06%<br/>120,469 rows × 3 cols"]
     step_13 --> step_15
     step_14 --> step_15
     step_16["16 · Reorder<br/>120,469 rows × 4 cols"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 0.0000665%<br/>117,014 rows × 14 cols"]
+    step_17["17 · EqJoin · 8.01%<br/>117,014 rows × 14 cols"]
     step_11 --> step_17
     step_16 --> step_17
     step_18["18 · Reorder<br/>117,014 rows × 15 cols"]
@@ -1380,27 +1384,27 @@ flowchart TD
 | 0 | SourceTable | 5 | 2 | region |  |  |  |  |  |
 | 1 | Filter | 1 | 1 | < | 20% | 0.0585326 | 0.0585326 | fuse | fuse |
 | 2 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 3 | EqJoin | 5 | 2 | region⋈nation | 20% | 0.103954 | 0.103954 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 5 | 2 | region⋈nation | 500% | 0.103954 | 0.103954 | hash_gfur | hash_gfur |
 | 4 | Reorder | 5 | 3 |  |  | 0.002112 | 0.002112 |  |  |
 | 5 | SourceTable | 1500000 | 2 | customer |  |  |  |  |  |
-| 6 | EqJoin | 299436 | 4 | (region⋈nation)⋈customer | 3.99% | 1.42759 | 1.42759 | hash_gfur | hash_gfur |
+| 6 | EqJoin | 299436 | 4 | (region⋈nation)⋈customer | 5.99e+06% | 1.42759 | 1.42759 | hash_gfur | hash_gfur |
 | 7 | Reorder | 299436 | 5 |  |  | 0.00200686 | 0.00200686 |  |  |
 | 8 | SourceTable | 15000000 | 3 | orders |  |  |  |  |  |
 | 9 | Filter | 4557513 | 3 | < | 30.4% | 4.67057 | 2.78978 | fuse | nofuse |
-| 10 | EqJoin | 910360 | 7 | ((region⋈nation)⋈customer)⋈orders | 0.0000667% | 8.14634 | 8.14634 | hash_gfur | hash_gfur |
+| 10 | EqJoin | 910360 | 7 | ((region⋈nation)⋈customer)⋈orders | 304% | 8.14634 | 8.14634 | hash_gfur | hash_gfur |
 | 11 | Reorder | 910360 | 8 |  |  | 0.00209371 | 0.00209371 |  |  |
 | 12 | SourceTable | 59986052 | 5 | lineitem |  |  |  |  |  |
-| 13 | EqJoin | 3638929 | 12 | (((region⋈nation)⋈customer)⋈orders)⋈lineitem | 0.00000666% | 57.1499 | 57.1499 | hash_gfur | hash_gfur |
+| 13 | EqJoin | 3638929 | 12 | (((region⋈nation)⋈customer)⋈orders)⋈lineitem | 400% | 57.1499 | 57.1499 | hash_gfur | hash_gfur |
 | 14 | Reorder | 3638929 | 13 |  |  | 0.00213943 | 0.00213943 |  |  |
 | 15 | SourceTable | 2000000 | 2 | part |  |  |  |  |  |
 | 16 | Filter | 13452 | 1 | < | 0.673% | 0.371173 | 0.371173 | fuse | fuse |
-| 17 | EqJoin | 24254 | 13 | ((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part | 0.0000495% | 6.92702 | 6.92702 | hash_gfur | hash_gfur |
+| 17 | EqJoin | 24254 | 13 | ((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part | 0.667% | 6.92702 | 6.92702 | hash_gfur | hash_gfur |
 | 18 | Reorder | 24254 | 14 |  |  | 0.00210286 | 0.00210286 |  |  |
 | 19 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
-| 20 | EqJoin | 24254 | 15 | (((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier | 0.001% | 0.361367 | 0.361367 | hash_gfur | hash_gfur |
+| 20 | EqJoin | 24254 | 15 | (((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier | 100% | 0.361367 | 0.361367 | hash_gfur | hash_gfur |
 | 21 | Reorder | 24254 | 16 |  |  | 0.00297143 | 0.00297143 |  |  |
 | 22 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 23 | EqJoin | 24254 | 17 | ((((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier)⋈nation | 4% | 1.67774 | 1.67774 | hash_gfur | hash_gfur |
+| 23 | EqJoin | 24254 | 17 | ((((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier)⋈nation | 100% | 1.67774 | 1.67774 | hash_gfur | hash_gfur |
 | 24 | Reorder | 24254 | 18 |  |  | 0.010272 | 0.010272 |  |  |
 | 25 | Project | 24254 | 3 |  |  | 0.121842 | 0.121842 | nofuse | nofuse |
 | 26 | Project | 24254 | 3 |  |  | 0.0295131 | 0.0295131 | nofuse | nofuse |
@@ -1417,13 +1421,13 @@ flowchart TD
     step_1["1 · Filter · 20%<br/>1 rows × 1 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_3["3 · EqJoin · 20%<br/>5 rows × 2 cols"]
+    step_3["3 · EqJoin · 500%<br/>5 rows × 2 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>5 rows × 3 cols"]
     step_3 --> step_4
     step_5["5 · SourceTable<br/>customer<br/>1,500,000 rows × 2 cols"]
-    step_6["6 · EqJoin · 3.99%<br/>299,436 rows × 4 cols"]
+    step_6["6 · EqJoin · 5.99e+06%<br/>299,436 rows × 4 cols"]
     step_4 --> step_6
     step_5 --> step_6
     step_7["7 · Reorder<br/>299,436 rows × 5 cols"]
@@ -1431,13 +1435,13 @@ flowchart TD
     step_8["8 · SourceTable<br/>orders<br/>15,000,000 rows × 3 cols"]
     step_9["9 · Filter · 30.4%<br/>4,557,513 rows × 3 cols"]
     step_8 --> step_9
-    step_10["10 · EqJoin · 0.0000667%<br/>910,360 rows × 7 cols"]
+    step_10["10 · EqJoin · 304%<br/>910,360 rows × 7 cols"]
     step_7 --> step_10
     step_9 --> step_10
     step_11["11 · Reorder<br/>910,360 rows × 8 cols"]
     step_10 --> step_11
     step_12["12 · SourceTable<br/>lineitem<br/>59,986,052 rows × 5 cols"]
-    step_13["13 · EqJoin · 0.00000666%<br/>3,638,929 rows × 12 cols"]
+    step_13["13 · EqJoin · 400%<br/>3,638,929 rows × 12 cols"]
     step_11 --> step_13
     step_12 --> step_13
     step_14["14 · Reorder<br/>3,638,929 rows × 13 cols"]
@@ -1445,19 +1449,19 @@ flowchart TD
     step_15["15 · SourceTable<br/>part<br/>2,000,000 rows × 2 cols"]
     step_16["16 · Filter · 0.673%<br/>13,452 rows × 1 cols"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 0.0000495%<br/>24,254 rows × 13 cols"]
+    step_17["17 · EqJoin · 0.667%<br/>24,254 rows × 13 cols"]
     step_14 --> step_17
     step_16 --> step_17
     step_18["18 · Reorder<br/>24,254 rows × 14 cols"]
     step_17 --> step_18
     step_19["19 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
-    step_20["20 · EqJoin · 0.001%<br/>24,254 rows × 15 cols"]
+    step_20["20 · EqJoin · 100%<br/>24,254 rows × 15 cols"]
     step_18 --> step_20
     step_19 --> step_20
     step_21["21 · Reorder<br/>24,254 rows × 16 cols"]
     step_20 --> step_21
     step_22["22 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_23["23 · EqJoin · 4%<br/>24,254 rows × 17 cols"]
+    step_23["23 · EqJoin · 100%<br/>24,254 rows × 17 cols"]
     step_21 --> step_23
     step_22 --> step_23
     step_24["24 · Reorder<br/>24,254 rows × 18 cols"]
@@ -1618,19 +1622,19 @@ flowchart TD
 | 1 | SourceTable | 2000000 | 2 | part |  |  |  |  |  |
 | 2 | Filter | 108782 | 1 | < | 5.44% | 1.0344 | 1.0344 | fuse | fuse |
 | 3 | SourceTable | 59986052 | 6 | lineitem |  |  |  |  |  |
-| 4 | EqJoin | 3261613 | 6 | part⋈lineitem | 0.00005% | 53.2063 | 53.2063 | hash_gfur | hash_gfur |
+| 4 | EqJoin | 3261613 | 6 | part⋈lineitem | 3e+03% | 53.2063 | 53.2063 | hash_gfur | hash_gfur |
 | 5 | Reorder | 3261613 | 7 |  |  | 0.00196 | 0.00196 |  |  |
 | 6 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
-| 7 | EqJoin | 3261613 | 8 | (part⋈lineitem)⋈supplier | 0.001% | 25.2001 | 25.2001 | hash_gfur | hash_gfur |
+| 7 | EqJoin | 3261613 | 8 | (part⋈lineitem)⋈supplier | 100% | 25.2001 | 25.2001 | hash_gfur | hash_gfur |
 | 8 | Reorder | 3261613 | 9 |  |  | 0.002168 | 0.002168 |  |  |
 | 9 | SourceTable | 8000000 | 3 | partsupp |  |  |  |  |  |
-| 10 | EqJoin | 13046452 | 11 | ((part⋈lineitem)⋈supplier)⋈partsupp | 0.00005% | 35.6903 | 35.6903 | hash_gfur | hash_gfur |
+| 10 | EqJoin | 13046452 | 11 | ((part⋈lineitem)⋈supplier)⋈partsupp | 400% | 35.6903 | 35.6903 | hash_gfur | hash_gfur |
 | 11 | Reorder | 13046452 | 12 |  |  | 0.00336 | 0.00336 |  |  |
 | 12 | Filter | 3261613 | 6 | < | 25% | 4.71559 | 4.71559 | fuse | fuse |
 | 13 | SourceTable | 15000000 | 2 | orders |  |  |  |  |  |
-| 14 | EqJoin | 3261613 | 7 | (((part⋈lineitem)⋈supplier)⋈partsupp)⋈orders | 0.00000667% | 65.2255 | 65.2255 | hash_gfur | hash_gfur |
+| 14 | EqJoin | 3261613 | 7 | (((part⋈lineitem)⋈supplier)⋈partsupp)⋈orders | 100% | 65.2255 | 65.2255 | hash_gfur | hash_gfur |
 | 15 | Reorder | 3261613 | 8 |  |  | 0.001824 | 0.001824 |  |  |
-| 16 | EqJoin | 3261613 | 9 | nation⋈((((part⋈lineitem)⋈supplier)⋈partsupp) ⋈ orders) | 4% | 5.33718 | 5.33718 | hash_gfur | hash_gfur |
+| 16 | EqJoin | 3261613 | 9 | nation⋈((((part⋈lineitem)⋈supplier)⋈partsupp) ⋈ orders) | 1.3e+07% | 5.33718 | 5.33718 | hash_gfur | hash_gfur |
 | 17 | Reorder | 3261613 | 10 |  |  | 0.011896 | 0.011896 |  |  |
 | 18 | Project | 3261613 | 3 |  |  | 2.9913 | 2.9913 | nofuse | nofuse |
 | 19 | Reorder | 3261613 | 3 |  |  | 0.007056 | 0.007056 |  |  |
@@ -1645,19 +1649,19 @@ flowchart TD
     step_2["2 · Filter · 5.44%<br/>108,782 rows × 1 cols"]
     step_1 --> step_2
     step_3["3 · SourceTable<br/>lineitem<br/>59,986,052 rows × 6 cols"]
-    step_4["4 · EqJoin · 0.00005%<br/>3,261,613 rows × 6 cols"]
+    step_4["4 · EqJoin · 3e+03%<br/>3,261,613 rows × 6 cols"]
     step_2 --> step_4
     step_3 --> step_4
     step_5["5 · Reorder<br/>3,261,613 rows × 7 cols"]
     step_4 --> step_5
     step_6["6 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
-    step_7["7 · EqJoin · 0.001%<br/>3,261,613 rows × 8 cols"]
+    step_7["7 · EqJoin · 100%<br/>3,261,613 rows × 8 cols"]
     step_5 --> step_7
     step_6 --> step_7
     step_8["8 · Reorder<br/>3,261,613 rows × 9 cols"]
     step_7 --> step_8
     step_9["9 · SourceTable<br/>partsupp<br/>8,000,000 rows × 3 cols"]
-    step_10["10 · EqJoin · 0.00005%<br/>13,046,452 rows × 11 cols"]
+    step_10["10 · EqJoin · 400%<br/>13,046,452 rows × 11 cols"]
     step_8 --> step_10
     step_9 --> step_10
     step_11["11 · Reorder<br/>13,046,452 rows × 12 cols"]
@@ -1665,12 +1669,12 @@ flowchart TD
     step_12["12 · Filter · 25%<br/>3,261,613 rows × 6 cols"]
     step_11 --> step_12
     step_13["13 · SourceTable<br/>orders<br/>15,000,000 rows × 2 cols"]
-    step_14["14 · EqJoin · 0.00000667%<br/>3,261,613 rows × 7 cols"]
+    step_14["14 · EqJoin · 100%<br/>3,261,613 rows × 7 cols"]
     step_12 --> step_14
     step_13 --> step_14
     step_15["15 · Reorder<br/>3,261,613 rows × 8 cols"]
     step_14 --> step_15
-    step_16["16 · EqJoin · 4%<br/>3,261,613 rows × 9 cols"]
+    step_16["16 · EqJoin · 1.3e+07%<br/>3,261,613 rows × 9 cols"]
     step_0 --> step_16
     step_15 --> step_16
     step_17["17 · Reorder<br/>3,261,613 rows × 10 cols"]
@@ -1697,6 +1701,10 @@ flowchart TD
     class step_21 ordering
 ```
 
+
+## Notes
+
+- Multikey joins could result in smaller joins
 
 ## Runtime breakdown
 
@@ -1819,14 +1827,14 @@ flowchart TD
 | 3 | Filter | 14808183 | 3 | < | 24.7% | 11.7255 | 11.7255 | fuse | fuse |
 | 4 | SourceTable | 15000000 | 3 | orders |  |  |  |  |  |
 | 5 | Filter | 573157 | 2 | < | 3.82% | 3.06078 | 2.06517 | fuse | nofuse |
-| 6 | EqJoin | 1147084 | 4 | lineitem⋈orders | 0.0000135% | 16.2753 | 16.2753 | hash_gfur | hash_gfur |
+| 6 | EqJoin | 1147084 | 4 | lineitem⋈orders | 7.75% | 16.2753 | 16.2753 | hash_gfur | hash_gfur |
 | 7 | Reorder | 1147084 | 5 |  |  | 0.00184686 | 0.00184686 |  |  |
 | 8 | Project | 1147084 | 2 |  |  | 0.355273 | 0.355273 | nofuse | nofuse |
 | 9 | Reorder | 1147084 | 2 |  |  | 0.00183314 | 0.00183314 |  |  |
 | 10 | GroupBy | 381105 | 2 | < | 33.2% | 1.42471 | 1.42471 | hash | hash |
-| 11 | EqJoin | 381105 | 8 | customer⋈(lineitem⋈orders) | 0.0000667% | 26.842 | 26.842 | hash_gfur | hash_gfur |
+| 11 | EqJoin | 381105 | 8 | customer⋈(lineitem⋈orders) | 25.4% | 26.842 | 26.842 | hash_gfur | hash_gfur |
 | 12 | Reorder | 381105 | 9 |  |  | 0.0150674 | 0.0150674 |  |  |
-| 13 | EqJoin | 381105 | 10 | nation⋈(customer⋈(lineitem⋈orders)) | 4% | 7.95907 | 7.95907 | hash_gfur | hash_gfur |
+| 13 | EqJoin | 381105 | 10 | nation⋈(customer⋈(lineitem⋈orders)) | 1.52e+06% | 7.95907 | 7.95907 | hash_gfur | hash_gfur |
 | 14 | Reorder | 381105 | 11 |  |  | 0.016224 | 0.016224 |  |  |
 | 15 | Project | 381105 | 8 |  |  | 7.38965 | 7.38965 | nofuse | nofuse |
 | 16 | TopK | 20 | 8 | < | 0.00525% | 0.709536 | 0.709536 |  |  |
@@ -1842,7 +1850,7 @@ flowchart TD
     step_4["4 · SourceTable<br/>orders<br/>15,000,000 rows × 3 cols"]
     step_5["5 · Filter · 3.82%<br/>573,157 rows × 2 cols"]
     step_4 --> step_5
-    step_6["6 · EqJoin · 0.0000135%<br/>1,147,084 rows × 4 cols"]
+    step_6["6 · EqJoin · 7.75%<br/>1,147,084 rows × 4 cols"]
     step_3 --> step_6
     step_5 --> step_6
     step_7["7 · Reorder<br/>1,147,084 rows × 5 cols"]
@@ -1853,12 +1861,12 @@ flowchart TD
     step_8 --> step_9
     step_10["10 · GroupBy · 33.2%<br/>381,105 rows × 2 cols"]
     step_9 --> step_10
-    step_11["11 · EqJoin · 0.0000667%<br/>381,105 rows × 8 cols"]
+    step_11["11 · EqJoin · 25.4%<br/>381,105 rows × 8 cols"]
     step_1 --> step_11
     step_10 --> step_11
     step_12["12 · Reorder<br/>381,105 rows × 9 cols"]
     step_11 --> step_12
-    step_13["13 · EqJoin · 4%<br/>381,105 rows × 10 cols"]
+    step_13["13 · EqJoin · 1.52e+06%<br/>381,105 rows × 10 cols"]
     step_0 --> step_13
     step_12 --> step_13
     step_14["14 · Reorder<br/>381,105 rows × 11 cols"]
@@ -2014,9 +2022,9 @@ flowchart TD
 | 1 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
 | 2 | Filter | 1 | 1 | < | 4% | 0.0505006 | 0.0505006 | nofuse | nofuse |
 | 3 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
-| 4 | EqJoin | 4049 | 2 | nation⋈supplier | 4.05% | 0.139422 | 0.139422 | hash_gfur | hash_gfur |
+| 4 | EqJoin | 4049 | 2 | nation⋈supplier | 4.05e+05% | 0.139422 | 0.139422 | hash_gfur | hash_gfur |
 | 5 | Reorder | 4049 | 3 |  |  | 0.00201829 | 0.00201829 |  |  |
-| 6 | EqJoin | 323920 | 6 | partsupp⋈(nation⋈supplier) | 0.001% | 36.9888 | 36.9888 | hash_gfur | hash_gfur |
+| 6 | EqJoin | 323920 | 6 | partsupp⋈(nation⋈supplier) | 4.05% | 36.9888 | 36.9888 | hash_gfur | hash_gfur |
 | 7 | Reorder | 323920 | 7 |  |  | 0.002544 | 0.002544 |  |  |
 | 8 | Project | 323920 | 2 |  |  | 0.0813806 | 0.0813806 | nofuse | nofuse |
 | 9 | Reorder | 323920 | 2 |  |  | 0.0388914 | 0.0388914 |  |  |
@@ -2037,12 +2045,12 @@ flowchart TD
     step_2["2 · Filter · 4%<br/>1 rows × 1 cols"]
     step_1 --> step_2
     step_3["3 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
-    step_4["4 · EqJoin · 4.05%<br/>4,049 rows × 2 cols"]
+    step_4["4 · EqJoin · 4.05e+05%<br/>4,049 rows × 2 cols"]
     step_2 --> step_4
     step_3 --> step_4
     step_5["5 · Reorder<br/>4,049 rows × 3 cols"]
     step_4 --> step_5
-    step_6["6 · EqJoin · 0.001%<br/>323,920 rows × 6 cols"]
+    step_6["6 · EqJoin · 4.05%<br/>323,920 rows × 6 cols"]
     step_0 --> step_6
     step_5 --> step_6
     step_7["7 · Reorder<br/>323,920 rows × 7 cols"]
@@ -2184,7 +2192,7 @@ flowchart TD
 | 0 | SourceTable | 15000000 | 2 | orders |  |  |  |  |  |
 | 1 | SourceTable | 59986052 | 5 | lineitem |  |  |  |  |  |
 | 2 | Filter | 310803 | 2 | < | 0.518% | 29.9621 | 23.6523 | fuse | nofuse |
-| 3 | EqJoin | 310803 | 3 | orders⋈lineitem | 0.00000667% | 26.6645 | 26.6645 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 310803 | 3 | orders⋈lineitem | 2.07% | 26.6645 | 26.6645 | hash_gfur | hash_gfur |
 | 4 | Reorder | 310803 | 4 |  |  | 0.0115484 | 0.0115484 |  |  |
 | 5 | Project | 310803 | 2 |  |  | 0.269799 | 0.269799 | nofuse | nofuse |
 | 6 | Project | 310803 | 3 |  |  | 0.0946809 | 0.0946809 | nofuse | nofuse |
@@ -2199,7 +2207,7 @@ flowchart TD
     step_1["1 · SourceTable<br/>lineitem<br/>59,986,052 rows × 5 cols"]
     step_2["2 · Filter · 0.518%<br/>310,803 rows × 2 cols"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 0.00000667%<br/>310,803 rows × 3 cols"]
+    step_3["3 · EqJoin · 2.07%<br/>310,803 rows × 3 cols"]
     step_0 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>310,803 rows × 4 cols"]
@@ -2334,11 +2342,11 @@ flowchart TD
 | 0 | SourceTable | 1500000 | 1 | customer |  |  |  |  |  |
 | 1 | SourceTable | 15000000 | 2 | orders |  |  |  |  |  |
 | 2 | Filter | 14845369 | 1 | < | 99% | 12.0886 | 12.0886 | fuse | fuse |
-| 3 | EqJoin | 14845369 | 1 | customer⋈orders | 0.0000667% | 71.4798 | 71.4798 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 14845369 | 1 | customer⋈orders | 990% | 71.4798 | 71.4798 | hash_gfur | hash_gfur |
 | 4 | Reorder | 14845369 | 2 |  |  | 0.00172 | 0.00172 |  |  |
 | 5 | Reorder | 14845369 | 1 |  |  | 0.001416 | 0.001416 |  |  |
 | 6 | GroupBy | 999981 | 2 | < | 6.74% | 46.8193 | 20.7011 | hash | sort_gftr |
-| 7 | AntiJoin | 500019 | 1 | customer⋈orders | 0.00000225% | 12.1619 | 12.1619 |  |  |
+| 7 | AntiJoin | 500019 | 1 | customer⋈orders | 33.3% | 12.1619 | 12.1619 |  |  |
 | 8 | Reorder | 500019 | 1 |  |  | 0.001456 | 0.001456 |  |  |
 | 9 | Project | 500019 | 2 |  |  | 0.089328 | 0.089328 | nofuse | nofuse |
 | 10 | Concat | 1500000 | 2 |  |  | 0.223456 | 0.223456 |  |  |
@@ -2353,7 +2361,7 @@ flowchart TD
     step_1["1 · SourceTable<br/>orders<br/>15,000,000 rows × 2 cols"]
     step_2["2 · Filter · 99%<br/>14,845,369 rows × 1 cols"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 0.0000667%<br/>14,845,369 rows × 1 cols"]
+    step_3["3 · EqJoin · 990%<br/>14,845,369 rows × 1 cols"]
     step_0 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>14,845,369 rows × 2 cols"]
@@ -2362,7 +2370,7 @@ flowchart TD
     step_4 --> step_5
     step_6["6 · GroupBy · 6.74%<br/>999,981 rows × 2 cols"]
     step_5 --> step_6
-    step_7["7 · AntiJoin · 0.00000225%<br/>500,019 rows × 1 cols"]
+    step_7["7 · AntiJoin · 33.3%<br/>500,019 rows × 1 cols"]
     step_0 --> step_7
     step_2 --> step_7
     step_8["8 · Reorder<br/>500,019 rows × 1 cols"]
@@ -2476,7 +2484,7 @@ flowchart TD
 | 0 | SourceTable | 59986052 | 4 | lineitem |  |  |  |  |  |
 | 1 | Filter | 749223 | 3 | < | 1.25% | 14.3196 | 9.97113 | fuse | nofuse |
 | 2 | SourceTable | 2000000 | 2 | part |  |  |  |  |  |
-| 3 | EqJoin | 749223 | 4 | lineitem⋈part | 0.00005% | 8.03465 | 8.03465 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 749223 | 4 | lineitem⋈part | 100% | 8.03465 | 8.03465 | hash_gfur | hash_gfur |
 | 4 | Reorder | 749223 | 5 |  |  | 0.00806545 | 0.00806545 |  |  |
 | 5 | Project | 749223 | 2 |  |  | 0.297175 | 0.297175 | nofuse | nofuse |
 | 6 | Project | 749223 | 2 |  |  | 0.0541745 | 0.0541745 | nofuse | nofuse |
@@ -2491,7 +2499,7 @@ flowchart TD
     step_1["1 · Filter · 1.25%<br/>749,223 rows × 3 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>part<br/>2,000,000 rows × 2 cols"]
-    step_3["3 · EqJoin · 0.00005%<br/>749,223 rows × 4 cols"]
+    step_3["3 · EqJoin · 100%<br/>749,223 rows × 4 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>749,223 rows × 5 cols"]
@@ -2807,9 +2815,9 @@ flowchart TD
 | 2 | SourceTable | 8000000 | 2 | partsupp |  |  |  |  |  |
 | 3 | SourceTable | 100000 | 2 | supplier |  |  |  |  |  |
 | 4 | Filter | 56 | 1 | < | 0.056% | 0.180559 | 0.180559 | fuse | fuse |
-| 5 | AntiJoin | 7995520 | 2 | partsupp⋈supplier | 1.78% | 2.78452 | 2.78452 |  |  |
+| 5 | AntiJoin | 7995520 | 2 | partsupp⋈supplier | 99.9% | 2.78452 | 2.78452 |  |  |
 | 6 | Reorder | 7995520 | 2 |  |  | 0.00182982 | 0.00182982 |  |  |
-| 7 | EqJoin | 1186602 | 5 | part⋈(partsupp⋈supplier) | 0.00005% | 7.72549 | 7.72549 | hash_gfur | hash_gfur |
+| 7 | EqJoin | 1186602 | 5 | part⋈(partsupp⋈supplier) | 400% | 7.72549 | 7.72549 | hash_gfur | hash_gfur |
 | 8 | Reorder | 1186602 | 6 |  |  | 0.00876218 | 0.00876218 |  |  |
 | 9 | Distinct | 1186339 | 4 |  |  | 4.38748 | 4.38748 | hash | hash |
 | 10 | Reorder | 1186339 | 3 |  |  | 0.00780509 | 0.00780509 |  |  |
@@ -2826,12 +2834,12 @@ flowchart TD
     step_3["3 · SourceTable<br/>supplier<br/>100,000 rows × 2 cols"]
     step_4["4 · Filter · 0.056%<br/>56 rows × 1 cols"]
     step_3 --> step_4
-    step_5["5 · AntiJoin · 1.78%<br/>7,995,520 rows × 2 cols"]
+    step_5["5 · AntiJoin · 99.9%<br/>7,995,520 rows × 2 cols"]
     step_2 --> step_5
     step_4 --> step_5
     step_6["6 · Reorder<br/>7,995,520 rows × 2 cols"]
     step_5 --> step_6
-    step_7["7 · EqJoin · 0.00005%<br/>1,186,602 rows × 5 cols"]
+    step_7["7 · EqJoin · 400%<br/>1,186,602 rows × 5 cols"]
     step_1 --> step_7
     step_6 --> step_7
     step_8["8 · Reorder<br/>1,186,602 rows × 6 cols"]
@@ -2965,12 +2973,12 @@ flowchart TD
 | 0 | SourceTable | 2000000 | 3 | part |  |  |  |
 | 1 | Filter | 2044 | 1 | < | 0.102% | 0.544299 | nofuse |
 | 2 | SourceTable | 59986052 | 3 | lineitem |  |  |  |
-| 3 | EqJoin | 61385 | 3 | part⋈lineitem | 0.0000501% | 41.2013 | hash_gfur |
+| 3 | EqJoin | 61385 | 3 | part⋈lineitem | 3e+03% | 41.2013 | hash_gfur |
 | 4 | Reorder | 61385 | 4 |  |  | 0.00205867 |  |
 | 5 | Reorder | 61385 | 2 |  |  | 0.0178933 |  |
 | 6 | GroupBy | 2044 | 2 | < | 3.33% | 0.210541 | hash |
 | 7 | Project | 2044 | 2 |  |  | 0.017096 | nofuse |
-| 8 | EqJoin | 61385 | 5 | (part⋈lineitem)⋈(part⋈lineitem) | 0.0489% | 0.181176 | hash_gfur |
+| 8 | EqJoin | 61385 | 5 | (part⋈lineitem)⋈(part⋈lineitem) | 3e+03% | 0.181176 | hash_gfur |
 | 9 | Reorder | 61385 | 6 |  |  | 0.002168 |  |
 | 10 | Filter | 5526 | 1 | < | 9% | 0.0549627 | nofuse |
 | 11 | Reorder | 5526 | 1 |  |  | 0.00176267 |  |
@@ -2984,7 +2992,7 @@ flowchart TD
     step_1["1 · Filter · 0.102%<br/>2,044 rows × 1 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>lineitem<br/>59,986,052 rows × 3 cols"]
-    step_3["3 · EqJoin · 0.0000501%<br/>61,385 rows × 3 cols"]
+    step_3["3 · EqJoin · 3e+03%<br/>61,385 rows × 3 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>61,385 rows × 4 cols"]
@@ -2995,7 +3003,7 @@ flowchart TD
     step_5 --> step_6
     step_7["7 · Project<br/>2,044 rows × 2 cols"]
     step_6 --> step_7
-    step_8["8 · EqJoin · 0.0489%<br/>61,385 rows × 5 cols"]
+    step_8["8 · EqJoin · 3e+03%<br/>61,385 rows × 5 cols"]
     step_7 --> step_8
     step_4 --> step_8
     step_9["9 · Reorder<br/>61,385 rows × 6 cols"]
@@ -3130,10 +3138,10 @@ flowchart TD
 | 2 | Reorder | 59986052 | 2 |  |  | 0.00211657 | 0.00211657 |  |  |
 | 3 | GroupBy | 15000000 | 2 | < | 25% | 53.2047 | 53.2047 | hash | hash |
 | 4 | Filter | 624 | 2 | < | 0.00416% | 1.74166 | 1.6023 | fuse | nofuse |
-| 5 | EqJoin | 624 | 5 | orders⋈lineitem | 0.00000667% | 24.6104 | 24.6104 | hash_gfur | hash_gfur |
+| 5 | EqJoin | 624 | 5 | orders⋈lineitem | 0.00416% | 24.6104 | 24.6104 | hash_gfur | hash_gfur |
 | 6 | Reorder | 624 | 6 |  |  | 0.00191086 | 0.00191086 |  |  |
 | 7 | SourceTable | 1500000 | 2 | customer |  |  |  |  |  |
-| 8 | EqJoin | 624 | 7 | (orders⋈lineitem)⋈customer | 0.0000667% | 0.969454 | 0.969454 | hash_gfur | hash_gfur |
+| 8 | EqJoin | 624 | 7 | (orders⋈lineitem)⋈customer | 100% | 0.969454 | 0.969454 | hash_gfur | hash_gfur |
 | 9 | Reorder | 624 | 8 |  |  | 0.00869486 | 0.00869486 |  |  |
 | 10 | Project | 624 | 6 |  |  | 0.092128 | 0.092128 | nofuse | nofuse |
 | 11 | TopK | 100 | 6 | < | 16% | 0.639758 | 0.639758 |  |  |
@@ -3149,13 +3157,13 @@ flowchart TD
     step_2 --> step_3
     step_4["4 · Filter · 0.00416%<br/>624 rows × 2 cols"]
     step_3 --> step_4
-    step_5["5 · EqJoin · 0.00000667%<br/>624 rows × 5 cols"]
+    step_5["5 · EqJoin · 0.00416%<br/>624 rows × 5 cols"]
     step_0 --> step_5
     step_4 --> step_5
     step_6["6 · Reorder<br/>624 rows × 6 cols"]
     step_5 --> step_6
     step_7["7 · SourceTable<br/>customer<br/>1,500,000 rows × 2 cols"]
-    step_8["8 · EqJoin · 0.0000667%<br/>624 rows × 7 cols"]
+    step_8["8 · EqJoin · 100%<br/>624 rows × 7 cols"]
     step_6 --> step_8
     step_7 --> step_8
     step_9["9 · Reorder<br/>624 rows × 8 cols"]
@@ -3287,7 +3295,7 @@ flowchart TD
 | 1 | Filter | 2141904 | 4 | < | 3.57% | 23.0009 | 23.0009 | fuse | fuse |
 | 2 | Project | 2141904 | 4 |  |  | 0.001784 | 0.001784 | nofuse | nofuse |
 | 3 | SourceTable | 2000000 | 4 | part |  |  |  |  |  |
-| 4 | EqJoin | 2141904 | 7 | lineitem⋈part | 0.00005% | 17.4938 | 17.4938 | hash_gfur | hash_gfur |
+| 4 | EqJoin | 2141904 | 7 | lineitem⋈part | 100% | 17.4938 | 17.4938 | hash_gfur | hash_gfur |
 | 5 | Reorder | 2141904 | 8 |  |  | 0.012192 | 0.012192 |  |  |
 | 6 | Filter | 1134 | 2 | < | 0.0529% | 3.85935 | 3.18491 | fuse | nofuse |
 | 7 | Project | 1134 | 1 |  |  | 0.0213067 | 0.0213067 | nofuse | nofuse |
@@ -3303,7 +3311,7 @@ flowchart TD
     step_2["2 · Project<br/>2,141,904 rows × 4 cols"]
     step_1 --> step_2
     step_3["3 · SourceTable<br/>part<br/>2,000,000 rows × 4 cols"]
-    step_4["4 · EqJoin · 0.00005%<br/>2,141,904 rows × 7 cols"]
+    step_4["4 · EqJoin · 100%<br/>2,141,904 rows × 7 cols"]
     step_2 --> step_4
     step_3 --> step_4
     step_5["5 · Reorder<br/>2,141,904 rows × 8 cols"]
@@ -3515,29 +3523,29 @@ flowchart TD
 | 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
 | 1 | Filter | 1 | 1 | < | 4% | 0.0508587 | 0.0508587 | fuse | fuse |
 | 2 | SourceTable | 100000 | 4 | supplier |  |  |  |  |  |
-| 3 | EqJoin | 4054 | 4 | nation⋈supplier | 4.05% | 0.279927 | 0.279927 | hash_gfur | hash_gfur |
+| 3 | EqJoin | 4054 | 4 | nation⋈supplier | 4.05e+05% | 0.279927 | 0.279927 | hash_gfur | hash_gfur |
 | 4 | Reorder | 4054 | 5 |  |  | 0.00998222 | 0.00998222 |  |  |
 | 5 | Project | 4054 | 3 |  |  | 0.132469 | 0.132469 | nofuse | nofuse |
 | 6 | SourceTable | 8000000 | 3 | partsupp |  |  |  |  |  |
-| 7 | SemiJoin | 324320 | 3 | partsupp⋈(nation⋈supplier) | 0.001% | 2.65559 | 2.65559 |  |  |
+| 7 | SemiJoin | 324320 | 3 | partsupp⋈(nation⋈supplier) | 4.05% | 2.65559 | 2.65559 |  |  |
 | 8 | Reorder | 324320 | 3 |  |  | 0.00180978 | 0.00180978 |  |  |
 | 9 | SourceTable | 2000000 | 2 | part |  |  |  |  |  |
 | 10 | Filter | 21551 | 1 | < | 1.08% | 0.469333 | 0.469333 | fuse | fuse |
-| 11 | SemiJoin | 3517 | 3 | (partsupp⋈(nation⋈supplier))⋈part | 0.0000503% | 0.197577 | 0.197577 |  |  |
+| 11 | SemiJoin | 3517 | 3 | (partsupp⋈(nation⋈supplier))⋈part | 1.08% | 0.197577 | 0.197577 |  |  |
 | 12 | Reorder | 3517 | 3 |  |  | 0.00184 | 0.00184 |  |  |
 | 13 | SourceTable | 59986052 | 4 | lineitem |  |  |  |  |  |
 | 14 | Filter | 9099165 | 3 | < | 15.2% | 16.3136 | 11.858 | fuse | nofuse |
-| 15 | EqJoin | 15984 | 5 | ((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem | 0.0000499% | 5.92658 | 5.92658 | hash_gfur | hash_gfur |
+| 15 | EqJoin | 15984 | 5 | ((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem | 454% | 5.92658 | 5.92658 | hash_gfur | hash_gfur |
 | 16 | Reorder | 15984 | 6 |  |  | 0.00217422 | 0.00217422 |  |  |
 | 17 | Filter | 4015 | 3 | < | 25.1% | 0.126164 | 0.100346 | fuse | nofuse |
 | 18 | Reorder | 4015 | 3 |  |  | 0.00162311 | 0.00162311 |  |  |
 | 19 | GroupBy | 2384 | 3 | < | 59.4% | 0.171047 | 0.171047 | hash | hash |
 | 20 | Project | 2384 | 3 |  |  | 0.0182471 | 0.0182471 | nofuse | nofuse |
-| 21 | EqJoin | 2667 | 5 | (((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem) ⋈ ((partsupp⋈(nation⋈supplier))⋈part) | 0.0318% | 0.121593 | 0.121593 | hash_gfur | hash_gfur |
+| 21 | EqJoin | 2667 | 5 | (((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem) ⋈ ((partsupp⋈(nation⋈supplier))⋈part) | 112% | 0.121593 | 0.121593 | hash_gfur | hash_gfur |
 | 22 | Reorder | 2667 | 6 |  |  | 0.00193956 | 0.00193956 |  |  |
 | 23 | Filter | 2384 | 3 | < | 89.4% | 0.108002 | 0.0876145 | fuse | nofuse |
 | 24 | Filter | 2377 | 1 | < | 99.7% | 0.0561493 | 0.0374764 | fuse | nofuse |
-| 25 | SemiJoin | 1804 | 3 | (nation⋈supplier)⋈((((partsupp⋈(nation⋈supplier)) ⋈ part)⋈lineitem)⋈((partsupp⋈(nation⋈supplier)) ⋈ part)) | 0.0187% | 0.206946 | 0.206946 |  |  |
+| 25 | SemiJoin | 1804 | 3 | (nation⋈supplier)⋈((((partsupp⋈(nation⋈supplier)) ⋈ part)⋈lineitem)⋈((partsupp⋈(nation⋈supplier)) ⋈ part)) | 44.5% | 0.206946 | 0.206946 |  |  |
 | 26 | Reorder | 1804 | 3 |  |  | 0.00971378 | 0.00971378 |  |  |
 | 27 | Project | 1804 | 2 |  |  | 0.128533 | 0.128533 | nofuse | nofuse |
 | 28 | Sort | 1804 | 2 |  |  | 0.778987 | 0.778987 | no_skf | no_skf |
@@ -3549,7 +3557,7 @@ flowchart TD
     step_1["1 · Filter · 4%<br/>1 rows × 1 cols"]
     step_0 --> step_1
     step_2["2 · SourceTable<br/>supplier<br/>100,000 rows × 4 cols"]
-    step_3["3 · EqJoin · 4.05%<br/>4,054 rows × 4 cols"]
+    step_3["3 · EqJoin · 4.05e+05%<br/>4,054 rows × 4 cols"]
     step_1 --> step_3
     step_2 --> step_3
     step_4["4 · Reorder<br/>4,054 rows × 5 cols"]
@@ -3557,7 +3565,7 @@ flowchart TD
     step_5["5 · Project<br/>4,054 rows × 3 cols"]
     step_4 --> step_5
     step_6["6 · SourceTable<br/>partsupp<br/>8,000,000 rows × 3 cols"]
-    step_7["7 · SemiJoin · 0.001%<br/>324,320 rows × 3 cols"]
+    step_7["7 · SemiJoin · 4.05%<br/>324,320 rows × 3 cols"]
     step_6 --> step_7
     step_5 --> step_7
     step_8["8 · Reorder<br/>324,320 rows × 3 cols"]
@@ -3565,7 +3573,7 @@ flowchart TD
     step_9["9 · SourceTable<br/>part<br/>2,000,000 rows × 2 cols"]
     step_10["10 · Filter · 1.08%<br/>21,551 rows × 1 cols"]
     step_9 --> step_10
-    step_11["11 · SemiJoin · 0.0000503%<br/>3,517 rows × 3 cols"]
+    step_11["11 · SemiJoin · 1.08%<br/>3,517 rows × 3 cols"]
     step_8 --> step_11
     step_10 --> step_11
     step_12["12 · Reorder<br/>3,517 rows × 3 cols"]
@@ -3573,7 +3581,7 @@ flowchart TD
     step_13["13 · SourceTable<br/>lineitem<br/>59,986,052 rows × 4 cols"]
     step_14["14 · Filter · 15.2%<br/>9,099,165 rows × 3 cols"]
     step_13 --> step_14
-    step_15["15 · EqJoin · 0.0000499%<br/>15,984 rows × 5 cols"]
+    step_15["15 · EqJoin · 454%<br/>15,984 rows × 5 cols"]
     step_12 --> step_15
     step_14 --> step_15
     step_16["16 · Reorder<br/>15,984 rows × 6 cols"]
@@ -3586,7 +3594,7 @@ flowchart TD
     step_18 --> step_19
     step_20["20 · Project<br/>2,384 rows × 3 cols"]
     step_19 --> step_20
-    step_21["21 · EqJoin · 0.0318%<br/>2,667 rows × 5 cols"]
+    step_21["21 · EqJoin · 112%<br/>2,667 rows × 5 cols"]
     step_20 --> step_21
     step_12 --> step_21
     step_22["22 · Reorder<br/>2,667 rows × 6 cols"]
@@ -3595,7 +3603,7 @@ flowchart TD
     step_22 --> step_23
     step_24["24 · Filter · 99.7%<br/>2,377 rows × 1 cols"]
     step_23 --> step_24
-    step_25["25 · SemiJoin · 0.0187%<br/>1,804 rows × 3 cols"]
+    step_25["25 · SemiJoin · 44.5%<br/>1,804 rows × 3 cols"]
     step_5 --> step_25
     step_24 --> step_25
     step_26["26 · Reorder<br/>1,804 rows × 3 cols"]
@@ -3778,22 +3786,22 @@ flowchart TD
 | 6 | Reorder | 59984817 | 1 |  |  | 0.001896 | 0.001896 |  |  |
 | 7 | GroupBy | 15000000 | 2 | < | 25% | 57.5717 | 57.5717 | hash | hash |
 | 8 | Filter | 12856058 | 1 | < | 85.7% | 1.7535 | 1.65297 | fuse | nofuse |
-| 9 | SemiJoin | 36573988 | 2 | lineitem⋈lineitem | 0.0000075% | 36.141 | 36.141 |  |  |
+| 9 | SemiJoin | 36573988 | 2 | lineitem⋈lineitem | 96.4% | 36.141 | 36.141 |  |  |
 | 10 | Reorder | 36573988 | 2 |  |  | 0.00188 | 0.00188 |  |  |
 | 11 | Distinct | 37928859 | 2 |  |  | 87.8783 | 79.602 | hash | sort_skf |
 | 12 | Reorder | 37928859 | 1 |  |  | 0.001632 | 0.001632 |  |  |
 | 13 | GroupBy | 13753474 | 2 | < | 36.3% | 44.9404 | 44.9404 | hash | hash |
 | 14 | Filter | 3372250 | 1 | < | 24.5% | 1.25962 | 1.18282 | fuse | nofuse |
-| 15 | SemiJoin | 2016924 | 2 | (lineitem⋈lineitem)⋈lineitem | 0.00000164% | 17.3358 | 17.3358 |  |  |
+| 15 | SemiJoin | 2016924 | 2 | (lineitem⋈lineitem)⋈lineitem | 5.51% | 17.3358 | 17.3358 |  |  |
 | 16 | Reorder | 2016924 | 2 |  |  | 0.001616 | 0.001616 |  |  |
 | 17 | SourceTable | 100000 | 3 | supplier |  |  |  |  |  |
-| 18 | EqJoin | 2016924 | 4 | ((lineitem⋈lineitem)⋈lineitem)⋈supplier | 0.001% | 9.60445 | 9.60445 | hash_gfur | hash_gfur |
+| 18 | EqJoin | 2016924 | 4 | ((lineitem⋈lineitem)⋈lineitem)⋈supplier | 100% | 9.60445 | 9.60445 | hash_gfur | hash_gfur |
 | 19 | Reorder | 2016924 | 5 |  |  | 0.009112 | 0.009112 |  |  |
 | 20 | SourceTable | 15000000 | 2 | orders |  |  |  |  |  |
 | 21 | Filter | 7309184 | 1 | < | 48.7% | 1.67194 | 1.67194 | fuse | fuse |
-| 22 | EqJoin | 990572 | 5 | (((lineitem⋈lineitem)⋈lineitem)⋈supplier)⋈orders | 0.00000672% | 31.9133 | 31.9133 | hash_gfur | hash_gfur |
+| 22 | EqJoin | 990572 | 5 | (((lineitem⋈lineitem)⋈lineitem)⋈supplier)⋈orders | 49.1% | 31.9133 | 31.9133 | hash_gfur | hash_gfur |
 | 23 | Reorder | 990572 | 6 |  |  | 0.010896 | 0.010896 |  |  |
-| 24 | EqJoin | 39448 | 6 | nation⋈((((lineitem⋈lineitem)⋈lineitem)⋈supplier) ⋈ orders) | 3.98% | 0.832344 | 0.832344 | hash_gfur | hash_gfur |
+| 24 | EqJoin | 39448 | 6 | nation⋈((((lineitem⋈lineitem)⋈lineitem)⋈supplier) ⋈ orders) | 3.94e+06% | 0.832344 | 0.832344 | hash_gfur | hash_gfur |
 | 25 | Reorder | 39448 | 7 |  |  | 0.006832 | 0.006832 |  |  |
 | 26 | Reorder | 39448 | 1 |  |  | 0.001504 | 0.001504 |  |  |
 | 27 | GroupBy | 4009 | 2 | < | 10.2% | 0.258112 | 0.249096 | hash | partition_gftr |
@@ -3817,7 +3825,7 @@ flowchart TD
     step_6 --> step_7
     step_8["8 · Filter · 85.7%<br/>12,856,058 rows × 1 cols"]
     step_7 --> step_8
-    step_9["9 · SemiJoin · 0.0000075%<br/>36,573,988 rows × 2 cols"]
+    step_9["9 · SemiJoin · 96.4%<br/>36,573,988 rows × 2 cols"]
     step_3 --> step_9
     step_8 --> step_9
     step_10["10 · Reorder<br/>36,573,988 rows × 2 cols"]
@@ -3830,13 +3838,13 @@ flowchart TD
     step_12 --> step_13
     step_14["14 · Filter · 24.5%<br/>3,372,250 rows × 1 cols"]
     step_13 --> step_14
-    step_15["15 · SemiJoin · 0.00000164%<br/>2,016,924 rows × 2 cols"]
+    step_15["15 · SemiJoin · 5.51%<br/>2,016,924 rows × 2 cols"]
     step_10 --> step_15
     step_14 --> step_15
     step_16["16 · Reorder<br/>2,016,924 rows × 2 cols"]
     step_15 --> step_16
     step_17["17 · SourceTable<br/>supplier<br/>100,000 rows × 3 cols"]
-    step_18["18 · EqJoin · 0.001%<br/>2,016,924 rows × 4 cols"]
+    step_18["18 · EqJoin · 100%<br/>2,016,924 rows × 4 cols"]
     step_16 --> step_18
     step_17 --> step_18
     step_19["19 · Reorder<br/>2,016,924 rows × 5 cols"]
@@ -3844,12 +3852,12 @@ flowchart TD
     step_20["20 · SourceTable<br/>orders<br/>15,000,000 rows × 2 cols"]
     step_21["21 · Filter · 48.7%<br/>7,309,184 rows × 1 cols"]
     step_20 --> step_21
-    step_22["22 · EqJoin · 0.00000672%<br/>990,572 rows × 5 cols"]
+    step_22["22 · EqJoin · 49.1%<br/>990,572 rows × 5 cols"]
     step_19 --> step_22
     step_21 --> step_22
     step_23["23 · Reorder<br/>990,572 rows × 6 cols"]
     step_22 --> step_23
-    step_24["24 · EqJoin · 3.98%<br/>39,448 rows × 6 cols"]
+    step_24["24 · EqJoin · 3.94e+06%<br/>39,448 rows × 6 cols"]
     step_1 --> step_24
     step_23 --> step_24
     step_25["25 · Reorder<br/>39,448 rows × 7 cols"]
@@ -4004,7 +4012,7 @@ flowchart TD
 | 6 | CrossJoin | 419974 | 4 | customer⋈customer | 100% | 0.336489 |  |
 | 7 | Filter | 190691 | 3 | < | 45.4% | 0.321772 | nofuse |
 | 8 | SourceTable | 15000000 | 1 | orders |  |  |  |
-| 9 | AntiJoin | 63914 | 3 | (customer⋈customer)⋈orders | 0.00000223% | 11.5145 |  |
+| 9 | AntiJoin | 63914 | 3 | (customer⋈customer)⋈orders | 33.5% | 11.5145 |  |
 | 10 | Reorder | 63914 | 3 |  |  | 0.00709689 |  |
 | 11 | Reorder | 63914 | 2 |  |  | 0.00208356 |  |
 | 12 | GroupBy | 7 | 3 | < | 0.011% | 0.21308 | hash |
@@ -4030,7 +4038,7 @@ flowchart TD
     step_7["7 · Filter · 45.4%<br/>190,691 rows × 3 cols"]
     step_6 --> step_7
     step_8["8 · SourceTable<br/>orders<br/>15,000,000 rows × 1 cols"]
-    step_9["9 · AntiJoin · 0.00000223%<br/>63,914 rows × 3 cols"]
+    step_9["9 · AntiJoin · 33.5%<br/>63,914 rows × 3 cols"]
     step_7 --> step_9
     step_8 --> step_9
     step_10["10 · Reorder<br/>63,914 rows × 3 cols"]
