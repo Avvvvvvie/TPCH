@@ -1,6 +1,6 @@
 # TPCH Query Analysis
 
-`generate.py` combines TPCH queries, notes, execution logs, benchmark CSVs, and runtime charts to generate query analysis reports. It discovers device and scale-factor combinations from chart filenames in `charts/`, then creates chart crops and reports for each combination.
+`generate.py` combines TPCH queries, notes, execution logs, benchmark CSVs, and runtime charts from Eiger/GaMax to generate query analysis reports. It discovers device and scale factor combinations from chart filenames in `charts/`, then creates chart crops and reports for each combination.
 
 ## Folders
 
