@@ -900,7 +900,7 @@ def render_query(
                 "",
                 "## Runtime breakdown",
                 "",
-                f"![Q{query_number} runtime breakdown|200x0](/{runtime_breakdown})",
+                f"![Q{query_number} runtime breakdown|200x0]({runtime_breakdown})",
             )
         )
     return "\n".join(report_sections)
@@ -961,7 +961,7 @@ def generate_report(
         legend_reference = legend_path.relative_to(output_path.parent).as_posix()
         report_text += (
             "\n\n## Runtime breakdown legend\n\n"
-            f"![Runtime breakdown legend|200x0](/{legend_reference})"
+            f"![Runtime breakdown legend|200x0]({legend_reference})"
         )
     output_path.write_text(report_text + "\n", encoding="utf-8")
     return output_path

@@ -115,7 +115,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q1 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q1.jpg)
+![Q1 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q1.jpg)
 
 # Q2 Minimum Cost Supplier Query
 
@@ -416,7 +416,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q2 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q2.jpg)
+![Q2 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q2.jpg)
 
 # Q3 Shipping Priority Query
 
@@ -588,7 +588,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q3 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q3.jpg)
+![Q3 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q3.jpg)
 
 # Q4 Order Priority Checking Query
 
@@ -714,7 +714,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q4 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q4.jpg)
+![Q4 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q4.jpg)
 
 # Q5 Local Supplier Volume Query
 
@@ -914,7 +914,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q5 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q5.jpg)
+![Q5 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q5.jpg)
 
 # Q6 Forecasting Revenue Change Query
 
@@ -1009,7 +1009,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q6 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q6.jpg)
+![Q6 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q6.jpg)
 
 # Q7 Volume Shipping Query
 
@@ -1235,7 +1235,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q7 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q7.jpg)
+![Q7 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q7.jpg)
 
 # Q8 National Market Share Query
 
@@ -1497,7 +1497,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q8 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q8.jpg)
+![Q8 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q8.jpg)
 
 # Q9 Product Type Profit Measure Query
 
@@ -1700,7 +1700,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q9 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q9.jpg)
+![Q9 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q9.jpg)
 
 # Q10 Returned Item Reporting Query
 
@@ -1884,7 +1884,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q10 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q10.jpg)
+![Q10 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q10.jpg)
 
 # Q11 Important Stock Identification Query
 
@@ -2089,7 +2089,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q11 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q11.jpg)
+![Q11 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q11.jpg)
 
 # Q12 Shipping Modes and Order Priority Query
 
@@ -2231,7 +2231,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q12 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q12.jpg)
+![Q12 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q12.jpg)
 
 # Q13 Customer Distribution Query
 
@@ -2395,7 +2395,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q13 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q13.jpg)
+![Q13 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q13.jpg)
 
 # Q14 Promotion Effect Query
 
@@ -2522,7 +2522,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q14 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q14.jpg)
+![Q14 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q14.jpg)
 
 # Q15 Top Supplier Query
 
@@ -2704,7 +2704,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q15 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q15.jpg)
+![Q15 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q15.jpg)
 
 # Q16 Parts/Supplier Relationship Query
 
@@ -2865,7 +2865,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q16 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q16.jpg)
+![Q16 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q16.jpg)
 
 # Q17 Small-Quantity-Order Revenue Query
 
@@ -3024,7 +3024,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q17 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q17.jpg)
+![Q17 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q17.jpg)
 
 # Q18 Large Volume Customer Query
 
@@ -3185,7 +3185,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q18 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q18.jpg)
+![Q18 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q18.jpg)
 
 # Q19 Discounted Revenue Query
 
@@ -3332,7 +3332,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q19 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q19.jpg)
+![Q19 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q19.jpg)
 
 # Q20 Potential Part Promotion Query
 
@@ -3625,7 +3625,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q20 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q20.jpg)
+![Q20 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q20.jpg)
 
 # Q21 Suppliers Who Kept Orders Waiting Query
 
@@ -3884,7 +3884,7 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q21 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q21.jpg)
+![Q21 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q21.jpg)
 
 # Q22 Global Sales Opportunity Query
 
@@ -4058,8 +4058,8 @@ flowchart TD
 
 ## Runtime breakdown
 
-![Q22 runtime breakdown|200x0](/assets/runtime-breakdowns/T4_SF1_Q22.jpg)
+![Q22 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF1_Q22.jpg)
 
 ## Runtime breakdown legend
 
-![Runtime breakdown legend|200x0](/assets/runtime-breakdowns/T4_SF1_legend.jpg)
+![Runtime breakdown legend|200x0](assets/runtime-breakdowns/T4_SF1_legend.jpg)
