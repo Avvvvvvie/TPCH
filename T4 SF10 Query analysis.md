@@ -113,9 +113,11 @@ flowchart TD
 
 - Almost a complete table scan
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q1 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q1.jpg)
+| T4 Q1 SF1 | T4 Q1 SF10 | GH200 Q1 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q1.jpg" alt="T4 Q1 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q1.jpg" alt="T4 Q1 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q1_comparison.jpg" alt="GH200 Q1 SF100" width="200"> |
 
 # Q2 Minimum Cost Supplier Query
 
@@ -414,9 +416,11 @@ flowchart TD
 
 - Repeated join subtree for the correlated MIN
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q2 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q2.jpg)
+| T4 Q2 SF1 | T4 Q2 SF10 | GH200 Q2 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q2.jpg" alt="T4 Q2 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q2.jpg" alt="T4 Q2 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q2_comparison.jpg" alt="GH200 Q2 SF100" width="200"> |
 
 # Q3 Shipping Priority Query
 
@@ -586,9 +590,11 @@ flowchart TD
 
 - Large intermediate join
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q3 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q3.jpg)
+| T4 Q3 SF1 | T4 Q3 SF10 | GH200 Q3 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q3.jpg" alt="T4 Q3 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q3.jpg" alt="T4 Q3 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q3_comparison.jpg" alt="GH200 Q3 SF100" width="200"> |
 
 # Q4 Order Priority Checking Query
 
@@ -712,9 +718,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q4 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q4.jpg)
+| T4 Q4 SF1 | T4 Q4 SF10 | GH200 Q4 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q4.jpg" alt="T4 Q4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q4.jpg" alt="T4 Q4 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q4_comparison.jpg" alt="GH200 Q4 SF100" width="200"> |
 
 # Q5 Local Supplier Volume Query
 
@@ -916,9 +924,11 @@ flowchart TD
 
 - Region and supplier could be filtered from lineitem first before joining
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q5 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q5.jpg)
+| T4 Q5 SF1 | T4 Q5 SF10 | GH200 Q5 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q5.jpg" alt="T4 Q5 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q5.jpg" alt="T4 Q5 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q5_comparison.jpg" alt="GH200 Q5 SF100" width="200"> |
 
 # Q6 Forecasting Revenue Change Query
 
@@ -1011,9 +1021,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q6 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q6.jpg)
+| T4 Q6 SF1 | T4 Q6 SF10 | GH200 Q6 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q6.jpg" alt="T4 Q6 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q6.jpg" alt="T4 Q6 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q6_comparison.jpg" alt="GH200 Q6 SF100" width="200"> |
 
 # Q7 Volume Shipping Query
 
@@ -1237,9 +1249,11 @@ flowchart TD
 
 - nation is read multiple times.
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q7 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q7.jpg)
+| T4 Q7 SF1 | T4 Q7 SF10 | GH200 Q7 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q7.jpg" alt="T4 Q7 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q7.jpg" alt="T4 Q7 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q7_comparison.jpg" alt="GH200 Q7 SF100" width="200"> |
 
 # Q8 National Market Share Query
 
@@ -1499,9 +1513,11 @@ flowchart TD
 
 - nation is read multiple times.
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q8 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q8.jpg)
+| T4 Q8 SF1 | T4 Q8 SF10 | GH200 Q8 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q8.jpg" alt="T4 Q8 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q8.jpg" alt="T4 Q8 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q8_comparison.jpg" alt="GH200 Q8 SF100" width="200"> |
 
 # Q9 Product Type Profit Measure Query
 
@@ -1706,9 +1722,11 @@ flowchart TD
 
 - Multikey joins could result in smaller joins
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q9 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q9.jpg)
+| T4 Q9 SF1 | T4 Q9 SF10 | GH200 Q9 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q9.jpg" alt="T4 Q9 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q9.jpg" alt="T4 Q9 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q9_comparison.jpg" alt="GH200 Q9 SF100" width="200"> |
 
 # Q10 Returned Item Reporting Query
 
@@ -1890,9 +1908,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q10 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q10.jpg)
+| T4 Q10 SF1 | T4 Q10 SF10 | GH200 Q10 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q10.jpg" alt="T4 Q10 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q10.jpg" alt="T4 Q10 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q10_comparison.jpg" alt="GH200 Q10 SF100" width="200"> |
 
 # Q11 Important Stock Identification Query
 
@@ -2095,9 +2115,11 @@ flowchart TD
 
 - Repeated computation of the global threshold
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q11 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q11.jpg)
+| T4 Q11 SF1 | T4 Q11 SF10 | GH200 Q11 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q11.jpg" alt="T4 Q11 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q11.jpg" alt="T4 Q11 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q11_comparison.jpg" alt="GH200 Q11 SF100" width="200"> |
 
 # Q12 Shipping Modes and Order Priority Query
 
@@ -2237,9 +2259,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q12 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q12.jpg)
+| T4 Q12 SF1 | T4 Q12 SF10 | GH200 Q12 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q12.jpg" alt="T4 Q12 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q12.jpg" alt="T4 Q12 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q12_comparison.jpg" alt="GH200 Q12 SF100" width="200"> |
 
 # Q13 Customer Distribution Query
 
@@ -2401,9 +2425,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q13 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q13.jpg)
+| T4 Q13 SF1 | T4 Q13 SF10 | GH200 Q13 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q13.jpg" alt="T4 Q13 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q13.jpg" alt="T4 Q13 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q13_comparison.jpg" alt="GH200 Q13 SF100" width="200"> |
 
 # Q14 Promotion Effect Query
 
@@ -2528,9 +2554,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q14 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q14.jpg)
+| T4 Q14 SF1 | T4 Q14 SF10 | GH200 Q14 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q14.jpg" alt="T4 Q14 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q14.jpg" alt="T4 Q14 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q14_comparison.jpg" alt="GH200 Q14 SF100" width="200"> |
 
 # Q15 Top Supplier Query
 
@@ -2710,9 +2738,11 @@ flowchart TD
 
 - Duplicate Aggregation
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q15 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q15.jpg)
+| T4 Q15 SF1 | T4 Q15 SF10 | GH200 Q15 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q15.jpg" alt="T4 Q15 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q15.jpg" alt="T4 Q15 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q15_comparison.jpg" alt="GH200 Q15 SF100" width="200"> |
 
 # Q16 Parts/Supplier Relationship Query
 
@@ -2871,9 +2901,11 @@ flowchart TD
 
 - Anti-join with very low selectivity
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q16 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q16.jpg)
+| T4 Q16 SF1 | T4 Q16 SF10 | GH200 Q16 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q16.jpg" alt="T4 Q16 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q16.jpg" alt="T4 Q16 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q16_comparison.jpg" alt="GH200 Q16 SF100" width="200"> |
 
 # Q17 Small-Quantity-Order Revenue Query
 
@@ -3030,9 +3062,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q17 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q17.jpg)
+| T4 Q17 SF1 | T4 Q17 SF10 | GH200 Q17 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q17.jpg" alt="T4 Q17 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q17.jpg" alt="T4 Q17 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q17_comparison.jpg" alt="GH200 Q17 SF100" width="200"> |
 
 # Q18 Large Volume Customer Query
 
@@ -3191,9 +3225,11 @@ flowchart TD
 
 - Aggregating the entire LINEITEM table
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q18 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q18.jpg)
+| T4 Q18 SF1 | T4 Q18 SF10 | GH200 Q18 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q18.jpg" alt="T4 Q18 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q18.jpg" alt="T4 Q18 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q18_comparison.jpg" alt="GH200 Q18 SF100" width="200"> |
 
 # Q19 Discounted Revenue Query
 
@@ -3338,9 +3374,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q19 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q19.jpg)
+| T4 Q19 SF1 | T4 Q19 SF10 | GH200 Q19 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q19.jpg" alt="T4 Q19 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q19.jpg" alt="T4 Q19 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q19_comparison.jpg" alt="GH200 Q19 SF100" width="200"> |
 
 # Q20 Potential Part Promotion Query
 
@@ -3631,9 +3669,11 @@ flowchart TD
 
 - Duplicated subplans and joins
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q20 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q20.jpg)
+| T4 Q20 SF1 | T4 Q20 SF10 | GH200 Q20 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q20.jpg" alt="T4 Q20 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q20.jpg" alt="T4 Q20 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q20_comparison.jpg" alt="GH200 Q20 SF100" width="200"> |
 
 # Q21 Suppliers Who Kept Orders Waiting Query
 
@@ -3890,9 +3930,11 @@ flowchart TD
 - Expensive aggregation
 - Two DISTINCT on lineitem
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q21 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q21.jpg)
+| T4 Q21 SF1 | T4 Q21 SF10 | GH200 Q21 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q21.jpg" alt="T4 Q21 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q21.jpg" alt="T4 Q21 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q21_comparison.jpg" alt="GH200 Q21 SF100" width="200"> |
 
 # Q22 Global Sales Opportunity Query
 
@@ -4064,9 +4106,11 @@ flowchart TD
 ```
 
 
-## Runtime breakdown
+## Runtime breakdown comparison
 
-![Q22 runtime breakdown|200x0](assets/runtime-breakdowns/T4_SF10_Q22.jpg)
+| T4 Q22 SF1 | T4 Q22 SF10 | GH200 Q22 SF100 |
+| --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q22.jpg" alt="T4 Q22 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q22.jpg" alt="T4 Q22 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q22_comparison.jpg" alt="GH200 Q22 SF100" width="200"> |
 
 ## Runtime breakdown legend
 

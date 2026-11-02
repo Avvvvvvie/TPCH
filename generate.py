@@ -4,7 +4,9 @@ import csv
 import html
 import math
 import re
+from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 from PIL import Image, ImageChops
 
@@ -68,12 +70,30 @@ STEP_KIND_CONFIG_REVERSE = {
 }
 SUMMARY_OVERRIDE_RE = re.compile(r"Step\s+(\d+):\s*([^;]+)")
 CHART_SOURCE_RE = re.compile(
-    r"(?P<device>.+) SF(?P<scale_factor>\d+) breakdown\.(?:jpe?g|png)$",
+    r"(?P<device>.+) SF(?P<scale_factor>\d+) breakdown"
+    r"(?P<comparison> comparison)?\.(?:jpe?g|png)$",
     re.IGNORECASE,
 )
 
 
-def discover_chart_sources(root: Path) -> list[tuple[str, int, Path]]:
+@dataclass(frozen=True)
+class ChartSource:
+    device: str
+    scale_factor: int
+    path: Path
+    comparison: bool
+
+    def query_image_path(self, root: Path, query_number: int) -> Path:
+        suffix = "_comparison" if self.comparison else ""
+        return (
+            root
+            / "assets"
+            / "runtime-breakdowns"
+            / f"{self.device}_SF{self.scale_factor}_Q{query_number}{suffix}.jpg"
+        )
+
+
+def discover_chart_sources(root: Path) -> list[ChartSource]:
     charts_dir = root / "charts"
     if not charts_dir.is_dir():
         raise FileNotFoundError(f"Chart source folder does not exist: {charts_dir}")
@@ -86,26 +106,36 @@ def discover_chart_sources(root: Path) -> list[tuple[str, int, Path]]:
         if match is None:
             continue
         chart_sources.append(
-            (
-                match.group("device"),
-                int(match.group("scale_factor")),
-                chart_path,
+            ChartSource(
+                device=match.group("device"),
+                scale_factor=int(match.group("scale_factor")),
+                path=chart_path,
+                comparison=bool(match.group("comparison")),
             )
         )
     if not chart_sources:
         raise FileNotFoundError(
-            f"No '<device> SF<number> breakdown' chart sources found in {charts_dir}"
+            f"No '<device> SF<number> breakdown[ comparison]' chart sources "
+            f"found in {charts_dir}"
         )
-    return chart_sources
+    return sorted(
+        chart_sources,
+        key=lambda source: (
+            source.scale_factor,
+            source.device.casefold(),
+            source.comparison,
+        ),
+    )
 
 
 def generate_runtime_breakdown_assets(
-    root: Path, device: str, scale_factor: int, source_path: Path
+    root: Path, source: ChartSource
 ) -> None:
     asset_dir = root / "assets" / "runtime-breakdowns"
     asset_dir.mkdir(parents=True, exist_ok=True)
+    suffix = "_comparison" if source.comparison else ""
 
-    with Image.open(source_path) as source_image:
+    with Image.open(source.path) as source_image:
         image = source_image.convert("RGB")
         width, height = image.size
         first_column_width = round(width * 0.10468)
@@ -130,9 +160,13 @@ def generate_runtime_breakdown_assets(
                 )
             )
             crop.save(
-                asset_dir / f"{device}_SF{scale_factor}_Q{query_number}.jpg",
+                asset_dir
+                / f"{source.device}_SF{source.scale_factor}_Q{query_number}{suffix}.jpg",
                 quality=95,
             )
+
+        if source.comparison:
+            return
 
         legend_band_top = round(height * 0.89)
         legend_band = image.crop((0, legend_band_top, width, height))
@@ -141,7 +175,7 @@ def generate_runtime_breakdown_assets(
         ).convert("L")
         bbox = difference.point(lambda value: 255 if value > 30 else 0).getbbox()
         if bbox is None:
-            raise ValueError(f"No operator legend found in {source_path}")
+            raise ValueError(f"No operator legend found in {source.path}")
 
         left, top, right, bottom = bbox
         padding = 8
@@ -154,7 +188,7 @@ def generate_runtime_breakdown_assets(
             )
         )
         legend.save(
-            asset_dir / f"{device}_SF{scale_factor}_legend.jpg",
+            asset_dir / f"{source.device}_SF{source.scale_factor}_legend.jpg",
             quality=95,
         )
 
@@ -789,6 +823,19 @@ def make_execution_graph(log_text: str) -> str:
     return "\n".join(lines)
 
 
+def make_runtime_breakdown_table(images: list[tuple[str, str]]) -> str:
+    labels = [label.replace("|", r"\|") for label, _ in images]
+    headers = "| " + " | ".join(labels) + " |"
+    separator = "| " + " | ".join("---" for _ in images) + " |"
+    image_cells = []
+    for (_, image_path), safe_label in zip(images, labels):
+        image_reference = quote(image_path, safe="/._-")
+        image_cells.append(
+            f'<img src="{image_reference}" alt="{safe_label}" width="200">'
+        )
+    return "\n".join((headers, separator, "| " + " | ".join(image_cells) + " |"))
+
+
 def read_notes(
     root: Path, device: str, scale_factor: int, query_number: int
 ) -> list[str]:
@@ -852,7 +899,7 @@ def render_query(
     query_sql: str,
     log_text: str,
     notes: list[str] | None = None,
-    runtime_breakdown: str | None = None,
+    runtime_breakdowns: list[tuple[str, str]] | None = None,
     benchmark_summary: dict[str, str] | None = None,
     benchmark_rows: list[dict[str, str]] | None = None,
 ) -> str:
@@ -893,21 +940,27 @@ def render_query(
     note_text = make_notes(parse_plan(log_text), notes or [])
     if note_text:
         report_sections.extend(("", "## Notes", "", note_text))
-    if runtime_breakdown is not None:
+    if runtime_breakdowns:
         report_sections.extend(
             (
                 "",
-                "## Runtime breakdown",
+                "## Runtime breakdown comparison",
                 "",
-                f"![Q{query_number} runtime breakdown|200x0]({runtime_breakdown})",
+                make_runtime_breakdown_table(runtime_breakdowns),
             )
         )
     return "\n".join(report_sections)
 
 
 def generate_report(
-    root: Path, device: str, scale_factor: int, output_path: Path
+    root: Path,
+    device: str,
+    scale_factor: int,
+    output_path: Path,
+    chart_sources: list[ChartSource] | None = None,
 ) -> Path | None:
+    if chart_sources is None:
+        chart_sources = discover_chart_sources(root)
     benchmark_rows_by_query, summaries_by_query = read_benchmark_sources(
         root, device, scale_factor
     )
@@ -923,24 +976,24 @@ def generate_report(
         query_notes = read_notes(root, device, scale_factor, query_number)
         if query_number not in summaries_by_query:
             raise ValueError(f"Summary is missing Q{query_number}")
-        chart_path = (
-            root
-            / "assets"
-            / "runtime-breakdowns"
-            / f"{device}_SF{scale_factor}_Q{query_number}.jpg"
-        )
-        runtime_breakdown = (
-            chart_path.relative_to(output_path.parent).as_posix()
-            if chart_path.is_file()
-            else None
-        )
+        runtime_breakdowns = []
+        for chart_source in chart_sources:
+            chart_path = chart_source.query_image_path(root, query_number)
+            if not chart_path.is_file():
+                continue
+            chart_label = (
+                f"{chart_source.device} Q{query_number} "
+                f"SF{chart_source.scale_factor}"
+            )
+            image_reference = chart_path.relative_to(output_path.parent).as_posix()
+            runtime_breakdowns.append((chart_label, image_reference))
         query_reports.append(
             render_query(
                 query_number,
                 query_sql,
                 log_text,
                 query_notes,
-                runtime_breakdown,
+                runtime_breakdowns,
                 summaries_by_query[query_number],
                 benchmark_rows_by_query.get(query_number, []),
             )
@@ -968,15 +1021,23 @@ def generate_report(
 
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parent
-    for device, scale_factor, chart_path in discover_chart_sources(project_root):
-        generate_runtime_breakdown_assets(
-            project_root, device, scale_factor, chart_path
-        )
+    chart_sources = discover_chart_sources(project_root)
+    for chart_source in chart_sources:
+        generate_runtime_breakdown_assets(project_root, chart_source)
+
+    for chart_source in chart_sources:
+        if chart_source.comparison:
+            continue
         report_path = (
-            project_root / f"{device} SF{scale_factor} Query analysis.md"
+            project_root
+            / f"{chart_source.device} SF{chart_source.scale_factor} Query analysis.md"
         )
         generated_path = generate_report(
-            project_root, device, scale_factor, report_path
+            project_root,
+            chart_source.device,
+            chart_source.scale_factor,
+            report_path,
+            chart_sources,
         )
         if generated_path is not None:
             print(f"Generated {generated_path}")

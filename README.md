@@ -1,6 +1,6 @@
 # TPCH Query Analysis
 
-`generate.py` combines TPCH queries, notes, execution logs, benchmark CSVs, and runtime charts from Eiger/GaMax to generate query analysis reports. It discovers device and scale factor combinations from chart filenames in `charts/`, then creates chart crops and reports for each combination.
+`generate.py` combines TPCH queries, notes, execution logs, benchmark CSVs, and runtime charts from Eiger/GaMax to generate query analysis reports.
 
 For joins, reported selectivity is output rows divided by left-input rows; it is not a true match rate.
 
@@ -18,4 +18,4 @@ For joins, reported selectivity is output rows divided by left-input rows; it is
 - `T4 SF1 Query analysis.md`
 - `T4 SF10 Query analysis.md`
 
-Run `python generate.py` to generate reports for all matching chart sources in `charts/`. Pillow is required for chart cropping.
+Run `python generate.py` to generate reports for all standard chart sources in `charts/` and refresh chart crops. Standard chart filenames (`<device> SF<number> breakdown.<image>`) create reports. Charts ending in `breakdown comparison.<image>` are cropped for comparison but do not create their own reports.
