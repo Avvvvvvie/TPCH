@@ -41,8 +41,8 @@ flowchart LR
 
 ```sql
 Sort[l_returnflag ASC, l_linestatus ASC]
-  Aggregate(keys=[l_returnflag, l_linestatus]; aggs=[sum(l_quantity) AS sum_qty, sum(l_extendedprice) AS sum_base_price, sum(disc_price) AS sum_disc_price, sum(charge) AS sum_charge, avg(l_quantity) AS avg_qty, avg(l_extendedprice) AS avg_price, avg(l_discount) AS avg_disc, count_all(*) AS count_order])
-    Project(l_returnflag = l_returnflag, l_linestatus = l_linestatus, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount, disc_price = (l_extendedprice * (1 - l_discount)), charge = ((l_extendedprice * (1 - l_discount)) * (1 + l_tax)))
+  Aggregate(l_returnflag, l_linestatus; sum(l_quantity), sum(l_extendedprice), sum(disc_price), sum(charge), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_all(*))
+    Project(l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, disc_price = (l_extendedprice * (1 - l_discount)), charge = ((l_extendedprice * (1 - l_discount)) * (1 + l_tax)))
       Filter((l_shipdate <= 19980902))
         Scan(lineitem [l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax])
 ```
@@ -50,9 +50,9 @@ Sort[l_returnflag ASC, l_linestatus ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>l_returnflag ASC, l_linestatus ASC"]
-    ir_1["Aggregate<br/>keys=[l_returnflag, l_linestatus]; aggs=[sum(l_quantity) AS sum_qty, sum(l_extendedprice) AS sum_base_price..."]
+    ir_1["Aggregate<br/>l_returnflag, l_linestatus; sum(l_quantity), sum(l_extendedprice), sum(disc_price), sum(charge), avg(l_quan..."]
     ir_0 --> ir_1
-    ir_2["Project<br/>l_returnflag = l_returnflag, l_linestatus = l_linestatus, l_quantity = l_quantity, l_extendedprice = l_exte..."]
+    ir_2["Project<br/>l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, disc_price = (l_extendedprice * (1 - l..."]
     ir_1 --> ir_2
     ir_3["Filter<br/>(l_shipdate &lt;= 19980902)"]
     ir_2 --> ir_3
@@ -72,28 +72,28 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 6001215 | 7 | lineitem |  |  |  |
-| 1 | Filter | 5916591 | 6 | < | 98.6% | 5.84656 | nofuse |
-| 2 | Project | 5916591 | 7 |  |  | 1.35117 | fuse |
-| 3 | Reorder | 5916591 | 7 |  |  | 0.00288474 |  |
-| 4 | GroupBy | 4 | 10 | < | 0.0000676% | 10.8955 | hash |
-| 5 | Sort | 4 | 10 |  |  | 0.502388 | no_skf |
-|  | Total |  |  |  |  | 18.5985 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 6001215 | 7 | lineitem |  |  |  | l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax |
+| 1 | Filter | 5916591 | 6 | < | 98.6% | 5.84656 | nofuse |  |
+| 2 | Project | 5916591 | 7 |  |  | 1.35117 | fuse | l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, disc_price, charge |
+| 3 | Reorder | 5916591 | 7 |  |  | 0.00288474 |  |  |
+| 4 | GroupBy | 4 | 10 | < | 0.0000676% | 10.8955 | hash | l_returnflag, l_linestatus; sum(l_quantity), sum(l_extendedprice), sum(disc_price), sum(charge), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_all(*) |
+| 5 | Sort | 4 | 10 |  |  | 0.502388 | no_skf | l_returnflag ASC, l_linestatus ASC |
+|  | Total |  |  |  |  | 18.5985 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>lineitem<br/>6,001,215 rows × 7 cols"]
-    step_1["1 · Filter · 98.6%<br/>5,916,591 rows × 6 cols"]
+    step_0["0 · SourceTable<br/>lineitem<br/>l_shipdate, l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax<br/>6,001,215 × 7"]
+    step_1["1 · Filter · 98.6%<br/>5,916,591 × 6"]
     step_0 --> step_1
-    step_2["2 · Project<br/>5,916,591 rows × 7 cols"]
+    step_2["2 · Project<br/>5,916,591 × 7"]
     step_1 --> step_2
-    step_3["3 · Reorder<br/>5,916,591 rows × 7 cols"]
+    step_3["3 · Reorder<br/>5,916,591 × 7"]
     step_2 --> step_3
-    step_4["4 · GroupBy · 0.0000676%<br/>4 rows × 10 cols"]
+    step_4["4 · GroupBy · 0.0000676%<br/>l_returnflag, l_linestatus; sum(l_quantity), sum(l_extendedprice), sum(disc_price), sum(charge), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_all(*)<br/>4 × 10"]
     step_3 --> step_4
-    step_5["5 · Sort<br/>4 rows × 10 cols"]
+    step_5["5 · Sort<br/>l_returnflag ASC, l_linestatus ASC<br/>4 × 10"]
     step_4 --> step_5
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -115,9 +115,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q1 SF1 | T4 Q1 SF10 | GH200 Q1 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q1.jpg" alt="T4 Q1 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q1.jpg" alt="T4 Q1 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q1_comparison.jpg" alt="GH200 Q1 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q1.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q1.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q1.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q1.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q1.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q1_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q2 Minimum Cost Supplier Query
 
@@ -174,40 +174,40 @@ flowchart LR
 ```sql
 Limit(n=100)
   Sort[s_acctbal DESC, n_name ASC, s_name ASC, p_partkey ASC]
-    Project(s_acctbal = s_acctbal, s_name = s_name, n_name = n_name, p_partkey = p_partkey, p_mfgr = p_mfgr, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+    Project(s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment)
       Filter((min_supplycost == ps_supplycost))
         InnerJoin(on=(p_partkey == p_partkey))
-          Project(agg_partkey = p_partkey, min_supplycost = min_supplycost)
-            Aggregate(keys=[p_partkey]; aggs=[min(ps_supplycost) AS min_supplycost])
-              Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+          Project(agg_partkey = p_partkey, min_supplycost)
+            Aggregate(p_partkey; min(ps_supplycost))
+              Project(p_partkey, ps_supplycost, p_mfgr, n_name, s_acctbal, s_name, s_address, s_phone, s_comment)
                 InnerJoin(on=(n_nationkey == s_nationkey))
-                  Project(n_nationkey = n_nationkey, n_name = n_name)
+                  Project(n_nationkey, n_name)
                     InnerJoin(on=(r_regionkey == n_regionkey))
                       Filter(str_eq(r_name, "EUROPE"))
                         Scan(region [r_regionkey, r_name])
                       Scan(nation [n_nationkey, n_name, n_regionkey])
-                  Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+                  Project(p_partkey, ps_supplycost, p_mfgr, s_nationkey, s_acctbal, s_name, s_address, s_phone, s_comment)
                     InnerJoin(on=(s_suppkey == ps_suppkey))
                       Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
                       InnerJoin(on=(ps_partkey == p_partkey))
                         Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
-                        Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                        Project(p_partkey, p_mfgr)
                           Filter(endswith(p_type, "BRASS"))
                             Filter((p_size == 15))
                               Scan(part [p_partkey, p_mfgr, p_type, p_size])
-          Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+          Project(p_partkey, ps_supplycost, p_mfgr, n_name, s_acctbal, s_name, s_address, s_phone, s_comment)
             InnerJoin(on=(n_nationkey == s_nationkey))
-              Project(n_nationkey = n_nationkey, n_name = n_name)
+              Project(n_nationkey, n_name)
                 InnerJoin(on=(r_regionkey == n_regionkey))
                   Filter(str_eq(r_name, "EUROPE"))
                     Scan(region [r_regionkey, r_name])
                   Scan(nation [n_nationkey, n_name, n_regionkey])
-              Project(p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal = s_acctbal, s_name = s_name, s_address = s_address, s_phone = s_phone, s_comment = s_comment)
+              Project(p_partkey, ps_supplycost, p_mfgr, s_nationkey, s_acctbal, s_name, s_address, s_phone, s_comment)
                 InnerJoin(on=(s_suppkey == ps_suppkey))
                   Scan(supplier [s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment])
                   InnerJoin(on=(ps_partkey == p_partkey))
                     Scan(partsupp [ps_partkey, ps_suppkey, ps_supplycost])
-                    Project(p_partkey = p_partkey, p_mfgr = p_mfgr)
+                    Project(p_partkey, p_mfgr)
                       Filter(endswith(p_type, "BRASS"))
                         Filter((p_size == 15))
                           Scan(part [p_partkey, p_mfgr, p_type, p_size])
@@ -218,21 +218,21 @@ flowchart TD
     ir_0["Limit<br/>n=100"]
     ir_1["Sort<br/>s_acctbal DESC, n_name ASC, s_name ASC, p_partkey ASC"]
     ir_0 --> ir_1
-    ir_2["Project<br/>s_acctbal = s_acctbal, s_name = s_name, n_name = n_name, p_partkey = p_partkey, p_mfgr = p_mfgr, s_address ..."]
+    ir_2["Project<br/>s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment"]
     ir_1 --> ir_2
     ir_3["Filter<br/>(min_supplycost == ps_supplycost)"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(p_partkey == p_partkey)"]
     ir_3 --> ir_4
-    ir_5["Project<br/>agg_partkey = p_partkey, min_supplycost = min_supplycost"]
+    ir_5["Project<br/>agg_partkey = p_partkey, min_supplycost"]
     ir_4 --> ir_5
-    ir_6["Aggregate<br/>keys=[p_partkey]; aggs=[min(ps_supplycost) AS min_supplycost]"]
+    ir_6["Aggregate<br/>p_partkey; min(ps_supplycost)"]
     ir_5 --> ir_6
-    ir_7["Project<br/>p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctb..."]
+    ir_7["Project<br/>p_partkey, ps_supplycost, p_mfgr, n_name, s_acctbal, s_name, s_address, s_phone, s_comment"]
     ir_6 --> ir_7
     ir_8["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_7 --> ir_8
-    ir_9["Project<br/>n_nationkey = n_nationkey, n_name = n_name"]
+    ir_9["Project<br/>n_nationkey, n_name"]
     ir_8 --> ir_9
     ir_10["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_9 --> ir_10
@@ -242,7 +242,7 @@ flowchart TD
     ir_11 --> ir_12
     ir_13["Scan<br/>nation · n_nationkey, n_name, n_regionkey"]
     ir_10 --> ir_13
-    ir_14["Project<br/>p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal..."]
+    ir_14["Project<br/>p_partkey, ps_supplycost, p_mfgr, s_nationkey, s_acctbal, s_name, s_address, s_phone, s_comment"]
     ir_8 --> ir_14
     ir_15["InnerJoin<br/>on=(s_suppkey == ps_suppkey)"]
     ir_14 --> ir_15
@@ -252,7 +252,7 @@ flowchart TD
     ir_15 --> ir_17
     ir_18["Scan<br/>partsupp · ps_partkey, ps_suppkey, ps_supplycost"]
     ir_17 --> ir_18
-    ir_19["Project<br/>p_partkey = p_partkey, p_mfgr = p_mfgr"]
+    ir_19["Project<br/>p_partkey, p_mfgr"]
     ir_17 --> ir_19
     ir_20["Filter<br/>endswith(p_type, #quot;BRASS#quot;)"]
     ir_19 --> ir_20
@@ -260,11 +260,11 @@ flowchart TD
     ir_20 --> ir_21
     ir_22["Scan<br/>part · p_partkey, p_mfgr, p_type, p_size"]
     ir_21 --> ir_22
-    ir_23["Project<br/>p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, n_name = n_name, s_acctbal = s_acctb..."]
+    ir_23["Project<br/>p_partkey, ps_supplycost, p_mfgr, n_name, s_acctbal, s_name, s_address, s_phone, s_comment"]
     ir_4 --> ir_23
     ir_24["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_23 --> ir_24
-    ir_25["Project<br/>n_nationkey = n_nationkey, n_name = n_name"]
+    ir_25["Project<br/>n_nationkey, n_name"]
     ir_24 --> ir_25
     ir_26["InnerJoin<br/>on=(r_regionkey == n_regionkey)"]
     ir_25 --> ir_26
@@ -274,7 +274,7 @@ flowchart TD
     ir_27 --> ir_28
     ir_29["Scan<br/>nation · n_nationkey, n_name, n_regionkey"]
     ir_26 --> ir_29
-    ir_30["Project<br/>p_partkey = p_partkey, ps_supplycost = ps_supplycost, p_mfgr = p_mfgr, s_nationkey = s_nationkey, s_acctbal..."]
+    ir_30["Project<br/>p_partkey, ps_supplycost, p_mfgr, s_nationkey, s_acctbal, s_name, s_address, s_phone, s_comment"]
     ir_24 --> ir_30
     ir_31["InnerJoin<br/>on=(s_suppkey == ps_suppkey)"]
     ir_30 --> ir_31
@@ -284,7 +284,7 @@ flowchart TD
     ir_31 --> ir_33
     ir_34["Scan<br/>partsupp · ps_partkey, ps_suppkey, ps_supplycost"]
     ir_33 --> ir_34
-    ir_35["Project<br/>p_partkey = p_partkey, p_mfgr = p_mfgr"]
+    ir_35["Project<br/>p_partkey, p_mfgr"]
     ir_33 --> ir_35
     ir_36["Filter<br/>endswith(p_type, #quot;BRASS#quot;)"]
     ir_35 --> ir_36
@@ -307,95 +307,95 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 5 | 2 | region |  |  |  |  |  |
-| 1 | Filter | 1 | 1 | < | 20% | 0.0496175 | 0.0496175 | nofuse | nofuse |
-| 2 | SourceTable | 25 | 3 | nation |  |  |  |  |  |
-| 3 | EqJoin | 5 | 3 | region⋈nation | 500% | 0.140919 | 0.140919 | hash_gfur | hash_gfur |
-| 4 | Reorder | 5 | 4 |  |  | 0.00693055 | 0.00693055 |  |  |
-| 5 | Project | 5 | 2 |  |  | 0.0614469 | 0.0614469 | nofuse | nofuse |
-| 6 | SourceTable | 10000 | 7 | supplier |  |  |  |  |  |
-| 7 | SourceTable | 800000 | 3 | partsupp |  |  |  |  |  |
-| 8 | SourceTable | 200000 | 4 | part |  |  |  |  |  |
-| 9 | Filter | 3907 | 3 | < | 1.95% | 0.21863 | 0.21863 | nofuse | nofuse |
-| 10 | Filter | 747 | 2 | < | 19.1% | 0.13022 | 0.13022 | nofuse | nofuse |
-| 11 | Project | 747 | 2 |  |  | 0.00291091 | 0.00291091 | nofuse | nofuse |
-| 12 | EqJoin | 2988 | 4 | partsupp⋈part | 0.373% | 0.809728 | 0.809728 | hash_gfur | hash_gfur |
-| 13 | Reorder | 2988 | 5 |  |  | 0.00668291 | 0.00668291 |  |  |
-| 14 | EqJoin | 2988 | 11 | supplier⋈(partsupp⋈part) | 29.9% | 0.414039 | 0.414039 | hash_gfur | hash_gfur |
-| 15 | Reorder | 2988 | 12 |  |  | 0.0139611 | 0.0139611 |  |  |
-| 16 | Project | 2988 | 9 |  |  | 0.307858 | 0.307858 | nofuse | nofuse |
-| 17 | EqJoin | 2988 | 10 | (region⋈nation)⋈(supplier⋈(partsupp⋈part)) | 5.98e+04% | 0.413337 | 0.413337 | hash_gfur | hash_gfur |
-| 18 | Reorder | 642 | 11 |  |  | 0.0155255 | 0.0155255 |  |  |
-| 19 | Project | 642 | 9 |  |  | 0.335089 | 0.335089 | nofuse | nofuse |
-| 20 | Reorder | 642 | 2 |  |  | 0.0234884 | 0.0234884 |  |  |
-| 21 | GroupBy | 460 | 2 | < | 71.7% | 0.111493 | 0.0840908 | hash | sort_gftr |
-| 22 | Project | 460 | 2 |  |  | 0.00240545 | 0.00240545 | nofuse | nofuse |
-| 23 | EqJoin | 642 | 10 | ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) ⋈ ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) | 140% | 0.422646 | 0.422646 | hash_gfur | hash_gfur |
-| 24 | Reorder | 642 | 11 |  |  | 0.0193971 | 0.0193971 |  |  |
-| 25 | Filter | 460 | 9 | < | 71.7% | 0.4506 | 0.4506 | nofuse | nofuse |
-| 26 | Project | 460 | 8 |  |  | 0.00510109 | 0.00510109 | nofuse | nofuse |
-| 27 | TopK | 100 | 8 | < | 21.7% | 1.63239 | 1.63239 |  |  |
-|  | Total |  |  |  |  | 5.59442 | 5.56701 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 5 | 2 | region |  |  |  |  |  | r_regionkey, r_name |
+| 1 | Filter | 1 | 1 | < | 20% | 0.0496175 | 0.0496175 | nofuse | nofuse |  |
+| 2 | SourceTable | 25 | 3 | nation |  |  |  |  |  | n_nationkey, n_name, n_regionkey |
+| 3 | EqJoin | 5 | 3 | region⋈nation | 1⋈25 | 0.140919 | 0.140919 | hash_gfur | hash_gfur | regionkey |
+| 4 | Reorder | 5 | 4 |  |  | 0.00693055 | 0.00693055 |  |  |  |
+| 5 | Project | 5 | 2 |  |  | 0.0614469 | 0.0614469 | nofuse | nofuse | n_nationkey, n_name |
+| 6 | SourceTable | 10000 | 7 | supplier |  |  |  |  |  | s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment |
+| 7 | SourceTable | 800000 | 3 | partsupp |  |  |  |  |  | ps_partkey, ps_suppkey, ps_supplycost |
+| 8 | SourceTable | 200000 | 4 | part |  |  |  |  |  | p_partkey, p_mfgr, p_type, p_size |
+| 9 | Filter | 3907 | 3 | < | 1.95% | 0.21863 | 0.21863 | nofuse | nofuse |  |
+| 10 | Filter | 747 | 2 | < | 19.1% | 0.13022 | 0.13022 | nofuse | nofuse |  |
+| 11 | Project | 747 | 2 |  |  | 0.00291091 | 0.00291091 | nofuse | nofuse | p_partkey, p_mfgr |
+| 12 | EqJoin | 2988 | 4 | partsupp⋈part | 800K⋈747 | 0.809728 | 0.809728 | hash_gfur | hash_gfur | partkey |
+| 13 | Reorder | 2988 | 5 |  |  | 0.00668291 | 0.00668291 |  |  |  |
+| 14 | EqJoin | 2988 | 11 | supplier⋈(partsupp⋈part) | 10K⋈3K | 0.414039 | 0.414039 | hash_gfur | hash_gfur | suppkey |
+| 15 | Reorder | 2988 | 12 |  |  | 0.0139611 | 0.0139611 |  |  |  |
+| 16 | Project | 2988 | 9 |  |  | 0.307858 | 0.307858 | nofuse | nofuse | p_partkey, ps_supplycost, p_mfgr, s_nationkey, s_acctbal, s_name, s_address, s_phone, s_comment |
+| 17 | EqJoin | 2988 | 10 | (region⋈nation)⋈(supplier⋈(partsupp⋈part)) | 5⋈3K | 0.413337 | 0.413337 | hash_gfur | hash_gfur | nationkey |
+| 18 | Reorder | 642 | 11 |  |  | 0.0155255 | 0.0155255 |  |  |  |
+| 19 | Project | 642 | 9 |  |  | 0.335089 | 0.335089 | nofuse | nofuse | p_partkey, ps_supplycost, p_mfgr, n_name, s_acctbal, s_name, s_address, s_phone, s_comment |
+| 20 | Reorder | 642 | 2 |  |  | 0.0234884 | 0.0234884 |  |  |  |
+| 21 | GroupBy | 460 | 2 | < | 71.7% | 0.111493 | 0.0840908 | hash | sort_gftr | p_partkey; min(ps_supplycost) |
+| 22 | Project | 460 | 2 |  |  | 0.00240545 | 0.00240545 | nofuse | nofuse | p_partkey, p_mfgr |
+| 23 | EqJoin | 642 | 10 | ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) ⋈ ((region⋈nation)⋈(supplier⋈(partsupp⋈part))) | 460⋈642 | 0.422646 | 0.422646 | hash_gfur | hash_gfur | partkey |
+| 24 | Reorder | 642 | 11 |  |  | 0.0193971 | 0.0193971 |  |  |  |
+| 25 | Filter | 460 | 9 | < | 71.7% | 0.4506 | 0.4506 | nofuse | nofuse |  |
+| 26 | Project | 460 | 8 |  |  | 0.00510109 | 0.00510109 | nofuse | nofuse | s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment |
+| 27 | TopK | 100 | 8 | < | 21.7% | 1.63239 | 1.63239 |  |  |  |
+|  | Total |  |  |  |  | 5.59442 | 5.56701 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>region<br/>5 rows × 2 cols"]
-    step_1["1 · Filter · 20%<br/>1 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>region<br/>r_regionkey, r_name<br/>5 × 2"]
+    step_1["1 · Filter · 20%<br/>1 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>nation<br/>25 rows × 3 cols"]
-    step_3["3 · EqJoin · 500%<br/>5 rows × 3 cols"]
+    step_2["2 · SourceTable<br/>nation<br/>n_nationkey, n_name, n_regionkey<br/>25 × 3"]
+    step_3["3 · EqJoin · 1⋈25<br/>regionkey<br/>5 × 3"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>5 rows × 4 cols"]
+    step_4["4 · Reorder<br/>5 × 4"]
     step_3 --> step_4
-    step_5["5 · Project<br/>5 rows × 2 cols"]
+    step_5["5 · Project<br/>5 × 2"]
     step_4 --> step_5
-    step_6["6 · SourceTable<br/>supplier<br/>10,000 rows × 7 cols"]
-    step_7["7 · SourceTable<br/>partsupp<br/>800,000 rows × 3 cols"]
-    step_8["8 · SourceTable<br/>part<br/>200,000 rows × 4 cols"]
-    step_9["9 · Filter · 1.95%<br/>3,907 rows × 3 cols"]
+    step_6["6 · SourceTable<br/>supplier<br/>s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment<br/>10,000 × 7"]
+    step_7["7 · SourceTable<br/>partsupp<br/>ps_partkey, ps_suppkey, ps_supplycost<br/>800,000 × 3"]
+    step_8["8 · SourceTable<br/>part<br/>p_partkey, p_mfgr, p_type, p_size<br/>200,000 × 4"]
+    step_9["9 · Filter · 1.95%<br/>3,907 × 3"]
     step_8 --> step_9
-    step_10["10 · Filter · 19.1%<br/>747 rows × 2 cols"]
+    step_10["10 · Filter · 19.1%<br/>747 × 2"]
     step_9 --> step_10
-    step_11["11 · Project<br/>747 rows × 2 cols"]
+    step_11["11 · Project<br/>747 × 2"]
     step_10 --> step_11
-    step_12["12 · EqJoin · 0.373%<br/>2,988 rows × 4 cols"]
+    step_12["12 · EqJoin · 800K⋈747<br/>partkey<br/>2,988 × 4"]
     step_7 --> step_12
     step_11 --> step_12
-    step_13["13 · Reorder<br/>2,988 rows × 5 cols"]
+    step_13["13 · Reorder<br/>2,988 × 5"]
     step_12 --> step_13
-    step_14["14 · EqJoin · 29.9%<br/>2,988 rows × 11 cols"]
+    step_14["14 · EqJoin · 10K⋈3K<br/>suppkey<br/>2,988 × 11"]
     step_6 --> step_14
     step_13 --> step_14
-    step_15["15 · Reorder<br/>2,988 rows × 12 cols"]
+    step_15["15 · Reorder<br/>2,988 × 12"]
     step_14 --> step_15
-    step_16["16 · Project<br/>2,988 rows × 9 cols"]
+    step_16["16 · Project<br/>2,988 × 9"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 5.98e+04%<br/>2,988 rows × 10 cols"]
+    step_17["17 · EqJoin · 5⋈3K<br/>nationkey<br/>2,988 × 10"]
     step_5 --> step_17
     step_16 --> step_17
-    step_18["18 · Reorder<br/>642 rows × 11 cols"]
+    step_18["18 · Reorder<br/>642 × 11"]
     step_17 --> step_18
-    step_19["19 · Project<br/>642 rows × 9 cols"]
+    step_19["19 · Project<br/>642 × 9"]
     step_18 --> step_19
-    step_20["20 · Reorder<br/>642 rows × 2 cols"]
+    step_20["20 · Reorder<br/>642 × 2"]
     step_19 --> step_20
-    step_21["21 · GroupBy · 71.7%<br/>460 rows × 2 cols"]
+    step_21["21 · GroupBy · 71.7%<br/>p_partkey; min(ps_supplycost)<br/>460 × 2"]
     step_20 --> step_21
-    step_22["22 · Project<br/>460 rows × 2 cols"]
+    step_22["22 · Project<br/>460 × 2"]
     step_21 --> step_22
-    step_23["23 · EqJoin · 140%<br/>642 rows × 10 cols"]
+    step_23["23 · EqJoin · 460⋈642<br/>partkey<br/>642 × 10"]
     step_22 --> step_23
     step_19 --> step_23
-    step_24["24 · Reorder<br/>642 rows × 11 cols"]
+    step_24["24 · Reorder<br/>642 × 11"]
     step_23 --> step_24
-    step_25["25 · Filter · 71.7%<br/>460 rows × 9 cols"]
+    step_25["25 · Filter · 71.7%<br/>460 × 9"]
     step_24 --> step_25
-    step_26["26 · Project<br/>460 rows × 8 cols"]
+    step_26["26 · Project<br/>460 × 8"]
     step_25 --> step_26
-    step_27["27 · TopK · 21.7%<br/>100 rows × 8 cols"]
+    step_27["27 · TopK · 21.7%<br/>100 × 8"]
     step_26 --> step_27
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -414,13 +414,15 @@ flowchart TD
 
 ## Notes
 
+- This query joins 5 tables.
+
 - Repeated join subtree for the correlated MIN
 
 ## Runtime breakdown comparison
 
-| T4 Q2 SF1 | T4 Q2 SF10 | GH200 Q2 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q2.jpg" alt="T4 Q2 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q2.jpg" alt="T4 Q2 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q2_comparison.jpg" alt="GH200 Q2 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q2.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q2.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q2.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q2.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q2.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q2_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q3 Shipping Priority Query
 
@@ -466,9 +468,9 @@ flowchart LR
 ```sql
 Limit(n=10)
   Sort[revenue DESC, o_orderdate ASC]
-    Project(l_orderkey = l_orderkey, revenue = revenue, o_orderdate = o_orderdate, o_shippriority = o_shippriority)
-      Aggregate(keys=[l_orderkey, o_orderdate, o_shippriority]; aggs=[sum(disc_price) AS revenue])
-        Project(l_orderkey = l_orderkey, o_orderdate = o_orderdate, o_shippriority = o_shippriority, disc_price = (l_extendedprice * (1 - l_discount)))
+    Project(l_orderkey, revenue, o_orderdate, o_shippriority)
+      Aggregate(l_orderkey, o_orderdate, o_shippriority; sum(disc_price))
+        Project(l_orderkey, o_orderdate, o_shippriority, disc_price = (l_extendedprice * (1 - l_discount)))
           InnerJoin(on=(l_orderkey == o_orderkey))
             InnerJoin(on=(c_custkey == o_custkey))
               Filter(str_eq(c_mktsegment, "BUILDING"))
@@ -484,11 +486,11 @@ flowchart TD
     ir_0["Limit<br/>n=10"]
     ir_1["Sort<br/>revenue DESC, o_orderdate ASC"]
     ir_0 --> ir_1
-    ir_2["Project<br/>l_orderkey = l_orderkey, revenue = revenue, o_orderdate = o_orderdate, o_shippriority = o_shippriority"]
+    ir_2["Project<br/>l_orderkey, revenue, o_orderdate, o_shippriority"]
     ir_1 --> ir_2
-    ir_3["Aggregate<br/>keys=[l_orderkey, o_orderdate, o_shippriority]; aggs=[sum(disc_price) AS revenue]"]
+    ir_3["Aggregate<br/>l_orderkey, o_orderdate, o_shippriority; sum(disc_price)"]
     ir_2 --> ir_3
-    ir_4["Project<br/>l_orderkey = l_orderkey, o_orderdate = o_orderdate, o_shippriority = o_shippriority, disc_price = (l_extend..."]
+    ir_4["Project<br/>l_orderkey, o_orderdate, o_shippriority, disc_price = (l_extendedprice * (1 - l_discount))"]
     ir_3 --> ir_4
     ir_5["InnerJoin<br/>on=(l_orderkey == o_orderkey)"]
     ir_4 --> ir_5
@@ -521,55 +523,55 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 150000 | 2 | customer |  |  |  |  |  |
-| 1 | Filter | 30142 | 1 | < | 20.1% | 0.0832018 | 0.0832018 | fuse | fuse |
-| 2 | SourceTable | 1500000 | 4 | orders |  |  |  |  |  |
-| 3 | Filter | 727305 | 4 | < | 48.5% | 0.403085 | 0.341397 | fuse | nofuse |
-| 4 | EqJoin | 147126 | 4 | customer⋈orders | 488% | 0.706689 | 0.706689 | hash_gfur | hash_gfur |
-| 5 | Reorder | 147126 | 5 |  |  | 0.00173903 | 0.00173903 |  |  |
-| 6 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 7 | Filter | 3241776 | 3 | < | 54% | 1.50229 | 1.27569 | fuse | nofuse |
-| 8 | EqJoin | 30519 | 7 | (customer⋈orders)⋈lineitem | 20.7% | 2.15337 | 2.15337 | hash_gfur | hash_gfur |
-| 9 | Reorder | 30519 | 8 |  |  | 0.00185232 | 0.00185232 |  |  |
-| 10 | Project | 30519 | 4 |  |  | 0.0401438 | 0.0401438 | nofuse | nofuse |
-| 11 | Reorder | 30519 | 4 |  |  | 0.00185048 | 0.00185048 |  |  |
-| 12 | GroupBy | 11620 | 4 | < | 38.1% | 0.141456 | 0.141456 | hash | hash |
-| 13 | Project | 11620 | 4 |  |  | 0.00265085 | 0.00265085 | nofuse | nofuse |
-| 14 | TopK | 10 | 4 | < | 0.0861% | 0.715242 | 0.715242 |  |  |
-|  | Total |  |  |  |  | 5.75357 | 5.46528 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 150000 | 2 | customer |  |  |  |  |  | c_custkey, c_mktsegment |
+| 1 | Filter | 30142 | 1 | < | 20.1% | 0.0832018 | 0.0832018 | fuse | fuse |  |
+| 2 | SourceTable | 1500000 | 4 | orders |  |  |  |  |  | o_orderkey, o_custkey, o_orderdate, o_shippriority |
+| 3 | Filter | 727305 | 4 | < | 48.5% | 0.403085 | 0.341397 | fuse | nofuse |  |
+| 4 | EqJoin | 147126 | 4 | customer⋈orders | 30.1K⋈727.3K | 0.706689 | 0.706689 | hash_gfur | hash_gfur | custkey |
+| 5 | Reorder | 147126 | 5 |  |  | 0.00173903 | 0.00173903 |  |  |  |
+| 6 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_orderkey, l_extendedprice, l_discount, l_shipdate |
+| 7 | Filter | 3241776 | 3 | < | 54% | 1.50229 | 1.27569 | fuse | nofuse |  |
+| 8 | EqJoin | 30519 | 7 | (customer⋈orders)⋈lineitem | 147.1K⋈3.2M | 2.15337 | 2.15337 | hash_gfur | hash_gfur | orderkey |
+| 9 | Reorder | 30519 | 8 |  |  | 0.00185232 | 0.00185232 |  |  |  |
+| 10 | Project | 30519 | 4 |  |  | 0.0401438 | 0.0401438 | nofuse | nofuse | l_orderkey, o_orderdate, o_shippriority, disc_price |
+| 11 | Reorder | 30519 | 4 |  |  | 0.00185048 | 0.00185048 |  |  |  |
+| 12 | GroupBy | 11620 | 4 | < | 38.1% | 0.141456 | 0.141456 | hash | hash | l_orderkey, o_orderdate, o_shippriority; sum(disc_price) |
+| 13 | Project | 11620 | 4 |  |  | 0.00265085 | 0.00265085 | nofuse | nofuse | l_orderkey, revenue, o_orderdate, o_shippriority |
+| 14 | TopK | 10 | 4 | < | 0.0861% | 0.715242 | 0.715242 |  |  |  |
+|  | Total |  |  |  |  | 5.75357 | 5.46528 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>customer<br/>150,000 rows × 2 cols"]
-    step_1["1 · Filter · 20.1%<br/>30,142 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>customer<br/>c_custkey, c_mktsegment<br/>150,000 × 2"]
+    step_1["1 · Filter · 20.1%<br/>30,142 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>orders<br/>1,500,000 rows × 4 cols"]
-    step_3["3 · Filter · 48.5%<br/>727,305 rows × 4 cols"]
+    step_2["2 · SourceTable<br/>orders<br/>o_orderkey, o_custkey, o_orderdate, o_shippriority<br/>1,500,000 × 4"]
+    step_3["3 · Filter · 48.5%<br/>727,305 × 4"]
     step_2 --> step_3
-    step_4["4 · EqJoin · 488%<br/>147,126 rows × 4 cols"]
+    step_4["4 · EqJoin · 30.1K⋈727.3K<br/>custkey<br/>147,126 × 4"]
     step_1 --> step_4
     step_3 --> step_4
-    step_5["5 · Reorder<br/>147,126 rows × 5 cols"]
+    step_5["5 · Reorder<br/>147,126 × 5"]
     step_4 --> step_5
-    step_6["6 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_7["7 · Filter · 54%<br/>3,241,776 rows × 3 cols"]
+    step_6["6 · SourceTable<br/>lineitem<br/>l_orderkey, l_extendedprice, l_discount, l_shipdate<br/>6,001,215 × 4"]
+    step_7["7 · Filter · 54%<br/>3,241,776 × 3"]
     step_6 --> step_7
-    step_8["8 · EqJoin · 20.7%<br/>30,519 rows × 7 cols"]
+    step_8["8 · EqJoin · 147.1K⋈3.2M<br/>orderkey<br/>30,519 × 7"]
     step_5 --> step_8
     step_7 --> step_8
-    step_9["9 · Reorder<br/>30,519 rows × 8 cols"]
+    step_9["9 · Reorder<br/>30,519 × 8"]
     step_8 --> step_9
-    step_10["10 · Project<br/>30,519 rows × 4 cols"]
+    step_10["10 · Project<br/>30,519 × 4"]
     step_9 --> step_10
-    step_11["11 · Reorder<br/>30,519 rows × 4 cols"]
+    step_11["11 · Reorder<br/>30,519 × 4"]
     step_10 --> step_11
-    step_12["12 · GroupBy · 38.1%<br/>11,620 rows × 4 cols"]
+    step_12["12 · GroupBy · 38.1%<br/>l_orderkey, o_orderdate, o_shippriority; sum(disc_price)<br/>11,620 × 4"]
     step_11 --> step_12
-    step_13["13 · Project<br/>11,620 rows × 4 cols"]
+    step_13["13 · Project<br/>11,620 × 4"]
     step_12 --> step_13
-    step_14["14 · TopK · 0.0861%<br/>10 rows × 4 cols"]
+    step_14["14 · TopK · 0.0861%<br/>10 × 4"]
     step_13 --> step_14
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -592,9 +594,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q3 SF1 | T4 Q3 SF10 | GH200 Q3 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q3.jpg" alt="T4 Q3 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q3.jpg" alt="T4 Q3 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q3_comparison.jpg" alt="GH200 Q3 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q3.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q3.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q3.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q3.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q3.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q3_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q4 Order Priority Checking Query
 
@@ -634,7 +636,7 @@ flowchart LR
 
 ```sql
 Sort[o_orderpriority ASC]
-  Aggregate(keys=[o_orderpriority]; aggs=[count_all(*) AS order_count])
+  Aggregate(o_orderpriority; count_all(*))
     LeftSemiJoin(on=(o_orderkey == l_orderkey))
       Filter(((o_orderdate >= 19930701) && (o_orderdate < 19931001)))
         Scan(orders [o_orderkey, o_orderdate, o_orderpriority])
@@ -645,7 +647,7 @@ Sort[o_orderpriority ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>o_orderpriority ASC"]
-    ir_1["Aggregate<br/>keys=[o_orderpriority]; aggs=[count_all(*) AS order_count]"]
+    ir_1["Aggregate<br/>o_orderpriority; count_all(*)"]
     ir_0 --> ir_1
     ir_2["LeftSemiJoin<br/>on=(o_orderkey == l_orderkey)"]
     ir_1 --> ir_2
@@ -671,37 +673,37 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  |
-| 1 | Filter | 57218 | 2 | < | 3.81% | 0.573399 | 0.493515 | fuse | nofuse |
-| 2 | SourceTable | 6001215 | 3 | lineitem |  |  |  |  |  |
-| 3 | Filter | 3793296 | 1 | < | 63.2% | 0.728793 | 0.626391 | fuse | nofuse |
-| 4 | SemiJoin | 52523 | 2 | orders⋈lineitem | 91.8% | 2.74453 | 2.74453 |  |  |
-| 5 | Reorder | 52523 | 2 |  |  | 0.0075789 | 0.0075789 |  |  |
-| 6 | Reorder | 52523 | 1 |  |  | 0.00212135 | 0.00212135 |  |  |
-| 7 | GroupBy | 5 | 2 | < | 0.00952% | 0.187308 | 0.187308 | hash | hash |
-| 8 | Sort | 5 | 2 |  |  | 0.157323 | 0.157323 | no_skf | no_skf |
-|  | Total |  |  |  |  | 4.40105 | 4.21877 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  | o_orderkey, o_orderdate, o_orderpriority |
+| 1 | Filter | 57218 | 2 | < | 3.81% | 0.573399 | 0.493515 | fuse | nofuse |  |
+| 2 | SourceTable | 6001215 | 3 | lineitem |  |  |  |  |  | l_orderkey, l_commitdate, l_receiptdate |
+| 3 | Filter | 3793296 | 1 | < | 63.2% | 0.728793 | 0.626391 | fuse | nofuse |  |
+| 4 | SemiJoin | 52523 | 2 | orders⋈lineitem | 57.2K⋈3.8M | 2.74453 | 2.74453 |  |  | o_orderkey; l_orderkey |
+| 5 | Reorder | 52523 | 2 |  |  | 0.0075789 | 0.0075789 |  |  |  |
+| 6 | Reorder | 52523 | 1 |  |  | 0.00212135 | 0.00212135 |  |  |  |
+| 7 | GroupBy | 5 | 2 | < | 0.00952% | 0.187308 | 0.187308 | hash | hash | o_orderpriority; count_all(*) |
+| 8 | Sort | 5 | 2 |  |  | 0.157323 | 0.157323 | no_skf | no_skf | o_orderpriority ASC |
+|  | Total |  |  |  |  | 4.40105 | 4.21877 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>orders<br/>1,500,000 rows × 3 cols"]
-    step_1["1 · Filter · 3.81%<br/>57,218 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>orders<br/>o_orderkey, o_orderdate, o_orderpriority<br/>1,500,000 × 3"]
+    step_1["1 · Filter · 3.81%<br/>57,218 × 2"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>lineitem<br/>6,001,215 rows × 3 cols"]
-    step_3["3 · Filter · 63.2%<br/>3,793,296 rows × 1 cols"]
+    step_2["2 · SourceTable<br/>lineitem<br/>l_orderkey, l_commitdate, l_receiptdate<br/>6,001,215 × 3"]
+    step_3["3 · Filter · 63.2%<br/>3,793,296 × 1"]
     step_2 --> step_3
-    step_4["4 · SemiJoin · 91.8%<br/>52,523 rows × 2 cols"]
+    step_4["4 · SemiJoin · 57.2K⋈3.8M<br/>o_orderkey; l_orderkey<br/>52,523 × 2"]
     step_1 --> step_4
     step_3 --> step_4
-    step_5["5 · Reorder<br/>52,523 rows × 2 cols"]
+    step_5["5 · Reorder<br/>52,523 × 2"]
     step_4 --> step_5
-    step_6["6 · Reorder<br/>52,523 rows × 1 cols"]
+    step_6["6 · Reorder<br/>52,523 × 1"]
     step_5 --> step_6
-    step_7["7 · GroupBy · 0.00952%<br/>5 rows × 2 cols"]
+    step_7["7 · GroupBy · 0.00952%<br/>o_orderpriority; count_all(*)<br/>5 × 2"]
     step_6 --> step_7
-    step_8["8 · Sort<br/>5 rows × 2 cols"]
+    step_8["8 · Sort<br/>o_orderpriority ASC<br/>5 × 2"]
     step_7 --> step_8
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -720,9 +722,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q4 SF1 | T4 Q4 SF10 | GH200 Q4 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q4.jpg" alt="T4 Q4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q4.jpg" alt="T4 Q4 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q4_comparison.jpg" alt="GH200 Q4 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q4.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q4.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q4.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q4.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q4.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q4_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q5 Local Supplier Volume Query
 
@@ -763,8 +765,8 @@ flowchart LR
 
 ```sql
 Sort[revenue DESC]
-  Aggregate(keys=[n_name]; aggs=[sum(disc_price) AS revenue])
-    Project(n_name = n_name, disc_price = (l_extendedprice * (1 - l_discount)))
+  Aggregate(n_name; sum(disc_price))
+    Project(n_name, disc_price = (l_extendedprice * (1 - l_discount)))
       Filter((c_nationkey == s_nationkey))
         InnerJoin(on=(l_suppkey == s_suppkey))
           InnerJoin(on=(o_orderkey == l_orderkey))
@@ -784,9 +786,9 @@ Sort[revenue DESC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>revenue DESC"]
-    ir_1["Aggregate<br/>keys=[n_name]; aggs=[sum(disc_price) AS revenue]"]
+    ir_1["Aggregate<br/>n_name; sum(disc_price)"]
     ir_0 --> ir_1
-    ir_2["Project<br/>n_name = n_name, disc_price = (l_extendedprice * (1 - l_discount))"]
+    ir_2["Project<br/>n_name, disc_price = (l_extendedprice * (1 - l_discount))"]
     ir_1 --> ir_2
     ir_3["Filter<br/>(c_nationkey == s_nationkey)"]
     ir_2 --> ir_3
@@ -831,79 +833,79 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 150000 | 2 | customer |  |  |  |  |  |
-| 1 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  |
-| 2 | Filter | 227597 | 2 | < | 15.2% | 0.425062 | 0.323168 | fuse | nofuse |
-| 3 | EqJoin | 227597 | 3 | customer⋈orders | 152% | 0.479766 | 0.479766 | hash_gfur | hash_gfur |
-| 4 | Reorder | 227597 | 4 |  |  | 0.001834 | 0.001834 |  |  |
-| 5 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 6 | EqJoin | 910519 | 7 | (customer⋈orders)⋈lineitem | 400% | 5.15134 | 5.15134 | hash_gfur | hash_gfur |
-| 7 | Reorder | 910519 | 8 |  |  | 0.00205067 | 0.00205067 |  |  |
-| 8 | SourceTable | 5 | 2 | region |  |  |  |  |  |
-| 9 | Filter | 1 | 1 | < | 20% | 0.0532093 | 0.0532093 | fuse | fuse |
-| 10 | SourceTable | 25 | 3 | nation |  |  |  |  |  |
-| 11 | EqJoin | 5 | 3 | region⋈nation | 500% | 0.148806 | 0.148806 | hash_gfur | hash_gfur |
-| 12 | Reorder | 5 | 4 |  |  | 0.00740333 | 0.00740333 |  |  |
-| 13 | SourceTable | 10000 | 2 | supplier |  |  |  |  |  |
-| 14 | EqJoin | 2003 | 5 | (region⋈nation)⋈supplier | 4.01e+04% | 0.15878 | 0.15878 | hash_gfur | hash_gfur |
-| 15 | Reorder | 2003 | 6 |  |  | 0.00627267 | 0.00627267 |  |  |
-| 16 | EqJoin | 182183 | 13 | ((customer⋈orders)⋈lineitem)⋈((region⋈nation) ⋈ supplier) | 20% | 3.57394 | 3.57394 | hash_gfur | hash_gfur |
-| 17 | Reorder | 182183 | 14 |  |  | 0.00783133 | 0.00783133 |  |  |
-| 18 | Filter | 7243 | 3 | < | 3.98% | 0.245203 | 0.205272 | fuse | nofuse |
-| 19 | Project | 7243 | 2 |  |  | 0.0323807 | 0.0323807 | nofuse | nofuse |
-| 20 | Reorder | 7243 | 2 |  |  | 0.001952 | 0.001952 |  |  |
-| 21 | GroupBy | 5 | 2 | < | 0.069% | 0.169658 | 0.169658 | hash | hash |
-| 22 | Sort | 5 | 2 |  |  | 0.102092 | 0.102092 | no_skf | no_skf |
-|  | Total |  |  |  |  | 10.5676 | 10.4258 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 150000 | 2 | customer |  |  |  |  |  | c_custkey, c_nationkey |
+| 1 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  | o_orderkey, o_custkey, o_orderdate |
+| 2 | Filter | 227597 | 2 | < | 15.2% | 0.425062 | 0.323168 | fuse | nofuse |  |
+| 3 | EqJoin | 227597 | 3 | customer⋈orders | 150K⋈227.6K | 0.479766 | 0.479766 | hash_gfur | hash_gfur | custkey |
+| 4 | Reorder | 227597 | 4 |  |  | 0.001834 | 0.001834 |  |  |  |
+| 5 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_orderkey, l_suppkey, l_extendedprice, l_discount |
+| 6 | EqJoin | 910519 | 7 | (customer⋈orders)⋈lineitem | 227.6K⋈6M | 5.15134 | 5.15134 | hash_gfur | hash_gfur | orderkey |
+| 7 | Reorder | 910519 | 8 |  |  | 0.00205067 | 0.00205067 |  |  |  |
+| 8 | SourceTable | 5 | 2 | region |  |  |  |  |  | r_regionkey, r_name |
+| 9 | Filter | 1 | 1 | < | 20% | 0.0532093 | 0.0532093 | fuse | fuse |  |
+| 10 | SourceTable | 25 | 3 | nation |  |  |  |  |  | n_nationkey, n_name, n_regionkey |
+| 11 | EqJoin | 5 | 3 | region⋈nation | 1⋈25 | 0.148806 | 0.148806 | hash_gfur | hash_gfur | regionkey |
+| 12 | Reorder | 5 | 4 |  |  | 0.00740333 | 0.00740333 |  |  |  |
+| 13 | SourceTable | 10000 | 2 | supplier |  |  |  |  |  | s_suppkey, s_nationkey |
+| 14 | EqJoin | 2003 | 5 | (region⋈nation)⋈supplier | 5⋈10K | 0.15878 | 0.15878 | hash_gfur | hash_gfur | nationkey |
+| 15 | Reorder | 2003 | 6 |  |  | 0.00627267 | 0.00627267 |  |  |  |
+| 16 | EqJoin | 182183 | 13 | ((customer⋈orders)⋈lineitem)⋈((region⋈nation) ⋈ supplier) | 910.5K⋈2K | 3.57394 | 3.57394 | hash_gfur | hash_gfur | suppkey |
+| 17 | Reorder | 182183 | 14 |  |  | 0.00783133 | 0.00783133 |  |  |  |
+| 18 | Filter | 7243 | 3 | < | 3.98% | 0.245203 | 0.205272 | fuse | nofuse |  |
+| 19 | Project | 7243 | 2 |  |  | 0.0323807 | 0.0323807 | nofuse | nofuse | n_name, disc_price |
+| 20 | Reorder | 7243 | 2 |  |  | 0.001952 | 0.001952 |  |  |  |
+| 21 | GroupBy | 5 | 2 | < | 0.069% | 0.169658 | 0.169658 | hash | hash | n_name; sum(disc_price) |
+| 22 | Sort | 5 | 2 |  |  | 0.102092 | 0.102092 | no_skf | no_skf | sum(disc_price) DESC |
+|  | Total |  |  |  |  | 10.5676 | 10.4258 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>customer<br/>150,000 rows × 2 cols"]
-    step_1["1 · SourceTable<br/>orders<br/>1,500,000 rows × 3 cols"]
-    step_2["2 · Filter · 15.2%<br/>227,597 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>customer<br/>c_custkey, c_nationkey<br/>150,000 × 2"]
+    step_1["1 · SourceTable<br/>orders<br/>o_orderkey, o_custkey, o_orderdate<br/>1,500,000 × 3"]
+    step_2["2 · Filter · 15.2%<br/>227,597 × 2"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 152%<br/>227,597 rows × 3 cols"]
+    step_3["3 · EqJoin · 150K⋈227.6K<br/>custkey<br/>227,597 × 3"]
     step_0 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>227,597 rows × 4 cols"]
+    step_4["4 · Reorder<br/>227,597 × 4"]
     step_3 --> step_4
-    step_5["5 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_6["6 · EqJoin · 400%<br/>910,519 rows × 7 cols"]
+    step_5["5 · SourceTable<br/>lineitem<br/>l_orderkey, l_suppkey, l_extendedprice, l_discount<br/>6,001,215 × 4"]
+    step_6["6 · EqJoin · 227.6K⋈6M<br/>orderkey<br/>910,519 × 7"]
     step_4 --> step_6
     step_5 --> step_6
-    step_7["7 · Reorder<br/>910,519 rows × 8 cols"]
+    step_7["7 · Reorder<br/>910,519 × 8"]
     step_6 --> step_7
-    step_8["8 · SourceTable<br/>region<br/>5 rows × 2 cols"]
-    step_9["9 · Filter · 20%<br/>1 rows × 1 cols"]
+    step_8["8 · SourceTable<br/>region<br/>r_regionkey, r_name<br/>5 × 2"]
+    step_9["9 · Filter · 20%<br/>1 × 1"]
     step_8 --> step_9
-    step_10["10 · SourceTable<br/>nation<br/>25 rows × 3 cols"]
-    step_11["11 · EqJoin · 500%<br/>5 rows × 3 cols"]
+    step_10["10 · SourceTable<br/>nation<br/>n_nationkey, n_name, n_regionkey<br/>25 × 3"]
+    step_11["11 · EqJoin · 1⋈25<br/>regionkey<br/>5 × 3"]
     step_9 --> step_11
     step_10 --> step_11
-    step_12["12 · Reorder<br/>5 rows × 4 cols"]
+    step_12["12 · Reorder<br/>5 × 4"]
     step_11 --> step_12
-    step_13["13 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_14["14 · EqJoin · 4.01e+04%<br/>2,003 rows × 5 cols"]
+    step_13["13 · SourceTable<br/>supplier<br/>s_suppkey, s_nationkey<br/>10,000 × 2"]
+    step_14["14 · EqJoin · 5⋈10K<br/>nationkey<br/>2,003 × 5"]
     step_12 --> step_14
     step_13 --> step_14
-    step_15["15 · Reorder<br/>2,003 rows × 6 cols"]
+    step_15["15 · Reorder<br/>2,003 × 6"]
     step_14 --> step_15
-    step_16["16 · EqJoin · 20%<br/>182,183 rows × 13 cols"]
+    step_16["16 · EqJoin · 910.5K⋈2K<br/>suppkey<br/>182,183 × 13"]
     step_7 --> step_16
     step_15 --> step_16
-    step_17["17 · Reorder<br/>182,183 rows × 14 cols"]
+    step_17["17 · Reorder<br/>182,183 × 14"]
     step_16 --> step_17
-    step_18["18 · Filter · 3.98%<br/>7,243 rows × 3 cols"]
+    step_18["18 · Filter · 3.98%<br/>7,243 × 3"]
     step_17 --> step_18
-    step_19["19 · Project<br/>7,243 rows × 2 cols"]
+    step_19["19 · Project<br/>7,243 × 2"]
     step_18 --> step_19
-    step_20["20 · Reorder<br/>7,243 rows × 2 cols"]
+    step_20["20 · Reorder<br/>7,243 × 2"]
     step_19 --> step_20
-    step_21["21 · GroupBy · 0.069%<br/>5 rows × 2 cols"]
+    step_21["21 · GroupBy · 0.069%<br/>n_name; sum(disc_price)<br/>5 × 2"]
     step_20 --> step_21
-    step_22["22 · Sort<br/>5 rows × 2 cols"]
+    step_22["22 · Sort<br/>sum(disc_price) DESC<br/>5 × 2"]
     step_21 --> step_22
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -922,13 +924,15 @@ flowchart TD
 
 ## Notes
 
+- This query joins 6 tables.
+
 - Region and supplier could be filtered from lineitem first before joining
 
 ## Runtime breakdown comparison
 
-| T4 Q5 SF1 | T4 Q5 SF10 | GH200 Q5 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q5.jpg" alt="T4 Q5 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q5.jpg" alt="T4 Q5 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q5_comparison.jpg" alt="GH200 Q5 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q5.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q5.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q5.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q5.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q5.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q5_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q6 Forecasting Revenue Change Query
 
@@ -960,7 +964,7 @@ flowchart LR
 ```
 
 ```sql
-Aggregate(aggs=[sum(revenue) AS total])
+Aggregate(sum(revenue))
   Project(revenue = (l_extendedprice * l_discount))
     Filter((((((l_shipdate >= 19940101) && (l_shipdate < 19950101)) && (l_discount >= 0.05)) && (l_discount <= 0.07)) && (l_quantity < 24)))
       Scan(lineitem [l_shipdate, l_extendedprice, l_discount, l_quantity])
@@ -968,7 +972,7 @@ Aggregate(aggs=[sum(revenue) AS total])
 
 ```mermaid
 flowchart TD
-    ir_0["Aggregate<br/>aggs=[sum(revenue) AS total]"]
+    ir_0["Aggregate<br/>sum(revenue)"]
     ir_1["Project<br/>revenue = (l_extendedprice * l_discount)"]
     ir_0 --> ir_1
     ir_2["Filter<br/>(((((l_shipdate &gt;= 19940101) &amp;&amp; (l_shipdate &lt; 19950101)) &amp;&amp; (l_discount &gt;= 0.05)) &amp;&amp; (l_discount &lt;= 0.07)) ..."]
@@ -988,25 +992,25 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 1 | Filter | 114160 | 2 | < | 1.9% | 2.73051 | 1.72603 | fuse | nofuse |
-| 2 | Project | 114160 | 1 |  |  | 0.0185139 | 0.0185139 | nofuse | nofuse |
-| 3 | Reorder | 114160 | 1 |  |  | 0.00191553 | 0.00191553 |  |  |
-| 4 | ScalarAgg | 1 | 1 |  |  | 0.0352661 | 0.0352661 |  |  |
-|  | Total |  |  |  |  | 2.78621 | 1.78173 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_shipdate, l_extendedprice, l_discount, l_quantity |
+| 1 | Filter | 114160 | 2 | < | 1.9% | 2.73051 | 1.72603 | fuse | nofuse |  |
+| 2 | Project | 114160 | 1 |  |  | 0.0185139 | 0.0185139 | nofuse | nofuse | revenue |
+| 3 | Reorder | 114160 | 1 |  |  | 0.00191553 | 0.00191553 |  |  |  |
+| 4 | ScalarAgg | 1 | 1 |  |  | 0.0352661 | 0.0352661 |  |  | sum(revenue) |
+|  | Total |  |  |  |  | 2.78621 | 1.78173 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_1["1 · Filter · 1.9%<br/>114,160 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>lineitem<br/>l_shipdate, l_extendedprice, l_discount, l_quantity<br/>6,001,215 × 4"]
+    step_1["1 · Filter · 1.9%<br/>114,160 × 2"]
     step_0 --> step_1
-    step_2["2 · Project<br/>114,160 rows × 1 cols"]
+    step_2["2 · Project<br/>114,160 × 1"]
     step_1 --> step_2
-    step_3["3 · Reorder<br/>114,160 rows × 1 cols"]
+    step_3["3 · Reorder<br/>114,160 × 1"]
     step_2 --> step_3
-    step_4["4 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_4["4 · ScalarAgg<br/>sum(revenue)<br/>1 × 1"]
     step_3 --> step_4
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -1023,9 +1027,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q6 SF1 | T4 Q6 SF10 | GH200 Q6 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q6.jpg" alt="T4 Q6 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q6.jpg" alt="T4 Q6 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q6_comparison.jpg" alt="GH200 Q6 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q6.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q6.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q6.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q6.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q6.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q6_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q7 Volume Shipping Query
 
@@ -1082,7 +1086,7 @@ flowchart LR
 
 ```sql
 Sort[n_name#12 ASC, n_name#14 ASC, l_year ASC]
-  Aggregate(keys=[n_name#12, n_name#14, l_year]; aggs=[sum(volume) AS revenue])
+  Aggregate(n_name#12, n_name#14, l_year; sum(volume))
     Project(supp_nation = n_name#12, cust_nation = n_name#14, l_year = year(l_shipdate), volume = (l_extendedprice * (1 - l_discount)))
       Filter(((str_eq(n_name#12, "FRANCE") && str_eq(n_name#14, "GERMANY")) || (str_eq(n_name#12, "GERMANY") && str_eq(n_name#14, "FRANCE"))))
         InnerJoin(on=(o_custkey == c_custkey))
@@ -1104,7 +1108,7 @@ Sort[n_name#12 ASC, n_name#14 ASC, l_year ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>n_name#12 ASC, n_name#14 ASC, l_year ASC"]
-    ir_1["Aggregate<br/>keys=[n_name#12, n_name#14, l_year]; aggs=[sum(volume) AS revenue]"]
+    ir_1["Aggregate<br/>n_name#12, n_name#14, l_year; sum(volume)"]
     ir_0 --> ir_1
     ir_2["Project<br/>supp_nation = n_name#12, cust_nation = n_name#14, l_year = year(l_shipdate), volume = (l_extendedprice * (1..."]
     ir_1 --> ir_2
@@ -1153,82 +1157,82 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 1 | Filter | 2 | 2 | < | 8% | 0.127813 | 0.127813 | fuse | fuse |
-| 2 | SourceTable | 10000 | 2 | supplier |  |  |  |  |  |
-| 3 | EqJoin | 798 | 3 | nation⋈supplier | 3.99e+04% | 0.134012 | 0.134012 | hash_gfur | hash_gfur |
-| 4 | Reorder | 798 | 4 |  |  | 0.00575247 | 0.00575247 |  |  |
-| 5 | SourceTable | 6001215 | 5 | lineitem |  |  |  |  |  |
-| 6 | Filter | 1828450 | 5 | < | 30.5% | 2.03619 | 1.68278 | fuse | nofuse |
-| 7 | EqJoin | 145703 | 8 | (nation⋈supplier)⋈lineitem | 1.83e+04% | 1.42676 | 1.42676 | hash_gfur | hash_gfur |
-| 8 | Reorder | 145703 | 9 |  |  | 0.00694918 | 0.00694918 |  |  |
-| 9 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  |
-| 10 | EqJoin | 145703 | 10 | ((nation⋈supplier)⋈lineitem)⋈orders | 100% | 1.70218 | 1.70218 | hash_gfur | hash_gfur |
-| 11 | Reorder | 145703 | 11 |  |  | 0.006488 | 0.006488 |  |  |
-| 12 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 13 | Filter | 2 | 2 | < | 8% | 0.125733 | 0.125733 | fuse | fuse |
-| 14 | SourceTable | 150000 | 2 | customer |  |  |  |  |  |
-| 15 | EqJoin | 12008 | 3 | nation⋈customer | 6e+05% | 0.204058 | 0.204058 | hash_gfur | hash_gfur |
-| 16 | Reorder | 12008 | 4 |  |  | 0.00538118 | 0.00538118 |  |  |
-| 17 | EqJoin | 11723 | 14 | (((nation⋈supplier)⋈lineitem)⋈orders)⋈(nation ⋈ customer) | 8.05% | 0.409308 | 0.409308 | hash_gfur | hash_gfur |
-| 18 | Reorder | 11723 | 15 |  |  | 0.00847388 | 0.00847388 |  |  |
-| 19 | Filter | 5924 | 5 | < | 50.5% | 0.316296 | 0.316296 | fuse | fuse |
-| 20 | Project | 5924 | 4 |  |  | 0.0405925 | 0.0405925 | nofuse | nofuse |
-| 21 | Reorder | 5924 | 4 |  |  | 0.001744 | 0.001744 |  |  |
-| 22 | GroupBy | 4 | 4 | < | 0.0675% | 0.226223 | 0.226223 | hash | hash |
-| 23 | Sort | 4 | 4 |  |  | 0.587701 | 0.587701 | no_skf | no_skf |
-|  | Total |  |  |  |  | 7.37166 | 7.01825 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  | n_nationkey, n_name |
+| 1 | Filter | 2 | 2 | < | 8% | 0.127813 | 0.127813 | fuse | fuse |  |
+| 2 | SourceTable | 10000 | 2 | supplier |  |  |  |  |  | s_suppkey, s_nationkey |
+| 3 | EqJoin | 798 | 3 | nation⋈supplier | 2⋈10K | 0.134012 | 0.134012 | hash_gfur | hash_gfur | nationkey |
+| 4 | Reorder | 798 | 4 |  |  | 0.00575247 | 0.00575247 |  |  |  |
+| 5 | SourceTable | 6001215 | 5 | lineitem |  |  |  |  |  | l_orderkey, l_suppkey, l_extendedprice, l_discount, l_shipdate |
+| 6 | Filter | 1828450 | 5 | < | 30.5% | 2.03619 | 1.68278 | fuse | nofuse |  |
+| 7 | EqJoin | 145703 | 8 | (nation⋈supplier)⋈lineitem | 798⋈1.8M | 1.42676 | 1.42676 | hash_gfur | hash_gfur | suppkey |
+| 8 | Reorder | 145703 | 9 |  |  | 0.00694918 | 0.00694918 |  |  |  |
+| 9 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  | o_orderkey, o_custkey |
+| 10 | EqJoin | 145703 | 10 | ((nation⋈supplier)⋈lineitem)⋈orders | 145.7K⋈1.5M | 1.70218 | 1.70218 | hash_gfur | hash_gfur | orderkey |
+| 11 | Reorder | 145703 | 11 |  |  | 0.006488 | 0.006488 |  |  |  |
+| 12 | SourceTable | 25 | 2 | nation |  |  |  |  |  | n_nationkey, n_name |
+| 13 | Filter | 2 | 2 | < | 8% | 0.125733 | 0.125733 | fuse | fuse |  |
+| 14 | SourceTable | 150000 | 2 | customer |  |  |  |  |  | c_custkey, c_nationkey |
+| 15 | EqJoin | 12008 | 3 | nation⋈customer | 2⋈150K | 0.204058 | 0.204058 | hash_gfur | hash_gfur | nationkey |
+| 16 | Reorder | 12008 | 4 |  |  | 0.00538118 | 0.00538118 |  |  |  |
+| 17 | EqJoin | 11723 | 14 | (((nation⋈supplier)⋈lineitem)⋈orders)⋈(nation ⋈ customer) | 145.7K⋈12K | 0.409308 | 0.409308 | hash_gfur | hash_gfur | custkey |
+| 18 | Reorder | 11723 | 15 |  |  | 0.00847388 | 0.00847388 |  |  |  |
+| 19 | Filter | 5924 | 5 | < | 50.5% | 0.316296 | 0.316296 | fuse | fuse |  |
+| 20 | Project | 5924 | 4 |  |  | 0.0405925 | 0.0405925 | nofuse | nofuse | supp_nation, cust_nation, l_year, volume |
+| 21 | Reorder | 5924 | 4 |  |  | 0.001744 | 0.001744 |  |  |  |
+| 22 | GroupBy | 4 | 4 | < | 0.0675% | 0.226223 | 0.226223 | hash | hash | supp_nation, cust_nation, l_year; sum(volume) |
+| 23 | Sort | 4 | 4 |  |  | 0.587701 | 0.587701 | no_skf | no_skf | supp_nation ASC, cust_nation ASC, l_year ASC |
+|  | Total |  |  |  |  | 7.37166 | 7.01825 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_1["1 · Filter · 8%<br/>2 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_1["1 · Filter · 8%<br/>2 × 2"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_3["3 · EqJoin · 3.99e+04%<br/>798 rows × 3 cols"]
+    step_2["2 · SourceTable<br/>supplier<br/>s_suppkey, s_nationkey<br/>10,000 × 2"]
+    step_3["3 · EqJoin · 2⋈10K<br/>nationkey<br/>798 × 3"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>798 rows × 4 cols"]
+    step_4["4 · Reorder<br/>798 × 4"]
     step_3 --> step_4
-    step_5["5 · SourceTable<br/>lineitem<br/>6,001,215 rows × 5 cols"]
-    step_6["6 · Filter · 30.5%<br/>1,828,450 rows × 5 cols"]
+    step_5["5 · SourceTable<br/>lineitem<br/>l_orderkey, l_suppkey, l_extendedprice, l_discount, l_shipdate<br/>6,001,215 × 5"]
+    step_6["6 · Filter · 30.5%<br/>1,828,450 × 5"]
     step_5 --> step_6
-    step_7["7 · EqJoin · 1.83e+04%<br/>145,703 rows × 8 cols"]
+    step_7["7 · EqJoin · 798⋈1.8M<br/>suppkey<br/>145,703 × 8"]
     step_4 --> step_7
     step_6 --> step_7
-    step_8["8 · Reorder<br/>145,703 rows × 9 cols"]
+    step_8["8 · Reorder<br/>145,703 × 9"]
     step_7 --> step_8
-    step_9["9 · SourceTable<br/>orders<br/>1,500,000 rows × 2 cols"]
-    step_10["10 · EqJoin · 100%<br/>145,703 rows × 10 cols"]
+    step_9["9 · SourceTable<br/>orders<br/>o_orderkey, o_custkey<br/>1,500,000 × 2"]
+    step_10["10 · EqJoin · 145.7K⋈1.5M<br/>orderkey<br/>145,703 × 10"]
     step_8 --> step_10
     step_9 --> step_10
-    step_11["11 · Reorder<br/>145,703 rows × 11 cols"]
+    step_11["11 · Reorder<br/>145,703 × 11"]
     step_10 --> step_11
-    step_12["12 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_13["13 · Filter · 8%<br/>2 rows × 2 cols"]
+    step_12["12 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_13["13 · Filter · 8%<br/>2 × 2"]
     step_12 --> step_13
-    step_14["14 · SourceTable<br/>customer<br/>150,000 rows × 2 cols"]
-    step_15["15 · EqJoin · 6e+05%<br/>12,008 rows × 3 cols"]
+    step_14["14 · SourceTable<br/>customer<br/>c_custkey, c_nationkey<br/>150,000 × 2"]
+    step_15["15 · EqJoin · 2⋈150K<br/>nationkey<br/>12,008 × 3"]
     step_13 --> step_15
     step_14 --> step_15
-    step_16["16 · Reorder<br/>12,008 rows × 4 cols"]
+    step_16["16 · Reorder<br/>12,008 × 4"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 8.05%<br/>11,723 rows × 14 cols"]
+    step_17["17 · EqJoin · 145.7K⋈12K<br/>custkey<br/>11,723 × 14"]
     step_11 --> step_17
     step_16 --> step_17
-    step_18["18 · Reorder<br/>11,723 rows × 15 cols"]
+    step_18["18 · Reorder<br/>11,723 × 15"]
     step_17 --> step_18
-    step_19["19 · Filter · 50.5%<br/>5,924 rows × 5 cols"]
+    step_19["19 · Filter · 50.5%<br/>5,924 × 5"]
     step_18 --> step_19
-    step_20["20 · Project<br/>5,924 rows × 4 cols"]
+    step_20["20 · Project<br/>5,924 × 4"]
     step_19 --> step_20
-    step_21["21 · Reorder<br/>5,924 rows × 4 cols"]
+    step_21["21 · Reorder<br/>5,924 × 4"]
     step_20 --> step_21
-    step_22["22 · GroupBy · 0.0675%<br/>4 rows × 4 cols"]
+    step_22["22 · GroupBy · 0.0675%<br/>supp_nation, cust_nation, l_year; sum(volume)<br/>4 × 4"]
     step_21 --> step_22
-    step_23["23 · Sort<br/>4 rows × 4 cols"]
+    step_23["23 · Sort<br/>supp_nation ASC, cust_nation ASC, l_year ASC<br/>4 × 4"]
     step_22 --> step_23
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -1247,13 +1251,17 @@ flowchart TD
 
 ## Notes
 
-- nation is read multiple times.
+- This query joins 5 tables.
+
+- Nation is read multiple times.
+
+- FIlter is applied twice on nation. This is not a problem since nation is very small.
 
 ## Runtime breakdown comparison
 
-| T4 Q7 SF1 | T4 Q7 SF10 | GH200 Q7 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q7.jpg" alt="T4 Q7 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q7.jpg" alt="T4 Q7 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q7_comparison.jpg" alt="GH200 Q7 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q7.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q7.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q7.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q7.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q7.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q7_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q8 National Market Share Query
 
@@ -1304,10 +1312,10 @@ flowchart LR
 
 ```sql
 Sort[o_year ASC]
-  Project(o_year = o_year, mkt_share = (sum_brazil / sum_total))
-    Aggregate(keys=[o_year]; aggs=[sum(brazil_volume) AS sum_brazil, sum(volume) AS sum_total])
-      Project(o_year = o_year, volume = volume, brazil_volume = case(is_brazil, volume, 0))
-        Project(o_year = o_year, volume = volume, is_brazil = str_eq(n_name, "BRAZIL"))
+  Project(o_year, mkt_share = (sum_brazil / sum_total))
+    Aggregate(o_year; sum(brazil_volume), sum(volume))
+      Project(o_year, volume, brazil_volume = case(is_brazil, volume, 0))
+        Project(o_year, volume, is_brazil = str_eq(n_name, "BRAZIL"))
           Project(o_year = year(o_orderdate), volume = (l_extendedprice * (1 - l_discount)), nation = n_name)
             InnerJoin(on=(s_nationkey == n_nationkey#16))
               InnerJoin(on=(l_suppkey == s_suppkey))
@@ -1332,13 +1340,13 @@ Sort[o_year ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>o_year ASC"]
-    ir_1["Project<br/>o_year = o_year, mkt_share = (sum_brazil / sum_total)"]
+    ir_1["Project<br/>o_year, mkt_share = (sum_brazil / sum_total)"]
     ir_0 --> ir_1
-    ir_2["Aggregate<br/>keys=[o_year]; aggs=[sum(brazil_volume) AS sum_brazil, sum(volume) AS sum_total]"]
+    ir_2["Aggregate<br/>o_year; sum(brazil_volume), sum(volume)"]
     ir_1 --> ir_2
-    ir_3["Project<br/>o_year = o_year, volume = volume, brazil_volume = case(is_brazil, volume, 0)"]
+    ir_3["Project<br/>o_year, volume, brazil_volume = case(is_brazil, volume, 0)"]
     ir_2 --> ir_3
-    ir_4["Project<br/>o_year = o_year, volume = volume, is_brazil = str_eq(n_name, #quot;BRAZIL#quot;)"]
+    ir_4["Project<br/>o_year, volume, is_brazil = str_eq(n_name, #quot;BRAZIL#quot;)"]
     ir_3 --> ir_4
     ir_5["Project<br/>o_year = year(o_orderdate), volume = (l_extendedprice * (1 - l_discount)), nation = n_name"]
     ir_4 --> ir_5
@@ -1393,106 +1401,106 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 5 | 2 | region |  |  |  |
-| 1 | Filter | 1 | 1 | < | 20% | 0.0494525 | nofuse |
-| 2 | SourceTable | 25 | 2 | nation |  |  |  |
-| 3 | EqJoin | 5 | 2 | region⋈nation | 500% | 0.086727 | hash_gfur |
-| 4 | Reorder | 5 | 3 |  |  | 0.00172475 |  |
-| 5 | SourceTable | 150000 | 2 | customer |  |  |  |
-| 6 | EqJoin | 29952 | 4 | (region⋈nation)⋈customer | 5.99e+05% | 0.168699 | hash_gfur |
-| 7 | Reorder | 29952 | 5 |  |  | 0.00177067 |  |
-| 8 | SourceTable | 1500000 | 3 | orders |  |  |  |
-| 9 | Filter | 457263 | 3 | < | 30.5% | 0.338978 | nofuse |
-| 10 | EqJoin | 91179 | 7 | ((region⋈nation)⋈customer)⋈orders | 304% | 0.485158 | hash_gfur |
-| 11 | Reorder | 91179 | 8 |  |  | 0.00169507 |  |
-| 12 | SourceTable | 6001215 | 5 | lineitem |  |  |  |
-| 13 | EqJoin | 365091 | 12 | (((region⋈nation)⋈customer)⋈orders)⋈lineitem | 400% | 4.07806 | hash_gfur |
-| 14 | Reorder | 365091 | 13 |  |  | 0.00181612 |  |
-| 15 | SourceTable | 200000 | 2 | part |  |  |  |
-| 16 | Filter | 1451 | 1 | < | 0.726% | 0.0874477 | nofuse |
-| 17 | EqJoin | 2603 | 13 | ((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part | 0.713% | 0.668509 | hash_gfur |
-| 18 | Reorder | 2603 | 14 |  |  | 0.00167652 |  |
-| 19 | SourceTable | 10000 | 2 | supplier |  |  |  |
-| 20 | EqJoin | 2603 | 15 | (((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier | 100% | 0.188778 | hash_gfur |
-| 21 | Reorder | 2603 | 16 |  |  | 0.00160881 |  |
-| 22 | SourceTable | 25 | 2 | nation |  |  |  |
-| 23 | EqJoin | 2603 | 17 | ((((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier)⋈nation | 100% | 0.347195 | hash_gfur |
-| 24 | Reorder | 2603 | 18 |  |  | 0.00785159 |  |
-| 25 | Project | 2603 | 3 |  |  | 0.0910497 | nofuse |
-| 26 | Project | 2603 | 3 |  |  | 0.0247008 | nofuse |
-| 27 | Project | 2603 | 3 |  |  | 0.01351 | nofuse |
-| 28 | Reorder | 2603 | 3 |  |  | 0.0016167 |  |
-| 29 | GroupBy | 2 | 3 | < | 0.0768% | 0.495086 | partition_gftr |
-| 30 | Project | 2 | 2 |  |  | 0.0144297 | nofuse |
-| 31 | Sort | 2 | 2 |  |  | 0.0226361 | no_skf |
-|  | Total |  |  |  |  | 7.18018 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 5 | 2 | region |  |  |  | r_regionkey, r_name |
+| 1 | Filter | 1 | 1 | < | 20% | 0.0494525 | nofuse |  |
+| 2 | SourceTable | 25 | 2 | nation |  |  |  | n_nationkey, n_regionkey |
+| 3 | EqJoin | 5 | 2 | region⋈nation | 1⋈25 | 0.086727 | hash_gfur | regionkey |
+| 4 | Reorder | 5 | 3 |  |  | 0.00172475 |  |  |
+| 5 | SourceTable | 150000 | 2 | customer |  |  |  | c_custkey, c_nationkey |
+| 6 | EqJoin | 29952 | 4 | (region⋈nation)⋈customer | 5⋈150K | 0.168699 | hash_gfur | nationkey |
+| 7 | Reorder | 29952 | 5 |  |  | 0.00177067 |  |  |
+| 8 | SourceTable | 1500000 | 3 | orders |  |  |  | o_orderkey, o_custkey, o_orderdate |
+| 9 | Filter | 457263 | 3 | < | 30.5% | 0.338978 | nofuse |  |
+| 10 | EqJoin | 91179 | 7 | ((region⋈nation)⋈customer)⋈orders | 30K⋈457.3K | 0.485158 | hash_gfur | custkey |
+| 11 | Reorder | 91179 | 8 |  |  | 0.00169507 |  |  |
+| 12 | SourceTable | 6001215 | 5 | lineitem |  |  |  | l_orderkey, l_partkey, l_suppkey, l_extendedprice, l_discount |
+| 13 | EqJoin | 365091 | 12 | (((region⋈nation)⋈customer)⋈orders)⋈lineitem | 91.2K⋈6M | 4.07806 | hash_gfur | orderkey |
+| 14 | Reorder | 365091 | 13 |  |  | 0.00181612 |  |  |
+| 15 | SourceTable | 200000 | 2 | part |  |  |  | p_partkey, p_type |
+| 16 | Filter | 1451 | 1 | < | 0.726% | 0.0874477 | nofuse |  |
+| 17 | EqJoin | 2603 | 13 | ((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part | 365.1K⋈1.5K | 0.668509 | hash_gfur | partkey |
+| 18 | Reorder | 2603 | 14 |  |  | 0.00167652 |  |  |
+| 19 | SourceTable | 10000 | 2 | supplier |  |  |  | s_suppkey, s_nationkey |
+| 20 | EqJoin | 2603 | 15 | (((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier | 2.6K⋈10K | 0.188778 | hash_gfur | suppkey |
+| 21 | Reorder | 2603 | 16 |  |  | 0.00160881 |  |  |
+| 22 | SourceTable | 25 | 2 | nation |  |  |  | n_nationkey, n_name |
+| 23 | EqJoin | 2603 | 17 | ((((((region⋈nation)⋈customer)⋈orders)⋈lineitem) ⋈ part)⋈supplier)⋈nation | 2.6K⋈25 | 0.347195 | hash_gfur | nationkey |
+| 24 | Reorder | 2603 | 18 |  |  | 0.00785159 |  |  |
+| 25 | Project | 2603 | 3 |  |  | 0.0910497 | nofuse | o_year, volume, nation |
+| 26 | Project | 2603 | 3 |  |  | 0.0247008 | nofuse | o_year, volume, is_brazil |
+| 27 | Project | 2603 | 3 |  |  | 0.01351 | nofuse | o_year, volume, brazil_volume |
+| 28 | Reorder | 2603 | 3 |  |  | 0.0016167 |  |  |
+| 29 | GroupBy | 2 | 3 | < | 0.0768% | 0.495086 | partition_gftr | o_year; sum(brazil_volume), sum(volume) |
+| 30 | Project | 2 | 2 |  |  | 0.0144297 | nofuse | o_year, mkt_share |
+| 31 | Sort | 2 | 2 |  |  | 0.0226361 | no_skf | o_year ASC |
+|  | Total |  |  |  |  | 7.18018 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>region<br/>5 rows × 2 cols"]
-    step_1["1 · Filter · 20%<br/>1 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>region<br/>r_regionkey, r_name<br/>5 × 2"]
+    step_1["1 · Filter · 20%<br/>1 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_3["3 · EqJoin · 500%<br/>5 rows × 2 cols"]
+    step_2["2 · SourceTable<br/>nation<br/>n_nationkey, n_regionkey<br/>25 × 2"]
+    step_3["3 · EqJoin · 1⋈25<br/>regionkey<br/>5 × 2"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>5 rows × 3 cols"]
+    step_4["4 · Reorder<br/>5 × 3"]
     step_3 --> step_4
-    step_5["5 · SourceTable<br/>customer<br/>150,000 rows × 2 cols"]
-    step_6["6 · EqJoin · 5.99e+05%<br/>29,952 rows × 4 cols"]
+    step_5["5 · SourceTable<br/>customer<br/>c_custkey, c_nationkey<br/>150,000 × 2"]
+    step_6["6 · EqJoin · 5⋈150K<br/>nationkey<br/>29,952 × 4"]
     step_4 --> step_6
     step_5 --> step_6
-    step_7["7 · Reorder<br/>29,952 rows × 5 cols"]
+    step_7["7 · Reorder<br/>29,952 × 5"]
     step_6 --> step_7
-    step_8["8 · SourceTable<br/>orders<br/>1,500,000 rows × 3 cols"]
-    step_9["9 · Filter · 30.5%<br/>457,263 rows × 3 cols"]
+    step_8["8 · SourceTable<br/>orders<br/>o_orderkey, o_custkey, o_orderdate<br/>1,500,000 × 3"]
+    step_9["9 · Filter · 30.5%<br/>457,263 × 3"]
     step_8 --> step_9
-    step_10["10 · EqJoin · 304%<br/>91,179 rows × 7 cols"]
+    step_10["10 · EqJoin · 30K⋈457.3K<br/>custkey<br/>91,179 × 7"]
     step_7 --> step_10
     step_9 --> step_10
-    step_11["11 · Reorder<br/>91,179 rows × 8 cols"]
+    step_11["11 · Reorder<br/>91,179 × 8"]
     step_10 --> step_11
-    step_12["12 · SourceTable<br/>lineitem<br/>6,001,215 rows × 5 cols"]
-    step_13["13 · EqJoin · 400%<br/>365,091 rows × 12 cols"]
+    step_12["12 · SourceTable<br/>lineitem<br/>l_orderkey, l_partkey, l_suppkey, l_extendedprice, l_discount<br/>6,001,215 × 5"]
+    step_13["13 · EqJoin · 91.2K⋈6M<br/>orderkey<br/>365,091 × 12"]
     step_11 --> step_13
     step_12 --> step_13
-    step_14["14 · Reorder<br/>365,091 rows × 13 cols"]
+    step_14["14 · Reorder<br/>365,091 × 13"]
     step_13 --> step_14
-    step_15["15 · SourceTable<br/>part<br/>200,000 rows × 2 cols"]
-    step_16["16 · Filter · 0.726%<br/>1,451 rows × 1 cols"]
+    step_15["15 · SourceTable<br/>part<br/>p_partkey, p_type<br/>200,000 × 2"]
+    step_16["16 · Filter · 0.726%<br/>1,451 × 1"]
     step_15 --> step_16
-    step_17["17 · EqJoin · 0.713%<br/>2,603 rows × 13 cols"]
+    step_17["17 · EqJoin · 365.1K⋈1.5K<br/>partkey<br/>2,603 × 13"]
     step_14 --> step_17
     step_16 --> step_17
-    step_18["18 · Reorder<br/>2,603 rows × 14 cols"]
+    step_18["18 · Reorder<br/>2,603 × 14"]
     step_17 --> step_18
-    step_19["19 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_20["20 · EqJoin · 100%<br/>2,603 rows × 15 cols"]
+    step_19["19 · SourceTable<br/>supplier<br/>s_suppkey, s_nationkey<br/>10,000 × 2"]
+    step_20["20 · EqJoin · 2.6K⋈10K<br/>suppkey<br/>2,603 × 15"]
     step_18 --> step_20
     step_19 --> step_20
-    step_21["21 · Reorder<br/>2,603 rows × 16 cols"]
+    step_21["21 · Reorder<br/>2,603 × 16"]
     step_20 --> step_21
-    step_22["22 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_23["23 · EqJoin · 100%<br/>2,603 rows × 17 cols"]
+    step_22["22 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_23["23 · EqJoin · 2.6K⋈25<br/>nationkey<br/>2,603 × 17"]
     step_21 --> step_23
     step_22 --> step_23
-    step_24["24 · Reorder<br/>2,603 rows × 18 cols"]
+    step_24["24 · Reorder<br/>2,603 × 18"]
     step_23 --> step_24
-    step_25["25 · Project<br/>2,603 rows × 3 cols"]
+    step_25["25 · Project<br/>2,603 × 3"]
     step_24 --> step_25
-    step_26["26 · Project<br/>2,603 rows × 3 cols"]
+    step_26["26 · Project<br/>2,603 × 3"]
     step_25 --> step_26
-    step_27["27 · Project<br/>2,603 rows × 3 cols"]
+    step_27["27 · Project<br/>2,603 × 3"]
     step_26 --> step_27
-    step_28["28 · Reorder<br/>2,603 rows × 3 cols"]
+    step_28["28 · Reorder<br/>2,603 × 3"]
     step_27 --> step_28
-    step_29["29 · GroupBy · 0.0768%<br/>2 rows × 3 cols"]
+    step_29["29 · GroupBy · 0.0768%<br/>o_year; sum(brazil_volume), sum(volume)<br/>2 × 3"]
     step_28 --> step_29
-    step_30["30 · Project<br/>2 rows × 2 cols"]
+    step_30["30 · Project<br/>2 × 2"]
     step_29 --> step_30
-    step_31["31 · Sort<br/>2 rows × 2 cols"]
+    step_31["31 · Sort<br/>o_year ASC<br/>2 × 2"]
     step_30 --> step_31
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -1511,13 +1519,15 @@ flowchart TD
 
 ## Notes
 
-- nation is read multiple times.
+- This query joins 7 tables.
+
+- Nation is read multiple times.
 
 ## Runtime breakdown comparison
 
-| T4 Q8 SF1 | T4 Q8 SF10 | GH200 Q8 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q8.jpg" alt="T4 Q8 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q8.jpg" alt="T4 Q8 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q8_comparison.jpg" alt="GH200 Q8 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q8.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q8.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q8.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q8.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q8.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q8_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q9 Product Type Profit Measure Query
 
@@ -1567,7 +1577,7 @@ flowchart LR
 
 ```sql
 Sort[n_name ASC, o_year DESC]
-  Aggregate(keys=[n_name, o_year]; aggs=[sum(amount) AS sum_profit])
+  Aggregate(n_name, o_year; sum(amount))
     Project(nation = n_name, o_year = year(o_orderdate), amount = ((l_extendedprice * (1 - l_discount)) - (ps_supplycost * l_quantity)))
       InnerJoin(on=(n_nationkey == s_nationkey))
         Scan(nation [n_nationkey, n_name])
@@ -1587,7 +1597,7 @@ Sort[n_name ASC, o_year DESC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>n_name ASC, o_year DESC"]
-    ir_1["Aggregate<br/>keys=[n_name, o_year]; aggs=[sum(amount) AS sum_profit]"]
+    ir_1["Aggregate<br/>n_name, o_year; sum(amount)"]
     ir_0 --> ir_1
     ir_2["Project<br/>nation = n_name, o_year = year(o_orderdate), amount = ((l_extendedprice * (1 - l_discount)) - (ps_supplycos..."]
     ir_1 --> ir_2
@@ -1632,76 +1642,76 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 25 | 2 | nation |  |  |  |
-| 1 | SourceTable | 200000 | 2 | part |  |  |  |
-| 2 | Filter | 10664 | 1 | < | 5.33% | 0.172931 | fuse |
-| 3 | SourceTable | 6001215 | 6 | lineitem |  |  |  |
-| 4 | EqJoin | 319404 | 6 | part⋈lineitem | 3e+03% | 4.52898 | hash_gfur |
-| 5 | Reorder | 319404 | 7 |  |  | 0.00202971 |  |
-| 6 | SourceTable | 10000 | 2 | supplier |  |  |  |
-| 7 | EqJoin | 319404 | 8 | (part⋈lineitem)⋈supplier | 100% | 0.943431 | hash_gfur |
-| 8 | Reorder | 319404 | 9 |  |  | 0.00175634 |  |
-| 9 | SourceTable | 800000 | 3 | partsupp |  |  |  |
-| 10 | EqJoin | 1277616 | 11 | ((part⋈lineitem)⋈supplier)⋈partsupp | 400% | 2.81387 | hash_gfur |
-| 11 | Reorder | 1277616 | 12 |  |  | 0.00199223 |  |
-| 12 | Filter | 319404 | 6 | < | 25% | 0.648463 | fuse |
-| 13 | SourceTable | 1500000 | 2 | orders |  |  |  |
-| 14 | EqJoin | 319404 | 7 | (((part⋈lineitem)⋈supplier)⋈partsupp)⋈orders | 100% | 3.15748 | hash_gfur |
-| 15 | Reorder | 319404 | 8 |  |  | 0.001824 |  |
-| 16 | EqJoin | 319404 | 9 | nation⋈((((part⋈lineitem)⋈supplier)⋈partsupp) ⋈ orders) | 1.28e+06% | 0.65697 | hash_gfur |
-| 17 | Reorder | 319404 | 10 |  |  | 0.00752549 |  |
-| 18 | Project | 319404 | 3 |  |  | 0.359775 | nofuse |
-| 19 | Reorder | 319404 | 3 |  |  | 0.00581577 |  |
-| 20 | GroupBy | 175 | 3 | < | 0.0548% | 0.348003 | hash |
-| 21 | Sort | 175 | 3 |  |  | 0.736459 | no_skf |
-|  | Total |  |  |  |  | 14.3873 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 25 | 2 | nation |  |  |  | n_nationkey, n_name |
+| 1 | SourceTable | 200000 | 2 | part |  |  |  | p_partkey, p_name |
+| 2 | Filter | 10664 | 1 | < | 5.33% | 0.172931 | fuse |  |
+| 3 | SourceTable | 6001215 | 6 | lineitem |  |  |  | l_orderkey, l_partkey, l_suppkey, l_quantity, l_extendedprice, l_discount |
+| 4 | EqJoin | 319404 | 6 | part⋈lineitem | 10.7K⋈6M | 4.52898 | hash_gfur | partkey |
+| 5 | Reorder | 319404 | 7 |  |  | 0.00202971 |  |  |
+| 6 | SourceTable | 10000 | 2 | supplier |  |  |  | s_suppkey, s_nationkey |
+| 7 | EqJoin | 319404 | 8 | (part⋈lineitem)⋈supplier | 319.4K⋈10K | 0.943431 | hash_gfur | suppkey |
+| 8 | Reorder | 319404 | 9 |  |  | 0.00175634 |  |  |
+| 9 | SourceTable | 800000 | 3 | partsupp |  |  |  | ps_partkey, ps_suppkey, ps_supplycost |
+| 10 | EqJoin | 1277616 | 11 | ((part⋈lineitem)⋈supplier)⋈partsupp | 319.4K⋈800K | 2.81387 | hash_gfur | partkey |
+| 11 | Reorder | 1277616 | 12 |  |  | 0.00199223 |  |  |
+| 12 | Filter | 319404 | 6 | < | 25% | 0.648463 | fuse |  |
+| 13 | SourceTable | 1500000 | 2 | orders |  |  |  | o_orderkey, o_orderdate |
+| 14 | EqJoin | 319404 | 7 | (((part⋈lineitem)⋈supplier)⋈partsupp)⋈orders | 319.4K⋈1.5M | 3.15748 | hash_gfur | orderkey |
+| 15 | Reorder | 319404 | 8 |  |  | 0.001824 |  |  |
+| 16 | EqJoin | 319404 | 9 | nation⋈((((part⋈lineitem)⋈supplier)⋈partsupp) ⋈ orders) | 25⋈319.4K | 0.65697 | hash_gfur | nationkey |
+| 17 | Reorder | 319404 | 10 |  |  | 0.00752549 |  |  |
+| 18 | Project | 319404 | 3 |  |  | 0.359775 | nofuse | nation, o_year, amount |
+| 19 | Reorder | 319404 | 3 |  |  | 0.00581577 |  |  |
+| 20 | GroupBy | 175 | 3 | < | 0.0548% | 0.348003 | hash | nation, o_year; sum(amount) |
+| 21 | Sort | 175 | 3 |  |  | 0.736459 | no_skf | nation ASC, o_year DESC |
+|  | Total |  |  |  |  | 14.3873 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_1["1 · SourceTable<br/>part<br/>200,000 rows × 2 cols"]
-    step_2["2 · Filter · 5.33%<br/>10,664 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_1["1 · SourceTable<br/>part<br/>p_partkey, p_name<br/>200,000 × 2"]
+    step_2["2 · Filter · 5.33%<br/>10,664 × 1"]
     step_1 --> step_2
-    step_3["3 · SourceTable<br/>lineitem<br/>6,001,215 rows × 6 cols"]
-    step_4["4 · EqJoin · 3e+03%<br/>319,404 rows × 6 cols"]
+    step_3["3 · SourceTable<br/>lineitem<br/>l_orderkey, l_partkey, l_suppkey, l_quantity, l_extendedprice, l_discount<br/>6,001,215 × 6"]
+    step_4["4 · EqJoin · 10.7K⋈6M<br/>partkey<br/>319,404 × 6"]
     step_2 --> step_4
     step_3 --> step_4
-    step_5["5 · Reorder<br/>319,404 rows × 7 cols"]
+    step_5["5 · Reorder<br/>319,404 × 7"]
     step_4 --> step_5
-    step_6["6 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_7["7 · EqJoin · 100%<br/>319,404 rows × 8 cols"]
+    step_6["6 · SourceTable<br/>supplier<br/>s_suppkey, s_nationkey<br/>10,000 × 2"]
+    step_7["7 · EqJoin · 319.4K⋈10K<br/>suppkey<br/>319,404 × 8"]
     step_5 --> step_7
     step_6 --> step_7
-    step_8["8 · Reorder<br/>319,404 rows × 9 cols"]
+    step_8["8 · Reorder<br/>319,404 × 9"]
     step_7 --> step_8
-    step_9["9 · SourceTable<br/>partsupp<br/>800,000 rows × 3 cols"]
-    step_10["10 · EqJoin · 400%<br/>1,277,616 rows × 11 cols"]
+    step_9["9 · SourceTable<br/>partsupp<br/>ps_partkey, ps_suppkey, ps_supplycost<br/>800,000 × 3"]
+    step_10["10 · EqJoin · 319.4K⋈800K<br/>partkey<br/>1,277,616 × 11"]
     step_8 --> step_10
     step_9 --> step_10
-    step_11["11 · Reorder<br/>1,277,616 rows × 12 cols"]
+    step_11["11 · Reorder<br/>1,277,616 × 12"]
     step_10 --> step_11
-    step_12["12 · Filter · 25%<br/>319,404 rows × 6 cols"]
+    step_12["12 · Filter · 25%<br/>319,404 × 6"]
     step_11 --> step_12
-    step_13["13 · SourceTable<br/>orders<br/>1,500,000 rows × 2 cols"]
-    step_14["14 · EqJoin · 100%<br/>319,404 rows × 7 cols"]
+    step_13["13 · SourceTable<br/>orders<br/>o_orderkey, o_orderdate<br/>1,500,000 × 2"]
+    step_14["14 · EqJoin · 319.4K⋈1.5M<br/>orderkey<br/>319,404 × 7"]
     step_12 --> step_14
     step_13 --> step_14
-    step_15["15 · Reorder<br/>319,404 rows × 8 cols"]
+    step_15["15 · Reorder<br/>319,404 × 8"]
     step_14 --> step_15
-    step_16["16 · EqJoin · 1.28e+06%<br/>319,404 rows × 9 cols"]
+    step_16["16 · EqJoin · 25⋈319.4K<br/>nationkey<br/>319,404 × 9"]
     step_0 --> step_16
     step_15 --> step_16
-    step_17["17 · Reorder<br/>319,404 rows × 10 cols"]
+    step_17["17 · Reorder<br/>319,404 × 10"]
     step_16 --> step_17
-    step_18["18 · Project<br/>319,404 rows × 3 cols"]
+    step_18["18 · Project<br/>319,404 × 3"]
     step_17 --> step_18
-    step_19["19 · Reorder<br/>319,404 rows × 3 cols"]
+    step_19["19 · Reorder<br/>319,404 × 3"]
     step_18 --> step_19
-    step_20["20 · GroupBy · 0.0548%<br/>175 rows × 3 cols"]
+    step_20["20 · GroupBy · 0.0548%<br/>nation, o_year; sum(amount)<br/>175 × 3"]
     step_19 --> step_20
-    step_21["21 · Sort<br/>175 rows × 3 cols"]
+    step_21["21 · Sort<br/>nation ASC, o_year DESC<br/>175 × 3"]
     step_20 --> step_21
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -1720,13 +1730,15 @@ flowchart TD
 
 ## Notes
 
+- This query joins 6 tables.
+
 - Multikey joins could result in smaller joins
 
 ## Runtime breakdown comparison
 
-| T4 Q9 SF1 | T4 Q9 SF10 | GH200 Q9 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q9.jpg" alt="T4 Q9 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q9.jpg" alt="T4 Q9 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q9_comparison.jpg" alt="GH200 Q9 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q9.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q9.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q9.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q9.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q9.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q9_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q10 Returned Item Reporting Query
 
@@ -1779,13 +1791,13 @@ flowchart LR
 ```sql
 Limit(n=20)
   Sort[revenue DESC]
-    Project(c_custkey = c_custkey, c_name = c_name, revenue = revenue, c_acctbal = c_acctbal, n_name = n_name, c_address = c_address, c_phone = c_phone, c_comment = c_comment)
+    Project(c_custkey, c_name, revenue, c_acctbal, n_name, c_address, c_phone, c_comment)
       InnerJoin(on=(n_nationkey == c_nationkey))
         Scan(nation [n_nationkey, n_name])
         InnerJoin(on=(c_custkey == o_custkey))
           Scan(customer [c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment])
-          Aggregate(keys=[o_custkey]; aggs=[sum(disc_price) AS revenue])
-            Project(o_custkey = o_custkey, disc_price = (l_extendedprice * (1 - l_discount)))
+          Aggregate(o_custkey; sum(disc_price))
+            Project(o_custkey, disc_price = (l_extendedprice * (1 - l_discount)))
               InnerJoin(on=(l_orderkey == o_orderkey))
                 Filter(str_eq(l_returnflag, "R"))
                   Scan(lineitem [l_orderkey, l_returnflag, l_extendedprice, l_discount])
@@ -1798,7 +1810,7 @@ flowchart TD
     ir_0["Limit<br/>n=20"]
     ir_1["Sort<br/>revenue DESC"]
     ir_0 --> ir_1
-    ir_2["Project<br/>c_custkey = c_custkey, c_name = c_name, revenue = revenue, c_acctbal = c_acctbal, n_name = n_name, c_addres..."]
+    ir_2["Project<br/>c_custkey, c_name, revenue, c_acctbal, n_name, c_address, c_phone, c_comment"]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(n_nationkey == c_nationkey)"]
     ir_2 --> ir_3
@@ -1808,9 +1820,9 @@ flowchart TD
     ir_3 --> ir_5
     ir_6["Scan<br/>customer · c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment"]
     ir_5 --> ir_6
-    ir_7["Aggregate<br/>keys=[o_custkey]; aggs=[sum(disc_price) AS revenue]"]
+    ir_7["Aggregate<br/>o_custkey; sum(disc_price)"]
     ir_5 --> ir_7
-    ir_8["Project<br/>o_custkey = o_custkey, disc_price = (l_extendedprice * (1 - l_discount))"]
+    ir_8["Project<br/>o_custkey, disc_price = (l_extendedprice * (1 - l_discount))"]
     ir_7 --> ir_8
     ir_9["InnerJoin<br/>on=(l_orderkey == o_orderkey)"]
     ir_8 --> ir_9
@@ -1837,61 +1849,61 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 1 | SourceTable | 150000 | 7 | customer |  |  |  |  |  |
-| 2 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 3 | Filter | 1478870 | 3 | < | 24.6% | 1.26605 | 1.26605 | fuse | fuse |
-| 4 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  |
-| 5 | Filter | 57069 | 2 | < | 3.8% | 0.354863 | 0.276867 | fuse | nofuse |
-| 6 | EqJoin | 114705 | 4 | lineitem⋈orders | 7.76% | 1.62777 | 1.62777 | hash_gfur | hash_gfur |
-| 7 | Reorder | 114705 | 5 |  |  | 0.00181951 | 0.00181951 |  |  |
-| 8 | Project | 114705 | 2 |  |  | 0.0446877 | 0.0446877 | nofuse | nofuse |
-| 9 | Reorder | 114705 | 2 |  |  | 0.00159719 | 0.00159719 |  |  |
-| 10 | GroupBy | 37967 | 2 | < | 33.1% | 0.177004 | 0.177004 | hash | hash |
-| 11 | EqJoin | 37967 | 8 | customer⋈(lineitem⋈orders) | 25.3% | 2.20003 | 2.20003 | hash_gfur | hash_gfur |
-| 12 | Reorder | 37967 | 9 |  |  | 0.0137465 | 0.0137465 |  |  |
-| 13 | EqJoin | 37967 | 10 | nation⋈(customer⋈(lineitem⋈orders)) | 1.52e+05% | 1.38466 | 1.38466 | hash_gfur | hash_gfur |
-| 14 | Reorder | 37967 | 11 |  |  | 0.0150007 | 0.0150007 |  |  |
-| 15 | Project | 37967 | 8 |  |  | 1.27849 | 1.27849 | nofuse | nofuse |
-| 16 | TopK | 20 | 8 | < | 0.0527% | 0.392296 | 0.392296 |  |  |
-|  | Total |  |  |  |  | 8.75801 | 8.68002 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  | n_nationkey, n_name |
+| 1 | SourceTable | 150000 | 7 | customer |  |  |  |  |  | c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment |
+| 2 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_orderkey, l_returnflag, l_extendedprice, l_discount |
+| 3 | Filter | 1478870 | 3 | < | 24.6% | 1.26605 | 1.26605 | fuse | fuse |  |
+| 4 | SourceTable | 1500000 | 3 | orders |  |  |  |  |  | o_orderkey, o_custkey, o_orderdate |
+| 5 | Filter | 57069 | 2 | < | 3.8% | 0.354863 | 0.276867 | fuse | nofuse |  |
+| 6 | EqJoin | 114705 | 4 | lineitem⋈orders | 1.5M⋈57.1K | 1.62777 | 1.62777 | hash_gfur | hash_gfur | orderkey |
+| 7 | Reorder | 114705 | 5 |  |  | 0.00181951 | 0.00181951 |  |  |  |
+| 8 | Project | 114705 | 2 |  |  | 0.0446877 | 0.0446877 | nofuse | nofuse | o_custkey, disc_price |
+| 9 | Reorder | 114705 | 2 |  |  | 0.00159719 | 0.00159719 |  |  |  |
+| 10 | GroupBy | 37967 | 2 | < | 33.1% | 0.177004 | 0.177004 | hash | hash | o_custkey; sum(disc_price) |
+| 11 | EqJoin | 37967 | 8 | customer⋈(lineitem⋈orders) | 150K⋈38K | 2.20003 | 2.20003 | hash_gfur | hash_gfur | custkey |
+| 12 | Reorder | 37967 | 9 |  |  | 0.0137465 | 0.0137465 |  |  |  |
+| 13 | EqJoin | 37967 | 10 | nation⋈(customer⋈(lineitem⋈orders)) | 25⋈38K | 1.38466 | 1.38466 | hash_gfur | hash_gfur | nationkey |
+| 14 | Reorder | 37967 | 11 |  |  | 0.0150007 | 0.0150007 |  |  |  |
+| 15 | Project | 37967 | 8 |  |  | 1.27849 | 1.27849 | nofuse | nofuse | c_custkey, c_name, revenue, c_acctbal, n_name, c_address, c_phone, c_comment |
+| 16 | TopK | 20 | 8 | < | 0.0527% | 0.392296 | 0.392296 |  |  |  |
+|  | Total |  |  |  |  | 8.75801 | 8.68002 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_1["1 · SourceTable<br/>customer<br/>150,000 rows × 7 cols"]
-    step_2["2 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_3["3 · Filter · 24.6%<br/>1,478,870 rows × 3 cols"]
+    step_0["0 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_1["1 · SourceTable<br/>customer<br/>c_custkey, c_name, c_address, c_nationkey, c_phone, c_acctbal, c_comment<br/>150,000 × 7"]
+    step_2["2 · SourceTable<br/>lineitem<br/>l_orderkey, l_returnflag, l_extendedprice, l_discount<br/>6,001,215 × 4"]
+    step_3["3 · Filter · 24.6%<br/>1,478,870 × 3"]
     step_2 --> step_3
-    step_4["4 · SourceTable<br/>orders<br/>1,500,000 rows × 3 cols"]
-    step_5["5 · Filter · 3.8%<br/>57,069 rows × 2 cols"]
+    step_4["4 · SourceTable<br/>orders<br/>o_orderkey, o_custkey, o_orderdate<br/>1,500,000 × 3"]
+    step_5["5 · Filter · 3.8%<br/>57,069 × 2"]
     step_4 --> step_5
-    step_6["6 · EqJoin · 7.76%<br/>114,705 rows × 4 cols"]
+    step_6["6 · EqJoin · 1.5M⋈57.1K<br/>orderkey<br/>114,705 × 4"]
     step_3 --> step_6
     step_5 --> step_6
-    step_7["7 · Reorder<br/>114,705 rows × 5 cols"]
+    step_7["7 · Reorder<br/>114,705 × 5"]
     step_6 --> step_7
-    step_8["8 · Project<br/>114,705 rows × 2 cols"]
+    step_8["8 · Project<br/>114,705 × 2"]
     step_7 --> step_8
-    step_9["9 · Reorder<br/>114,705 rows × 2 cols"]
+    step_9["9 · Reorder<br/>114,705 × 2"]
     step_8 --> step_9
-    step_10["10 · GroupBy · 33.1%<br/>37,967 rows × 2 cols"]
+    step_10["10 · GroupBy · 33.1%<br/>o_custkey; sum(disc_price)<br/>37,967 × 2"]
     step_9 --> step_10
-    step_11["11 · EqJoin · 25.3%<br/>37,967 rows × 8 cols"]
+    step_11["11 · EqJoin · 150K⋈38K<br/>custkey<br/>37,967 × 8"]
     step_1 --> step_11
     step_10 --> step_11
-    step_12["12 · Reorder<br/>37,967 rows × 9 cols"]
+    step_12["12 · Reorder<br/>37,967 × 9"]
     step_11 --> step_12
-    step_13["13 · EqJoin · 1.52e+05%<br/>37,967 rows × 10 cols"]
+    step_13["13 · EqJoin · 25⋈38K<br/>nationkey<br/>37,967 × 10"]
     step_0 --> step_13
     step_12 --> step_13
-    step_14["14 · Reorder<br/>37,967 rows × 11 cols"]
+    step_14["14 · Reorder<br/>37,967 × 11"]
     step_13 --> step_14
-    step_15["15 · Project<br/>37,967 rows × 8 cols"]
+    step_15["15 · Project<br/>37,967 × 8"]
     step_14 --> step_15
-    step_16["16 · TopK · 0.0527%<br/>20 rows × 8 cols"]
+    step_16["16 · TopK · 0.0527%<br/>20 × 8"]
     step_15 --> step_16
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -1910,9 +1922,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q10 SF1 | T4 Q10 SF10 | GH200 Q10 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q10.jpg" alt="T4 Q10 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q10.jpg" alt="T4 Q10 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q10_comparison.jpg" alt="GH200 Q10 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q10.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q10.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q10.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q10.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q10.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q10_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q11 Important Stock Identification Query
 
@@ -1956,11 +1968,11 @@ flowchart LR
 
 ```sql
 Sort[partkey_value DESC]
-  Project(ps_partkey = ps_partkey, partkey_value = partkey_value)
+  Project(ps_partkey, partkey_value)
     Filter((partkey_value > threshold))
       CrossJoin
-        Aggregate(keys=[ps_partkey]; aggs=[sum(value) AS partkey_value])
-          Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+        Aggregate(ps_partkey; sum(value))
+          Project(ps_partkey, value = (ps_supplycost * ps_availqty))
             InnerJoin(on=(ps_suppkey == s_suppkey))
               Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
               InnerJoin(on=(n_nationkey == s_nationkey))
@@ -1968,8 +1980,8 @@ Sort[partkey_value DESC]
                   Scan(nation [n_nationkey, n_name])
                 Scan(supplier [s_suppkey, s_nationkey])
         Project(threshold = (global_sum * 0.0001))
-          Aggregate(aggs=[sum(value) AS global_sum])
-            Project(ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty))
+          Aggregate(sum(value))
+            Project(ps_partkey, value = (ps_supplycost * ps_availqty))
               InnerJoin(on=(ps_suppkey == s_suppkey))
                 Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty, ps_supplycost])
                 InnerJoin(on=(n_nationkey == s_nationkey))
@@ -1981,15 +1993,15 @@ Sort[partkey_value DESC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>partkey_value DESC"]
-    ir_1["Project<br/>ps_partkey = ps_partkey, partkey_value = partkey_value"]
+    ir_1["Project<br/>ps_partkey, partkey_value"]
     ir_0 --> ir_1
     ir_2["Filter<br/>(partkey_value &gt; threshold)"]
     ir_1 --> ir_2
     ir_3["CrossJoin"]
     ir_2 --> ir_3
-    ir_4["Aggregate<br/>keys=[ps_partkey]; aggs=[sum(value) AS partkey_value]"]
+    ir_4["Aggregate<br/>ps_partkey; sum(value)"]
     ir_3 --> ir_4
-    ir_5["Project<br/>ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty)"]
+    ir_5["Project<br/>ps_partkey, value = (ps_supplycost * ps_availqty)"]
     ir_4 --> ir_5
     ir_6["InnerJoin<br/>on=(ps_suppkey == s_suppkey)"]
     ir_5 --> ir_6
@@ -2005,9 +2017,9 @@ flowchart TD
     ir_8 --> ir_11
     ir_12["Project<br/>threshold = (global_sum * 0.0001)"]
     ir_3 --> ir_12
-    ir_13["Aggregate<br/>aggs=[sum(value) AS global_sum]"]
+    ir_13["Aggregate<br/>sum(value)"]
     ir_12 --> ir_13
-    ir_14["Project<br/>ps_partkey = ps_partkey, value = (ps_supplycost * ps_availqty)"]
+    ir_14["Project<br/>ps_partkey, value = (ps_supplycost * ps_availqty)"]
     ir_13 --> ir_14
     ir_15["InnerJoin<br/>on=(ps_suppkey == s_suppkey)"]
     ir_14 --> ir_15
@@ -2036,65 +2048,65 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 800000 | 4 | partsupp |  |  |  |
-| 1 | SourceTable | 25 | 2 | nation |  |  |  |
-| 2 | Filter | 1 | 1 | < | 4% | 0.0456413 | nofuse |
-| 3 | SourceTable | 10000 | 2 | supplier |  |  |  |
-| 4 | EqJoin | 396 | 2 | nation⋈supplier | 3.96e+04% | 0.0906745 | hash_gfur |
-| 5 | Reorder | 396 | 3 |  |  | 0.00157921 |  |
-| 6 | EqJoin | 31680 | 6 | partsupp⋈(nation⋈supplier) | 3.96% | 3.1153 | hash_gfur |
-| 7 | Reorder | 31680 | 7 |  |  | 0.0016668 |  |
-| 8 | Project | 31680 | 2 |  |  | 0.0211123 | nofuse |
-| 9 | Reorder | 31680 | 2 |  |  | 0.0109849 |  |
-| 10 | GroupBy | 29818 | 2 | < | 94.1% | 0.152938 | sort_gftr |
-| 11 | Reorder | 31680 | 1 |  |  | 0.00165185 |  |
-| 12 | ScalarAgg | 1 | 1 |  |  | 0.0306707 |  |
-| 13 | Project | 1 | 1 |  |  | 0.0129098 | nofuse |
-| 14 | CrossJoin | 29818 | 3 | (partsupp⋈(nation⋈supplier))⋈(partsupp⋈(nation ⋈ supplier)) | 100% | 0.0428648 |  |
-| 15 | Filter | 1048 | 2 | < | 3.51% | 0.0703615 | nofuse |
-| 16 | Project | 1048 | 2 |  |  | 0.00178406 | nofuse |
-| 17 | Sort | 1048 | 2 |  |  | 0.0321453 | no_skf |
-|  | Total |  |  |  |  | 3.63229 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 800000 | 4 | partsupp |  |  |  | ps_partkey, ps_suppkey, ps_availqty, ps_supplycost |
+| 1 | SourceTable | 25 | 2 | nation |  |  |  | n_nationkey, n_name |
+| 2 | Filter | 1 | 1 | < | 4% | 0.0456413 | nofuse |  |
+| 3 | SourceTable | 10000 | 2 | supplier |  |  |  | s_suppkey, s_nationkey |
+| 4 | EqJoin | 396 | 2 | nation⋈supplier | 1⋈10K | 0.0906745 | hash_gfur | nationkey |
+| 5 | Reorder | 396 | 3 |  |  | 0.00157921 |  |  |
+| 6 | EqJoin | 31680 | 6 | partsupp⋈(nation⋈supplier) | 800K⋈396 | 3.1153 | hash_gfur | suppkey |
+| 7 | Reorder | 31680 | 7 |  |  | 0.0016668 |  |  |
+| 8 | Project | 31680 | 2 |  |  | 0.0211123 | nofuse | ps_partkey, value |
+| 9 | Reorder | 31680 | 2 |  |  | 0.0109849 |  |  |
+| 10 | GroupBy | 29818 | 2 | < | 94.1% | 0.152938 | sort_gftr | ps_partkey; sum(value) |
+| 11 | Reorder | 31680 | 1 |  |  | 0.00165185 |  |  |
+| 12 | ScalarAgg | 1 | 1 |  |  | 0.0306707 |  | sum(value) |
+| 13 | Project | 1 | 1 |  |  | 0.0129098 | nofuse | threshold |
+| 14 | CrossJoin | 29818 | 3 | (partsupp⋈(nation⋈supplier))⋈(partsupp⋈(nation ⋈ supplier)) | 29.8K⋈1 | 0.0428648 |  |  |
+| 15 | Filter | 1048 | 2 | < | 3.51% | 0.0703615 | nofuse |  |
+| 16 | Project | 1048 | 2 |  |  | 0.00178406 | nofuse | ps_partkey, value |
+| 17 | Sort | 1048 | 2 |  |  | 0.0321453 | no_skf | value DESC |
+|  | Total |  |  |  |  | 3.63229 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>partsupp<br/>800,000 rows × 4 cols"]
-    step_1["1 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_2["2 · Filter · 4%<br/>1 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>partsupp<br/>ps_partkey, ps_suppkey, ps_availqty, ps_supplycost<br/>800,000 × 4"]
+    step_1["1 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_2["2 · Filter · 4%<br/>1 × 1"]
     step_1 --> step_2
-    step_3["3 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_4["4 · EqJoin · 3.96e+04%<br/>396 rows × 2 cols"]
+    step_3["3 · SourceTable<br/>supplier<br/>s_suppkey, s_nationkey<br/>10,000 × 2"]
+    step_4["4 · EqJoin · 1⋈10K<br/>nationkey<br/>396 × 2"]
     step_2 --> step_4
     step_3 --> step_4
-    step_5["5 · Reorder<br/>396 rows × 3 cols"]
+    step_5["5 · Reorder<br/>396 × 3"]
     step_4 --> step_5
-    step_6["6 · EqJoin · 3.96%<br/>31,680 rows × 6 cols"]
+    step_6["6 · EqJoin · 800K⋈396<br/>suppkey<br/>31,680 × 6"]
     step_0 --> step_6
     step_5 --> step_6
-    step_7["7 · Reorder<br/>31,680 rows × 7 cols"]
+    step_7["7 · Reorder<br/>31,680 × 7"]
     step_6 --> step_7
-    step_8["8 · Project<br/>31,680 rows × 2 cols"]
+    step_8["8 · Project<br/>31,680 × 2"]
     step_7 --> step_8
-    step_9["9 · Reorder<br/>31,680 rows × 2 cols"]
+    step_9["9 · Reorder<br/>31,680 × 2"]
     step_8 --> step_9
-    step_10["10 · GroupBy · 94.1%<br/>29,818 rows × 2 cols"]
+    step_10["10 · GroupBy · 94.1%<br/>ps_partkey; sum(value)<br/>29,818 × 2"]
     step_9 --> step_10
-    step_11["11 · Reorder<br/>31,680 rows × 1 cols"]
+    step_11["11 · Reorder<br/>31,680 × 1"]
     step_8 --> step_11
-    step_12["12 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_12["12 · ScalarAgg<br/>sum(value)<br/>1 × 1"]
     step_11 --> step_12
-    step_13["13 · Project<br/>1 rows × 1 cols"]
+    step_13["13 · Project<br/>1 × 1"]
     step_12 --> step_13
-    step_14["14 · CrossJoin · 100%<br/>29,818 rows × 3 cols"]
+    step_14["14 · CrossJoin · 29.8K⋈1<br/>29,818 × 3"]
     step_10 --> step_14
     step_13 --> step_14
-    step_15["15 · Filter · 3.51%<br/>1,048 rows × 2 cols"]
+    step_15["15 · Filter · 3.51%<br/>1,048 × 2"]
     step_14 --> step_15
-    step_16["16 · Project<br/>1,048 rows × 2 cols"]
+    step_16["16 · Project<br/>1,048 × 2"]
     step_15 --> step_16
-    step_17["17 · Sort<br/>1,048 rows × 2 cols"]
+    step_17["17 · Sort<br/>value DESC<br/>1,048 × 2"]
     step_16 --> step_17
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2117,9 +2129,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q11 SF1 | T4 Q11 SF10 | GH200 Q11 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q11.jpg" alt="T4 Q11 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q11.jpg" alt="T4 Q11 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q11_comparison.jpg" alt="GH200 Q11 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q11.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q11.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q11.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q11.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q11.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q11_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q12 Shipping Modes and Order Priority Query
 
@@ -2168,9 +2180,9 @@ flowchart LR
 
 ```sql
 Sort[l_shipmode ASC]
-  Aggregate(keys=[l_shipmode]; aggs=[sum(high) AS high_line_count, sum(low) AS low_line_count])
-    Project(l_shipmode = l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1))
-      Project(l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, "1-URGENT") || str_eq(o_orderpriority, "2-HIGH")))
+  Aggregate(l_shipmode; sum(high), sum(low))
+    Project(l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1))
+      Project(l_shipmode, is_high = (str_eq(o_orderpriority, "1-URGENT") || str_eq(o_orderpriority, "2-HIGH")))
         InnerJoin(on=(o_orderkey == l_orderkey))
           Scan(orders [o_orderkey, o_orderpriority])
           Filter(((((str_in(l_shipmode, ["MAIL", "SHIP"]) && (l_commitdate < l_receiptdate)) && (l_shipdate < l_commitdate)) && (l_receiptdate >= 19940101)) && (l_receiptdate < 19950101)))
@@ -2180,11 +2192,11 @@ Sort[l_shipmode ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>l_shipmode ASC"]
-    ir_1["Aggregate<br/>keys=[l_shipmode]; aggs=[sum(high) AS high_line_count, sum(low) AS low_line_count]"]
+    ir_1["Aggregate<br/>l_shipmode; sum(high), sum(low)"]
     ir_0 --> ir_1
-    ir_2["Project<br/>l_shipmode = l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1)"]
+    ir_2["Project<br/>l_shipmode, high = case(is_high, 1, 0), low = case(is_high, 0, 1)"]
     ir_1 --> ir_2
-    ir_3["Project<br/>l_shipmode = l_shipmode, is_high = (str_eq(o_orderpriority, #quot;1-URGENT#quot;) || str_eq(o_orderpriority, #quot;2-HIGH#quot;))"]
+    ir_3["Project<br/>l_shipmode, is_high = (str_eq(o_orderpriority, #quot;1-URGENT#quot;) || str_eq(o_orderpriority, #quot;2-HIGH#quot;))"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(o_orderkey == l_orderkey)"]
     ir_3 --> ir_4
@@ -2209,40 +2221,40 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  |
-| 1 | SourceTable | 6001215 | 5 | lineitem |  |  |  |  |  |
-| 2 | Filter | 30988 | 2 | < | 0.516% | 3.08543 | 2.50617 | fuse | nofuse |
-| 3 | EqJoin | 30988 | 3 | orders⋈lineitem | 2.07% | 2.66252 | 2.66252 | hash_gfur | hash_gfur |
-| 4 | Reorder | 30988 | 4 |  |  | 0.0091072 | 0.0091072 |  |  |
-| 5 | Project | 30988 | 2 |  |  | 0.102 | 0.102 | nofuse | nofuse |
-| 6 | Project | 30988 | 3 |  |  | 0.0438496 | 0.0438496 | nofuse | nofuse |
-| 7 | Reorder | 30988 | 3 |  |  | 0.0015788 | 0.0015788 |  |  |
-| 8 | GroupBy | 2 | 3 | < | 0.00645% | 0.181404 | 0.181404 | hash | hash |
-| 9 | Sort | 2 | 3 |  |  | 0.162462 | 0.162462 | no_skf | no_skf |
-|  | Total |  |  |  |  | 6.24835 | 5.66909 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  | o_orderkey, o_orderpriority |
+| 1 | SourceTable | 6001215 | 5 | lineitem |  |  |  |  |  | l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate |
+| 2 | Filter | 30988 | 2 | < | 0.516% | 3.08543 | 2.50617 | fuse | nofuse |  |
+| 3 | EqJoin | 30988 | 3 | orders⋈lineitem | 1.5M⋈31K | 2.66252 | 2.66252 | hash_gfur | hash_gfur | orderkey |
+| 4 | Reorder | 30988 | 4 |  |  | 0.0091072 | 0.0091072 |  |  |  |
+| 5 | Project | 30988 | 2 |  |  | 0.102 | 0.102 | nofuse | nofuse | l_shipmode, is_high |
+| 6 | Project | 30988 | 3 |  |  | 0.0438496 | 0.0438496 | nofuse | nofuse | l_shipmode, high, low |
+| 7 | Reorder | 30988 | 3 |  |  | 0.0015788 | 0.0015788 |  |  |  |
+| 8 | GroupBy | 2 | 3 | < | 0.00645% | 0.181404 | 0.181404 | hash | hash | l_shipmode; sum(high), sum(low) |
+| 9 | Sort | 2 | 3 |  |  | 0.162462 | 0.162462 | no_skf | no_skf | l_shipmode ASC |
+|  | Total |  |  |  |  | 6.24835 | 5.66909 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>orders<br/>1,500,000 rows × 2 cols"]
-    step_1["1 · SourceTable<br/>lineitem<br/>6,001,215 rows × 5 cols"]
-    step_2["2 · Filter · 0.516%<br/>30,988 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>orders<br/>o_orderkey, o_orderpriority<br/>1,500,000 × 2"]
+    step_1["1 · SourceTable<br/>lineitem<br/>l_orderkey, l_shipmode, l_commitdate, l_receiptdate, l_shipdate<br/>6,001,215 × 5"]
+    step_2["2 · Filter · 0.516%<br/>30,988 × 2"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 2.07%<br/>30,988 rows × 3 cols"]
+    step_3["3 · EqJoin · 1.5M⋈31K<br/>orderkey<br/>30,988 × 3"]
     step_0 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>30,988 rows × 4 cols"]
+    step_4["4 · Reorder<br/>30,988 × 4"]
     step_3 --> step_4
-    step_5["5 · Project<br/>30,988 rows × 2 cols"]
+    step_5["5 · Project<br/>30,988 × 2"]
     step_4 --> step_5
-    step_6["6 · Project<br/>30,988 rows × 3 cols"]
+    step_6["6 · Project<br/>30,988 × 3"]
     step_5 --> step_6
-    step_7["7 · Reorder<br/>30,988 rows × 3 cols"]
+    step_7["7 · Reorder<br/>30,988 × 3"]
     step_6 --> step_7
-    step_8["8 · GroupBy · 0.00645%<br/>2 rows × 3 cols"]
+    step_8["8 · GroupBy · 0.00645%<br/>l_shipmode; sum(high), sum(low)<br/>2 × 3"]
     step_7 --> step_8
-    step_9["9 · Sort<br/>2 rows × 3 cols"]
+    step_9["9 · Sort<br/>l_shipmode ASC<br/>2 × 3"]
     step_8 --> step_9
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2261,9 +2273,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q12 SF1 | T4 Q12 SF10 | GH200 Q12 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q12.jpg" alt="T4 Q12 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q12.jpg" alt="T4 Q12 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q12_comparison.jpg" alt="GH200 Q12 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q12.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q12.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q12.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q12.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q12.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q12_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q13 Customer Distribution Query
 
@@ -2305,9 +2317,9 @@ flowchart LR
 
 ```sql
 Sort[custdist DESC, c_count#6 DESC]
-  Aggregate(keys=[c_count#6]; aggs=[count_all(*) AS custdist])
+  Aggregate(c_count#6; count_all(*))
     Concat(#inputs=2)
-      Aggregate(keys=[c_custkey#0]; aggs=[count_all(*) AS c_count])
+      Aggregate(c_custkey#0; count_all(*))
         InnerJoin(on=(c_custkey#0 == o_custkey))
           Scan(customer [c_custkey])
           Filter(!contains_multiple(o_comment, ["special", "requests"]))
@@ -2322,11 +2334,11 @@ Sort[custdist DESC, c_count#6 DESC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>custdist DESC, c_count#6 DESC"]
-    ir_1["Aggregate<br/>keys=[c_count#6]; aggs=[count_all(*) AS custdist]"]
+    ir_1["Aggregate<br/>c_count#6; count_all(*)"]
     ir_0 --> ir_1
     ir_2["Concat<br/>#inputs=2"]
     ir_1 --> ir_2
-    ir_3["Aggregate<br/>keys=[c_custkey#0]; aggs=[count_all(*) AS c_count]"]
+    ir_3["Aggregate<br/>c_custkey#0; count_all(*)"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(c_custkey#0 == o_custkey)"]
     ir_3 --> ir_4
@@ -2361,54 +2373,54 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 150000 | 1 | customer |  |  |  |  |  |
-| 1 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  |
-| 2 | Filter | 1484298 | 1 | < | 99% | 1.31893 | 1.31893 | nofuse | nofuse |
-| 3 | EqJoin | 1484298 | 1 | customer⋈orders | 990% | 1.94605 | 1.94605 | hash_gfur | hash_gfur |
-| 4 | Reorder | 1484298 | 2 |  |  | 0.00169915 | 0.00169915 |  |  |
-| 5 | Reorder | 1484298 | 1 |  |  | 0.00163425 | 0.00163425 |  |  |
-| 6 | GroupBy | 99996 | 2 | < | 6.74% | 2.1255 | 2.1255 | hash | hash |
-| 7 | AntiJoin | 50004 | 1 | customer⋈orders | 33.3% | 1.04629 | 1.04629 |  |  |
-| 8 | Reorder | 50004 | 1 |  |  | 0.00180462 | 0.00180462 |  |  |
-| 9 | Project | 50004 | 2 |  |  | 0.0196318 | 0.0196318 | nofuse | nofuse |
-| 10 | Concat | 150000 | 2 |  |  | 0.0311784 | 0.0311784 |  |  |
-| 11 | Reorder | 150000 | 1 |  |  | 0.00169915 | 0.00169915 |  |  |
-| 12 | GroupBy | 42 | 2 | < | 0.028% | 0.201206 | 0.201206 | hash | hash |
-| 13 | Sort | 42 | 2 |  |  | 0.32746 | 0.122279 | no_skf | skf |
-|  | Total |  |  |  |  | 7.02308 | 6.8179 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 150000 | 1 | customer |  |  |  |  |  | c_custkey |
+| 1 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  | o_custkey, o_comment |
+| 2 | Filter | 1484298 | 1 | < | 99% | 1.31893 | 1.31893 | nofuse | nofuse |  |
+| 3 | EqJoin | 1484298 | 1 | customer⋈orders | 150K⋈1.5M | 1.94605 | 1.94605 | hash_gfur | hash_gfur | custkey |
+| 4 | Reorder | 1484298 | 2 |  |  | 0.00169915 | 0.00169915 |  |  |  |
+| 5 | Reorder | 1484298 | 1 |  |  | 0.00163425 | 0.00163425 |  |  |  |
+| 6 | GroupBy | 99996 | 2 | < | 6.74% | 2.1255 | 2.1255 | hash | hash | c_custkey; count_all(*) |
+| 7 | AntiJoin | 50004 | 1 | customer⋈orders | 150K⋈1.5M | 1.04629 | 1.04629 |  |  | c_custkey; o_custkey |
+| 8 | Reorder | 50004 | 1 |  |  | 0.00180462 | 0.00180462 |  |  |  |
+| 9 | Project | 50004 | 2 |  |  | 0.0196318 | 0.0196318 | nofuse | nofuse | c_custkey, c_count |
+| 10 | Concat | 150000 | 2 |  |  | 0.0311784 | 0.0311784 |  |  |  |
+| 11 | Reorder | 150000 | 1 |  |  | 0.00169915 | 0.00169915 |  |  |  |
+| 12 | GroupBy | 42 | 2 | < | 0.028% | 0.201206 | 0.201206 | hash | hash | output column 1; count_all(*) |
+| 13 | Sort | 42 | 2 |  |  | 0.32746 | 0.122279 | no_skf | skf | count_all(*) DESC, output column 1 DESC |
+|  | Total |  |  |  |  | 7.02308 | 6.8179 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>customer<br/>150,000 rows × 1 cols"]
-    step_1["1 · SourceTable<br/>orders<br/>1,500,000 rows × 2 cols"]
-    step_2["2 · Filter · 99%<br/>1,484,298 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>customer<br/>c_custkey<br/>150,000 × 1"]
+    step_1["1 · SourceTable<br/>orders<br/>o_custkey, o_comment<br/>1,500,000 × 2"]
+    step_2["2 · Filter · 99%<br/>1,484,298 × 1"]
     step_1 --> step_2
-    step_3["3 · EqJoin · 990%<br/>1,484,298 rows × 1 cols"]
+    step_3["3 · EqJoin · 150K⋈1.5M<br/>custkey<br/>1,484,298 × 1"]
     step_0 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>1,484,298 rows × 2 cols"]
+    step_4["4 · Reorder<br/>1,484,298 × 2"]
     step_3 --> step_4
-    step_5["5 · Reorder<br/>1,484,298 rows × 1 cols"]
+    step_5["5 · Reorder<br/>1,484,298 × 1"]
     step_4 --> step_5
-    step_6["6 · GroupBy · 6.74%<br/>99,996 rows × 2 cols"]
+    step_6["6 · GroupBy · 6.74%<br/>c_custkey; count_all(*)<br/>99,996 × 2"]
     step_5 --> step_6
-    step_7["7 · AntiJoin · 33.3%<br/>50,004 rows × 1 cols"]
+    step_7["7 · AntiJoin · 150K⋈1.5M<br/>c_custkey; o_custkey<br/>50,004 × 1"]
     step_0 --> step_7
     step_2 --> step_7
-    step_8["8 · Reorder<br/>50,004 rows × 1 cols"]
+    step_8["8 · Reorder<br/>50,004 × 1"]
     step_7 --> step_8
-    step_9["9 · Project<br/>50,004 rows × 2 cols"]
+    step_9["9 · Project<br/>50,004 × 2"]
     step_8 --> step_9
-    step_10["10 · Concat<br/>150,000 rows × 2 cols"]
+    step_10["10 · Concat<br/>150,000 × 2"]
     step_6 --> step_10
     step_9 --> step_10
-    step_11["11 · Reorder<br/>150,000 rows × 1 cols"]
+    step_11["11 · Reorder<br/>150,000 × 1"]
     step_10 --> step_11
-    step_12["12 · GroupBy · 0.028%<br/>42 rows × 2 cols"]
+    step_12["12 · GroupBy · 0.028%<br/>output column 1; count_all(*)<br/>42 × 2"]
     step_11 --> step_12
-    step_13["13 · Sort<br/>42 rows × 2 cols"]
+    step_13["13 · Sort<br/>count_all(*) DESC, output column 1 DESC<br/>42 × 2"]
     step_12 --> step_13
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2427,9 +2439,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q13 SF1 | T4 Q13 SF10 | GH200 Q13 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q13.jpg" alt="T4 Q13 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q13.jpg" alt="T4 Q13 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q13_comparison.jpg" alt="GH200 Q13 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q13.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q13.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q13.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q13.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q13.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q13_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q14 Promotion Effect Query
 
@@ -2465,7 +2477,7 @@ flowchart LR
 
 ```sql
 Project(promo_revenue = ((100 * sum_promo) / sum_total))
-  Aggregate(aggs=[sum(promo_volume) AS sum_promo, sum(disc_price) AS sum_total])
+  Aggregate(sum(promo_volume), sum(disc_price))
     Project(promo_volume = case(is_promo, disc_price, 0), volume = disc_price)
       Project(disc_price = (l_extendedprice * (1 - l_discount)), is_promo = startswith(p_type, "PROMO"))
         InnerJoin(on=(l_partkey == p_partkey))
@@ -2477,7 +2489,7 @@ Project(promo_revenue = ((100 * sum_promo) / sum_total))
 ```mermaid
 flowchart TD
     ir_0["Project<br/>promo_revenue = ((100 * sum_promo) / sum_total)"]
-    ir_1["Aggregate<br/>aggs=[sum(promo_volume) AS sum_promo, sum(disc_price) AS sum_total]"]
+    ir_1["Aggregate<br/>sum(promo_volume), sum(disc_price)"]
     ir_0 --> ir_1
     ir_2["Project<br/>promo_volume = case(is_promo, disc_price, 0), volume = disc_price"]
     ir_1 --> ir_2
@@ -2505,40 +2517,40 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 1 | Filter | 75983 | 3 | < | 1.27% | 1.48825 | 1.12137 | fuse | nofuse |
-| 2 | SourceTable | 200000 | 2 | part |  |  |  |  |  |
-| 3 | EqJoin | 75983 | 4 | lineitem⋈part | 100% | 0.432097 | 0.432097 | hash_gfur | hash_gfur |
-| 4 | Reorder | 75983 | 5 |  |  | 0.00838373 | 0.00838373 |  |  |
-| 5 | Project | 75983 | 2 |  |  | 0.0649448 | 0.0649448 | nofuse | nofuse |
-| 6 | Project | 75983 | 2 |  |  | 0.0162572 | 0.0162572 | nofuse | nofuse |
-| 7 | Reorder | 75983 | 2 |  |  | 0.00208407 | 0.00208407 |  |  |
-| 8 | ScalarAgg | 1 | 2 |  |  | 0.0592348 | 0.0592348 |  |  |
-| 9 | Project | 1 | 1 |  |  | 0.0235143 | 0.0235143 | nofuse | nofuse |
-|  | Total |  |  |  |  | 2.09477 | 1.72789 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_partkey, l_extendedprice, l_discount, l_shipdate |
+| 1 | Filter | 75983 | 3 | < | 1.27% | 1.48825 | 1.12137 | fuse | nofuse |  |
+| 2 | SourceTable | 200000 | 2 | part |  |  |  |  |  | p_partkey, p_type |
+| 3 | EqJoin | 75983 | 4 | lineitem⋈part | 76K⋈200K | 0.432097 | 0.432097 | hash_gfur | hash_gfur | partkey |
+| 4 | Reorder | 75983 | 5 |  |  | 0.00838373 | 0.00838373 |  |  |  |
+| 5 | Project | 75983 | 2 |  |  | 0.0649448 | 0.0649448 | nofuse | nofuse | disc_price, is_promo |
+| 6 | Project | 75983 | 2 |  |  | 0.0162572 | 0.0162572 | nofuse | nofuse | promo_volume, volume |
+| 7 | Reorder | 75983 | 2 |  |  | 0.00208407 | 0.00208407 |  |  |  |
+| 8 | ScalarAgg | 1 | 2 |  |  | 0.0592348 | 0.0592348 |  |  | sum(promo_volume), sum(volume) |
+| 9 | Project | 1 | 1 |  |  | 0.0235143 | 0.0235143 | nofuse | nofuse | promo_revenue |
+|  | Total |  |  |  |  | 2.09477 | 1.72789 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_1["1 · Filter · 1.27%<br/>75,983 rows × 3 cols"]
+    step_0["0 · SourceTable<br/>lineitem<br/>l_partkey, l_extendedprice, l_discount, l_shipdate<br/>6,001,215 × 4"]
+    step_1["1 · Filter · 1.27%<br/>75,983 × 3"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>part<br/>200,000 rows × 2 cols"]
-    step_3["3 · EqJoin · 100%<br/>75,983 rows × 4 cols"]
+    step_2["2 · SourceTable<br/>part<br/>p_partkey, p_type<br/>200,000 × 2"]
+    step_3["3 · EqJoin · 76K⋈200K<br/>partkey<br/>75,983 × 4"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>75,983 rows × 5 cols"]
+    step_4["4 · Reorder<br/>75,983 × 5"]
     step_3 --> step_4
-    step_5["5 · Project<br/>75,983 rows × 2 cols"]
+    step_5["5 · Project<br/>75,983 × 2"]
     step_4 --> step_5
-    step_6["6 · Project<br/>75,983 rows × 2 cols"]
+    step_6["6 · Project<br/>75,983 × 2"]
     step_5 --> step_6
-    step_7["7 · Reorder<br/>75,983 rows × 2 cols"]
+    step_7["7 · Reorder<br/>75,983 × 2"]
     step_6 --> step_7
-    step_8["8 · ScalarAgg<br/>1 rows × 2 cols"]
+    step_8["8 · ScalarAgg<br/>sum(promo_volume), sum(volume)<br/>1 × 2"]
     step_7 --> step_8
-    step_9["9 · Project<br/>1 rows × 1 cols"]
+    step_9["9 · Project<br/>1 × 1"]
     step_8 --> step_9
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2556,9 +2568,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q14 SF1 | T4 Q14 SF10 | GH200 Q14 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q14.jpg" alt="T4 Q14 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q14.jpg" alt="T4 Q14 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q14_comparison.jpg" alt="GH200 Q14 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q14.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q14.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q14.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q14.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q14.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q14_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q15 Top Supplier Query
 
@@ -2609,17 +2621,17 @@ flowchart LR
 
 ```sql
 Sort[s_suppkey ASC]
-  Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address, s_phone = s_phone, total_revenue = total_revenue)
+  Project(s_suppkey, s_name, s_address, s_phone, total_revenue)
     InnerJoin(on=(s_suppkey == l_suppkey))
       Scan(supplier [s_suppkey, s_name, s_address, s_phone])
       Filter((total_revenue == max_revenue))
         CrossJoin
-          Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+          Aggregate(l_suppkey; sum(rev))
             Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
               Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
                 Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
-          Aggregate(aggs=[max(total_revenue) AS max_revenue])
-            Aggregate(keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue])
+          Aggregate(max(total_revenue))
+            Aggregate(l_suppkey; sum(rev))
               Project(supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount)))
                 Filter(((l_shipdate >= 19960101) && (l_shipdate < 19960401)))
                   Scan(lineitem [l_suppkey, l_extendedprice, l_discount, l_shipdate])
@@ -2628,7 +2640,7 @@ Sort[s_suppkey ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>s_suppkey ASC"]
-    ir_1["Project<br/>s_suppkey = s_suppkey, s_name = s_name, s_address = s_address, s_phone = s_phone, total_revenue = total_rev..."]
+    ir_1["Project<br/>s_suppkey, s_name, s_address, s_phone, total_revenue"]
     ir_0 --> ir_1
     ir_2["InnerJoin<br/>on=(s_suppkey == l_suppkey)"]
     ir_1 --> ir_2
@@ -2638,7 +2650,7 @@ flowchart TD
     ir_2 --> ir_4
     ir_5["CrossJoin"]
     ir_4 --> ir_5
-    ir_6["Aggregate<br/>keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue]"]
+    ir_6["Aggregate<br/>l_suppkey; sum(rev)"]
     ir_5 --> ir_6
     ir_7["Project<br/>supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount))"]
     ir_6 --> ir_7
@@ -2646,9 +2658,9 @@ flowchart TD
     ir_7 --> ir_8
     ir_9["Scan<br/>lineitem · l_suppkey, l_extendedprice, l_discount, l_shipdate"]
     ir_8 --> ir_9
-    ir_10["Aggregate<br/>aggs=[max(total_revenue) AS max_revenue]"]
+    ir_10["Aggregate<br/>max(total_revenue)"]
     ir_5 --> ir_10
-    ir_11["Aggregate<br/>keys=[l_suppkey]; aggs=[sum(rev) AS total_revenue]"]
+    ir_11["Aggregate<br/>l_suppkey; sum(rev)"]
     ir_10 --> ir_11
     ir_12["Project<br/>supplier_no = l_suppkey, rev = (l_extendedprice * (1 - l_discount))"]
     ir_11 --> ir_12
@@ -2671,53 +2683,53 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 10000 | 4 | supplier |  |  |  |  |  |
-| 1 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 2 | Filter | 225954 | 3 | < | 3.77% | 1.46039 | 1.15678 | fuse | nofuse |
-| 3 | Project | 225954 | 2 |  |  | 0.0464166 | 0.0464166 | nofuse | nofuse |
-| 4 | Reorder | 225954 | 2 |  |  | 0.00178123 | 0.00178123 |  |  |
-| 5 | GroupBy | 10000 | 2 | < | 4.43% | 0.196211 | 0.196211 | hash | hash |
-| 6 | Reorder | 10000 | 1 |  |  | 0.00721286 | 0.00721286 |  |  |
-| 7 | ScalarAgg | 1 | 1 |  |  | 0.0312445 | 0.0312445 |  |  |
-| 8 | CrossJoin | 10000 | 3 | lineitem⋈lineitem | 100% | 0.0428379 | 0.0428379 |  |  |
-| 9 | Filter | 1 | 2 | < | 0.01% | 0.0775616 | 0.0681308 | fuse | nofuse |
-| 10 | EqJoin | 1 | 5 | supplier⋈(lineitem⋈lineitem) | 0.01% | 0.225216 | 0.225216 | hash_gfur | hash_gfur |
-| 11 | Reorder | 1 | 6 |  |  | 0.0107978 | 0.0107978 |  |  |
-| 12 | Project | 1 | 5 |  |  | 0.163341 | 0.163341 | nofuse | nofuse |
-| 13 | Sort | 1 | 5 |  |  | 0.212059 | 0.212059 | no_skf | no_skf |
-|  | Total |  |  |  |  | 2.47507 | 2.16203 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 10000 | 4 | supplier |  |  |  |  |  | s_suppkey, s_name, s_address, s_phone |
+| 1 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_suppkey, l_extendedprice, l_discount, l_shipdate |
+| 2 | Filter | 225954 | 3 | < | 3.77% | 1.46039 | 1.15678 | fuse | nofuse |  |
+| 3 | Project | 225954 | 2 |  |  | 0.0464166 | 0.0464166 | nofuse | nofuse | supplier_no, rev |
+| 4 | Reorder | 225954 | 2 |  |  | 0.00178123 | 0.00178123 |  |  |  |
+| 5 | GroupBy | 10000 | 2 | < | 4.43% | 0.196211 | 0.196211 | hash | hash | supplier_no; sum(rev) |
+| 6 | Reorder | 10000 | 1 |  |  | 0.00721286 | 0.00721286 |  |  |  |
+| 7 | ScalarAgg | 1 | 1 |  |  | 0.0312445 | 0.0312445 |  |  | max(sum(rev)) |
+| 8 | CrossJoin | 10000 | 3 | lineitem⋈lineitem | 10K⋈1 | 0.0428379 | 0.0428379 |  |  |  |
+| 9 | Filter | 1 | 2 | < | 0.01% | 0.0775616 | 0.0681308 | fuse | nofuse |  |
+| 10 | EqJoin | 1 | 5 | supplier⋈(lineitem⋈lineitem) | 10K⋈1 | 0.225216 | 0.225216 | hash_gfur | hash_gfur | s_suppkey; supplier_no |
+| 11 | Reorder | 1 | 6 |  |  | 0.0107978 | 0.0107978 |  |  |  |
+| 12 | Project | 1 | 5 |  |  | 0.163341 | 0.163341 | nofuse | nofuse | s_suppkey, s_name, s_address, s_phone, total_revenue |
+| 13 | Sort | 1 | 5 |  |  | 0.212059 | 0.212059 | no_skf | no_skf | s_suppkey ASC |
+|  | Total |  |  |  |  | 2.47507 | 2.16203 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>supplier<br/>10,000 rows × 4 cols"]
-    step_1["1 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_2["2 · Filter · 3.77%<br/>225,954 rows × 3 cols"]
+    step_0["0 · SourceTable<br/>supplier<br/>s_suppkey, s_name, s_address, s_phone<br/>10,000 × 4"]
+    step_1["1 · SourceTable<br/>lineitem<br/>l_suppkey, l_extendedprice, l_discount, l_shipdate<br/>6,001,215 × 4"]
+    step_2["2 · Filter · 3.77%<br/>225,954 × 3"]
     step_1 --> step_2
-    step_3["3 · Project<br/>225,954 rows × 2 cols"]
+    step_3["3 · Project<br/>225,954 × 2"]
     step_2 --> step_3
-    step_4["4 · Reorder<br/>225,954 rows × 2 cols"]
+    step_4["4 · Reorder<br/>225,954 × 2"]
     step_3 --> step_4
-    step_5["5 · GroupBy · 4.43%<br/>10,000 rows × 2 cols"]
+    step_5["5 · GroupBy · 4.43%<br/>supplier_no; sum(rev)<br/>10,000 × 2"]
     step_4 --> step_5
-    step_6["6 · Reorder<br/>10,000 rows × 1 cols"]
+    step_6["6 · Reorder<br/>10,000 × 1"]
     step_5 --> step_6
-    step_7["7 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_7["7 · ScalarAgg<br/>max(sum(rev))<br/>1 × 1"]
     step_6 --> step_7
-    step_8["8 · CrossJoin · 100%<br/>10,000 rows × 3 cols"]
+    step_8["8 · CrossJoin · 10K⋈1<br/>10,000 × 3"]
     step_5 --> step_8
     step_7 --> step_8
-    step_9["9 · Filter · 0.01%<br/>1 rows × 2 cols"]
+    step_9["9 · Filter · 0.01%<br/>1 × 2"]
     step_8 --> step_9
-    step_10["10 · EqJoin · 0.01%<br/>1 rows × 5 cols"]
+    step_10["10 · EqJoin · 10K⋈1<br/>s_suppkey; supplier_no<br/>1 × 5"]
     step_0 --> step_10
     step_9 --> step_10
-    step_11["11 · Reorder<br/>1 rows × 6 cols"]
+    step_11["11 · Reorder<br/>1 × 6"]
     step_10 --> step_11
-    step_12["12 · Project<br/>1 rows × 5 cols"]
+    step_12["12 · Project<br/>1 × 5"]
     step_11 --> step_12
-    step_13["13 · Sort<br/>1 rows × 5 cols"]
+    step_13["13 · Sort<br/>s_suppkey ASC<br/>1 × 5"]
     step_12 --> step_13
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2740,9 +2752,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q15 SF1 | T4 Q15 SF10 | GH200 Q15 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q15.jpg" alt="T4 Q15 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q15.jpg" alt="T4 Q15 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q15_comparison.jpg" alt="GH200 Q15 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q15.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q15.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q15.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q15.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q15.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q15_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q16 Parts/Supplier Relationship Query
 
@@ -2792,7 +2804,7 @@ flowchart LR
 
 ```sql
 Sort[supplier_cnt DESC, p_brand ASC, p_type ASC, p_size ASC]
-  Aggregate(keys=[p_brand, p_type, p_size]; aggs=[count_all(*) AS supplier_cnt])
+  Aggregate(p_brand, p_type, p_size; count_all(*))
     Distinct(keys=[p_brand, p_type, p_size, ps_suppkey])
       InnerJoin(on=(p_partkey == ps_partkey))
         Filter(((!str_eq(p_brand, "Brand#45") && !startswith(p_type, "MEDIUM POLISHED")) && ((((((((p_size == 49) || (p_size == 14)) || (p_size == 23)) || (p_size == 45)) || (p_size == 19)) || (p_size == 3)) || (p_size == 36)) || (p_size == 9))))
@@ -2806,7 +2818,7 @@ Sort[supplier_cnt DESC, p_brand ASC, p_type ASC, p_size ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>supplier_cnt DESC, p_brand ASC, p_type ASC, p_size ASC"]
-    ir_1["Aggregate<br/>keys=[p_brand, p_type, p_size]; aggs=[count_all(*) AS supplier_cnt]"]
+    ir_1["Aggregate<br/>p_brand, p_type, p_size; count_all(*)"]
     ir_0 --> ir_1
     ir_2["Distinct<br/>keys=[p_brand, p_type, p_size, ps_suppkey]"]
     ir_1 --> ir_2
@@ -2838,49 +2850,49 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 200000 | 4 | part |  |  |  |
-| 1 | Filter | 29581 | 4 | < | 14.8% | 0.485452 | fuse |
-| 2 | SourceTable | 800000 | 2 | partsupp |  |  |  |
-| 3 | SourceTable | 10000 | 2 | supplier |  |  |  |
-| 4 | Filter | 4 | 1 | < | 0.04% | 0.0729618 | fuse |
-| 5 | AntiJoin | 799680 | 2 | partsupp⋈supplier | 100% | 0.287642 |  |
-| 6 | Reorder | 799680 | 2 |  |  | 0.00159029 |  |
-| 7 | EqJoin | 118274 | 5 | part⋈(partsupp⋈supplier) | 400% | 0.734813 | hash_gfur |
-| 8 | Reorder | 118274 | 6 |  |  | 0.00792449 |  |
-| 9 | Distinct | 118250 | 4 |  |  | 0.456529 | hash |
-| 10 | Reorder | 118250 | 3 |  |  | 0.00774508 |  |
-| 11 | GroupBy | 18314 | 4 | < | 15.5% | 0.397752 | hash |
-| 12 | Sort | 18314 | 4 |  |  | 3.15732 | no_skf |
-|  | Total |  |  |  |  | 5.60973 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 200000 | 4 | part |  |  |  | p_partkey, p_brand, p_type, p_size |
+| 1 | Filter | 29581 | 4 | < | 14.8% | 0.485452 | fuse |  |
+| 2 | SourceTable | 800000 | 2 | partsupp |  |  |  | ps_partkey, ps_suppkey |
+| 3 | SourceTable | 10000 | 2 | supplier |  |  |  | s_suppkey, s_comment |
+| 4 | Filter | 4 | 1 | < | 0.04% | 0.0729618 | fuse |  |
+| 5 | AntiJoin | 799680 | 2 | partsupp⋈supplier | 800K⋈4 | 0.287642 |  | ps_suppkey; s_suppkey |
+| 6 | Reorder | 799680 | 2 |  |  | 0.00159029 |  |  |
+| 7 | EqJoin | 118274 | 5 | part⋈(partsupp⋈supplier) | 29.6K⋈799.7K | 0.734813 | hash_gfur | p_partkey; ps_suppkey |
+| 8 | Reorder | 118274 | 6 |  |  | 0.00792449 |  |  |
+| 9 | Distinct | 118250 | 4 |  |  | 0.456529 | hash | 1, 2, 3, 5 |
+| 10 | Reorder | 118250 | 3 |  |  | 0.00774508 |  |  |
+| 11 | GroupBy | 18314 | 4 | < | 15.5% | 0.397752 | hash | output column 0, output column 1, output column 2; count_all(*) |
+| 12 | Sort | 18314 | 4 |  |  | 3.15732 | no_skf | count_all(*) DESC, output column 0 ASC, output column 1 ASC, output column 2 ASC |
+|  | Total |  |  |  |  | 5.60973 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>part<br/>200,000 rows × 4 cols"]
-    step_1["1 · Filter · 14.8%<br/>29,581 rows × 4 cols"]
+    step_0["0 · SourceTable<br/>part<br/>p_partkey, p_brand, p_type, p_size<br/>200,000 × 4"]
+    step_1["1 · Filter · 14.8%<br/>29,581 × 4"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>partsupp<br/>800,000 rows × 2 cols"]
-    step_3["3 · SourceTable<br/>supplier<br/>10,000 rows × 2 cols"]
-    step_4["4 · Filter · 0.04%<br/>4 rows × 1 cols"]
+    step_2["2 · SourceTable<br/>partsupp<br/>ps_partkey, ps_suppkey<br/>800,000 × 2"]
+    step_3["3 · SourceTable<br/>supplier<br/>s_suppkey, s_comment<br/>10,000 × 2"]
+    step_4["4 · Filter · 0.04%<br/>4 × 1"]
     step_3 --> step_4
-    step_5["5 · AntiJoin · 100%<br/>799,680 rows × 2 cols"]
+    step_5["5 · AntiJoin · 800K⋈4<br/>ps_suppkey; s_suppkey<br/>799,680 × 2"]
     step_2 --> step_5
     step_4 --> step_5
-    step_6["6 · Reorder<br/>799,680 rows × 2 cols"]
+    step_6["6 · Reorder<br/>799,680 × 2"]
     step_5 --> step_6
-    step_7["7 · EqJoin · 400%<br/>118,274 rows × 5 cols"]
+    step_7["7 · EqJoin · 29.6K⋈799.7K<br/>p_partkey; ps_suppkey<br/>118,274 × 5"]
     step_1 --> step_7
     step_6 --> step_7
-    step_8["8 · Reorder<br/>118,274 rows × 6 cols"]
+    step_8["8 · Reorder<br/>118,274 × 6"]
     step_7 --> step_8
-    step_9["9 · Distinct<br/>118,250 rows × 4 cols"]
+    step_9["9 · Distinct<br/>1, 2, 3, 5<br/>118,250 × 4"]
     step_8 --> step_9
-    step_10["10 · Reorder<br/>118,250 rows × 3 cols"]
+    step_10["10 · Reorder<br/>118,250 × 3"]
     step_9 --> step_10
-    step_11["11 · GroupBy · 15.5%<br/>18,314 rows × 4 cols"]
+    step_11["11 · GroupBy · 15.5%<br/>output column 0, output column 1, output column 2; count_all(*)<br/>18,314 × 4"]
     step_10 --> step_11
-    step_12["12 · Sort<br/>18,314 rows × 4 cols"]
+    step_12["12 · Sort<br/>count_all(*) DESC, output column 0 ASC, output column 1 ASC, output column 2 ASC<br/>18,314 × 4"]
     step_11 --> step_12
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -2903,9 +2915,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q16 SF1 | T4 Q16 SF10 | GH200 Q16 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q16.jpg" alt="T4 Q16 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q16.jpg" alt="T4 Q16 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q16_comparison.jpg" alt="GH200 Q16 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q16.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q16.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q16.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q16.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q16.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q16_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q17 Small-Quantity-Order Revenue Query
 
@@ -2942,11 +2954,11 @@ flowchart LR
 
 ```sql
 Project(avg_yearly = (sum_price / 7))
-  Aggregate(aggs=[sum(l_extendedprice) AS sum_price])
+  Aggregate(sum(l_extendedprice))
     Filter((l_quantity < thr))
       InnerJoin(on=(l_partkey == l_partkey))
-        Project(l_partkey = l_partkey, thr = (0.2 * avg_qty))
-          Aggregate(keys=[l_partkey]; aggs=[avg(l_quantity) AS avg_qty])
+        Project(l_partkey, thr = (0.2 * avg_qty))
+          Aggregate(l_partkey; avg(l_quantity))
             InnerJoin(on=(p_partkey == l_partkey))
               Filter((str_eq(p_brand, "Brand#23") && str_eq(p_container, "MED BOX")))
                 Scan(part [p_partkey, p_brand, p_container])
@@ -2960,15 +2972,15 @@ Project(avg_yearly = (sum_price / 7))
 ```mermaid
 flowchart TD
     ir_0["Project<br/>avg_yearly = (sum_price / 7)"]
-    ir_1["Aggregate<br/>aggs=[sum(l_extendedprice) AS sum_price]"]
+    ir_1["Aggregate<br/>sum(l_extendedprice)"]
     ir_0 --> ir_1
     ir_2["Filter<br/>(l_quantity &lt; thr)"]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(l_partkey == l_partkey)"]
     ir_2 --> ir_3
-    ir_4["Project<br/>l_partkey = l_partkey, thr = (0.2 * avg_qty)"]
+    ir_4["Project<br/>l_partkey, thr = (0.2 * avg_qty)"]
     ir_3 --> ir_4
-    ir_5["Aggregate<br/>keys=[l_partkey]; aggs=[avg(l_quantity) AS avg_qty]"]
+    ir_5["Aggregate<br/>l_partkey; avg(l_quantity)"]
     ir_4 --> ir_5
     ir_6["InnerJoin<br/>on=(p_partkey == l_partkey)"]
     ir_5 --> ir_6
@@ -3000,53 +3012,53 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 200000 | 3 | part |  |  |  |
-| 1 | Filter | 204 | 1 | < | 0.102% | 0.123122 | nofuse |
-| 2 | SourceTable | 6001215 | 3 | lineitem |  |  |  |
-| 3 | EqJoin | 6088 | 3 | part⋈lineitem | 2.98e+03% | 3.28401 | hash_gfur |
-| 4 | Reorder | 6088 | 4 |  |  | 0.0016755 |  |
-| 5 | Reorder | 6088 | 2 |  |  | 0.012514 |  |
-| 6 | GroupBy | 204 | 2 | < | 3.35% | 0.275564 | sort_gftr |
-| 7 | Project | 204 | 2 |  |  | 0.0138148 | nofuse |
-| 8 | EqJoin | 6088 | 5 | (part⋈lineitem)⋈(part⋈lineitem) | 2.98e+03% | 0.109117 | hash_gfur |
-| 9 | Reorder | 6088 | 6 |  |  | 0.0017735 |  |
-| 10 | Filter | 587 | 1 | < | 9.64% | 0.0443433 | nofuse |
-| 11 | Reorder | 587 | 1 |  |  | 0.00164225 |  |
-| 12 | ScalarAgg | 1 | 1 |  |  | 0.0256675 |  |
-| 13 | Project | 1 | 1 |  |  | 0.0129085 | nofuse |
-|  | Total |  |  |  |  | 3.90615 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 200000 | 3 | part |  |  |  | p_partkey, p_brand, p_container |
+| 1 | Filter | 204 | 1 | < | 0.102% | 0.123122 | nofuse |  |
+| 2 | SourceTable | 6001215 | 3 | lineitem |  |  |  | l_partkey, l_quantity, l_extendedprice |
+| 3 | EqJoin | 6088 | 3 | part⋈lineitem | 204⋈6M | 3.28401 | hash_gfur | partkey |
+| 4 | Reorder | 6088 | 4 |  |  | 0.0016755 |  |  |
+| 5 | Reorder | 6088 | 2 |  |  | 0.012514 |  |  |
+| 6 | GroupBy | 204 | 2 | < | 3.35% | 0.275564 | sort_gftr | p_partkey; avg(l_quantity) |
+| 7 | Project | 204 | 2 |  |  | 0.0138148 | nofuse | l_partkey, thr |
+| 8 | EqJoin | 6088 | 5 | (part⋈lineitem)⋈(part⋈lineitem) | 204⋈6.1K | 0.109117 | hash_gfur | partkey |
+| 9 | Reorder | 6088 | 6 |  |  | 0.0017735 |  |  |
+| 10 | Filter | 587 | 1 | < | 9.64% | 0.0443433 | nofuse |  |
+| 11 | Reorder | 587 | 1 |  |  | 0.00164225 |  |  |
+| 12 | ScalarAgg | 1 | 1 |  |  | 0.0256675 |  | sum(l_extendedprice) |
+| 13 | Project | 1 | 1 |  |  | 0.0129085 | nofuse | avg_yearly |
+|  | Total |  |  |  |  | 3.90615 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>part<br/>200,000 rows × 3 cols"]
-    step_1["1 · Filter · 0.102%<br/>204 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>part<br/>p_partkey, p_brand, p_container<br/>200,000 × 3"]
+    step_1["1 · Filter · 0.102%<br/>204 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>lineitem<br/>6,001,215 rows × 3 cols"]
-    step_3["3 · EqJoin · 2.98e+03%<br/>6,088 rows × 3 cols"]
+    step_2["2 · SourceTable<br/>lineitem<br/>l_partkey, l_quantity, l_extendedprice<br/>6,001,215 × 3"]
+    step_3["3 · EqJoin · 204⋈6M<br/>partkey<br/>6,088 × 3"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>6,088 rows × 4 cols"]
+    step_4["4 · Reorder<br/>6,088 × 4"]
     step_3 --> step_4
-    step_5["5 · Reorder<br/>6,088 rows × 2 cols"]
+    step_5["5 · Reorder<br/>6,088 × 2"]
     step_4 --> step_5
-    step_6["6 · GroupBy · 3.35%<br/>204 rows × 2 cols"]
+    step_6["6 · GroupBy · 3.35%<br/>p_partkey; avg(l_quantity)<br/>204 × 2"]
     step_5 --> step_6
-    step_7["7 · Project<br/>204 rows × 2 cols"]
+    step_7["7 · Project<br/>204 × 2"]
     step_6 --> step_7
-    step_8["8 · EqJoin · 2.98e+03%<br/>6,088 rows × 5 cols"]
+    step_8["8 · EqJoin · 204⋈6.1K<br/>partkey<br/>6,088 × 5"]
     step_7 --> step_8
     step_4 --> step_8
-    step_9["9 · Reorder<br/>6,088 rows × 6 cols"]
+    step_9["9 · Reorder<br/>6,088 × 6"]
     step_8 --> step_9
-    step_10["10 · Filter · 9.64%<br/>587 rows × 1 cols"]
+    step_10["10 · Filter · 9.64%<br/>587 × 1"]
     step_9 --> step_10
-    step_11["11 · Reorder<br/>587 rows × 1 cols"]
+    step_11["11 · Reorder<br/>587 × 1"]
     step_10 --> step_11
-    step_12["12 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_12["12 · ScalarAgg<br/>sum(l_extendedprice)<br/>1 × 1"]
     step_11 --> step_12
-    step_13["13 · Project<br/>1 rows × 1 cols"]
+    step_13["13 · Project<br/>1 × 1"]
     step_12 --> step_13
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -3064,9 +3076,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q17 SF1 | T4 Q17 SF10 | GH200 Q17 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q17.jpg" alt="T4 Q17 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q17.jpg" alt="T4 Q17 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q17_comparison.jpg" alt="GH200 Q17 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q17.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q17.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q17.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q17.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q17.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q17_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q18 Large Volume Customer Query
 
@@ -3119,12 +3131,12 @@ flowchart LR
 ```sql
 Limit(n=100)
   Sort[o_totalprice DESC, o_orderdate ASC]
-    Project(c_name = c_name, c_custkey = c_custkey, o_orderkey = o_orderkey, o_orderdate = o_orderdate, o_totalprice = o_totalprice, sum_quantity = sum_qty)
+    Project(c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, sum_quantity = sum_qty)
       InnerJoin(on=(o_custkey == c_custkey))
         InnerJoin(on=(o_orderkey == l_orderkey))
           Scan(orders [o_orderkey, o_custkey, o_orderdate, o_totalprice])
           Filter((sum_qty > 300))
-            Aggregate(keys=[l_orderkey]; aggs=[sum(l_quantity) AS sum_qty])
+            Aggregate(l_orderkey; sum(l_quantity))
               Scan(lineitem [l_orderkey, l_quantity])
         Scan(customer [c_custkey, c_name])
 ```
@@ -3134,7 +3146,7 @@ flowchart TD
     ir_0["Limit<br/>n=100"]
     ir_1["Sort<br/>o_totalprice DESC, o_orderdate ASC"]
     ir_0 --> ir_1
-    ir_2["Project<br/>c_name = c_name, c_custkey = c_custkey, o_orderkey = o_orderkey, o_orderdate = o_orderdate, o_totalprice = ..."]
+    ir_2["Project<br/>c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, sum_quantity = sum_qty"]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(o_custkey == c_custkey)"]
     ir_2 --> ir_3
@@ -3144,7 +3156,7 @@ flowchart TD
     ir_4 --> ir_5
     ir_6["Filter<br/>(sum_qty &gt; 300)"]
     ir_4 --> ir_6
-    ir_7["Aggregate<br/>keys=[l_orderkey]; aggs=[sum(l_quantity) AS sum_qty]"]
+    ir_7["Aggregate<br/>l_orderkey; sum(l_quantity)"]
     ir_6 --> ir_7
     ir_8["Scan<br/>lineitem · l_orderkey, l_quantity"]
     ir_7 --> ir_8
@@ -3165,46 +3177,46 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 1500000 | 4 | orders |  |  |  |
-| 1 | SourceTable | 6001215 | 2 | lineitem |  |  |  |
-| 2 | Reorder | 6001215 | 2 |  |  | 0.00164098 |  |
-| 3 | GroupBy | 1500000 | 2 | < | 25% | 5.38093 | hash |
-| 4 | Filter | 57 | 2 | < | 0.0038% | 0.220077 | nofuse |
-| 5 | EqJoin | 57 | 5 | orders⋈lineitem | 0.0038% | 2.40733 | hash_gfur |
-| 6 | Reorder | 57 | 6 |  |  | 0.00209628 |  |
-| 7 | SourceTable | 150000 | 2 | customer |  |  |  |
-| 8 | EqJoin | 57 | 7 | (orders⋈lineitem)⋈customer | 100% | 0.220122 | hash_gfur |
-| 9 | Reorder | 57 | 8 |  |  | 0.00671607 |  |
-| 10 | Project | 57 | 6 |  |  | 0.0753005 | nofuse |
-| 11 | TopK | 57 | 6 | < | 100% | 0.445286 |  |
-|  | Total |  |  |  |  | 8.7595 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 1500000 | 4 | orders |  |  |  | o_orderkey, o_custkey, o_orderdate, o_totalprice |
+| 1 | SourceTable | 6001215 | 2 | lineitem |  |  |  | l_orderkey, l_quantity |
+| 2 | Reorder | 6001215 | 2 |  |  | 0.00164098 |  |  |
+| 3 | GroupBy | 1500000 | 2 | < | 25% | 5.38093 | hash | l_orderkey; sum(l_quantity) |
+| 4 | Filter | 57 | 2 | < | 0.0038% | 0.220077 | nofuse |  |
+| 5 | EqJoin | 57 | 5 | orders⋈lineitem | 1.5M⋈57 | 2.40733 | hash_gfur | orderkey |
+| 6 | Reorder | 57 | 6 |  |  | 0.00209628 |  |  |
+| 7 | SourceTable | 150000 | 2 | customer |  |  |  | c_custkey, c_name |
+| 8 | EqJoin | 57 | 7 | (orders⋈lineitem)⋈customer | 57⋈150K | 0.220122 | hash_gfur | custkey |
+| 9 | Reorder | 57 | 8 |  |  | 0.00671607 |  |  |
+| 10 | Project | 57 | 6 |  |  | 0.0753005 | nofuse | c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, sum_quantity |
+| 11 | TopK | 57 | 6 | < | 100% | 0.445286 |  |  |
+|  | Total |  |  |  |  | 8.7595 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>orders<br/>1,500,000 rows × 4 cols"]
-    step_1["1 · SourceTable<br/>lineitem<br/>6,001,215 rows × 2 cols"]
-    step_2["2 · Reorder<br/>6,001,215 rows × 2 cols"]
+    step_0["0 · SourceTable<br/>orders<br/>o_orderkey, o_custkey, o_orderdate, o_totalprice<br/>1,500,000 × 4"]
+    step_1["1 · SourceTable<br/>lineitem<br/>l_orderkey, l_quantity<br/>6,001,215 × 2"]
+    step_2["2 · Reorder<br/>6,001,215 × 2"]
     step_1 --> step_2
-    step_3["3 · GroupBy · 25%<br/>1,500,000 rows × 2 cols"]
+    step_3["3 · GroupBy · 25%<br/>l_orderkey; sum(l_quantity)<br/>1,500,000 × 2"]
     step_2 --> step_3
-    step_4["4 · Filter · 0.0038%<br/>57 rows × 2 cols"]
+    step_4["4 · Filter · 0.0038%<br/>57 × 2"]
     step_3 --> step_4
-    step_5["5 · EqJoin · 0.0038%<br/>57 rows × 5 cols"]
+    step_5["5 · EqJoin · 1.5M⋈57<br/>orderkey<br/>57 × 5"]
     step_0 --> step_5
     step_4 --> step_5
-    step_6["6 · Reorder<br/>57 rows × 6 cols"]
+    step_6["6 · Reorder<br/>57 × 6"]
     step_5 --> step_6
-    step_7["7 · SourceTable<br/>customer<br/>150,000 rows × 2 cols"]
-    step_8["8 · EqJoin · 100%<br/>57 rows × 7 cols"]
+    step_7["7 · SourceTable<br/>customer<br/>c_custkey, c_name<br/>150,000 × 2"]
+    step_8["8 · EqJoin · 57⋈150K<br/>custkey<br/>57 × 7"]
     step_6 --> step_8
     step_7 --> step_8
-    step_9["9 · Reorder<br/>57 rows × 8 cols"]
+    step_9["9 · Reorder<br/>57 × 8"]
     step_8 --> step_9
-    step_10["10 · Project<br/>57 rows × 6 cols"]
+    step_10["10 · Project<br/>57 × 6"]
     step_9 --> step_10
-    step_11["11 · TopK · 100%<br/>57 rows × 6 cols"]
+    step_11["11 · TopK · 100%<br/>57 × 6"]
     step_10 --> step_11
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -3227,9 +3239,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q18 SF1 | T4 Q18 SF10 | GH200 Q18 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q18.jpg" alt="T4 Q18 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q18.jpg" alt="T4 Q18 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q18_comparison.jpg" alt="GH200 Q18 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q18.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q18.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q18.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q18.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q18.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q18_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q19 Discounted Revenue Query
 
@@ -3284,11 +3296,11 @@ flowchart LR
 ```
 
 ```sql
-Aggregate(aggs=[sum(disc_price) AS revenue])
+Aggregate(sum(disc_price))
   Project(disc_price = (l_extendedprice * (1 - l_discount)))
     Filter((((((((str_eq(p_brand, "Brand#12") && str_in(p_container, ["SM CASE", "SM BOX", "SM PACK", "SM PKG"])) && (l_quantity >= 1)) && (l_quantity <= 11)) && (p_size >= 1)) && (p_size <= 5)) || (((((str_eq(p_brand, "Brand#23") && str_in(p_container, ["MED BAG", "MED BOX", "MED PKG", "MED PACK"])) && (l_quantity >= 10)) && (l_quantity <= 20)) && (p_size >= 1)) && (p_size <= 10))) || (((((str_eq(p_brand, "Brand#34") && str_in(p_container, ["LG CASE", "LG BOX", "LG PACK", "LG PKG"])) && (l_quantity >= 20)) && (l_quantity <= 30)) && (p_size >= 1)) && (p_size <= 15))))
       InnerJoin(on=(l_partkey == p_partkey))
-        Project(l_partkey = l_partkey, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount)
+        Project(l_partkey, l_quantity, l_extendedprice, l_discount)
           Filter((str_in(l_shipmode, ["AIR", "AIR REG"]) && str_eq(l_shipinstruct, "DELIVER IN PERSON")))
             Scan(lineitem [l_partkey, l_quantity, l_extendedprice, l_discount, l_shipmode, l_shipinstruct])
         Scan(part [p_partkey, p_brand, p_container, p_size])
@@ -3296,14 +3308,14 @@ Aggregate(aggs=[sum(disc_price) AS revenue])
 
 ```mermaid
 flowchart TD
-    ir_0["Aggregate<br/>aggs=[sum(disc_price) AS revenue]"]
+    ir_0["Aggregate<br/>sum(disc_price)"]
     ir_1["Project<br/>disc_price = (l_extendedprice * (1 - l_discount))"]
     ir_0 --> ir_1
     ir_2["Filter<br/>(((((((str_eq(p_brand, #quot;Brand#12#quot;) &amp;&amp; str_in(p_container, [#quot;SM CASE#quot;, #quot;SM BOX#quot;, #quot;SM PACK#quot;, #quot;SM PKG#quot;])) &amp;&amp; (..."]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(l_partkey == p_partkey)"]
     ir_2 --> ir_3
-    ir_4["Project<br/>l_partkey = l_partkey, l_quantity = l_quantity, l_extendedprice = l_extendedprice, l_discount = l_discount"]
+    ir_4["Project<br/>l_partkey, l_quantity, l_extendedprice, l_discount"]
     ir_3 --> ir_4
     ir_5["Filter<br/>(str_in(l_shipmode, [#quot;AIR#quot;, #quot;AIR REG#quot;]) &amp;&amp; str_eq(l_shipinstruct, #quot;DELIVER IN PERSON#quot;))"]
     ir_4 --> ir_5
@@ -3325,40 +3337,40 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 6001215 | 6 | lineitem |  |  |  |  |  |
-| 1 | Filter | 214377 | 4 | < | 3.57% | 2.41517 | 2.41517 | fuse | fuse |
-| 2 | Project | 214377 | 4 |  |  | 0.00164063 | 0.00164063 | nofuse | nofuse |
-| 3 | SourceTable | 200000 | 4 | part |  |  |  |  |  |
-| 4 | EqJoin | 214377 | 7 | lineitem⋈part | 100% | 0.955445 | 0.955445 | hash_gfur | hash_gfur |
-| 5 | Reorder | 214377 | 8 |  |  | 0.0125885 | 0.0125885 |  |  |
-| 6 | Filter | 121 | 2 | < | 0.0564% | 0.898578 | 0.591924 | fuse | nofuse |
-| 7 | Project | 121 | 1 |  |  | 0.021863 | 0.021863 | nofuse | nofuse |
-| 8 | Reorder | 121 | 1 |  |  | 0.00242115 | 0.00242115 |  |  |
-| 9 | ScalarAgg | 1 | 1 |  |  | 0.0311224 | 0.0311224 |  |  |
-|  | Total |  |  |  |  | 4.33883 | 4.03217 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 6001215 | 6 | lineitem |  |  |  |  |  | l_partkey, l_quantity, l_extendedprice, l_discount, l_shipmode, l_shipinstruct |
+| 1 | Filter | 214377 | 4 | < | 3.57% | 2.41517 | 2.41517 | fuse | fuse |  |
+| 2 | Project | 214377 | 4 |  |  | 0.00164063 | 0.00164063 | nofuse | nofuse | l_partkey, l_quantity, l_extendedprice, l_discount |
+| 3 | SourceTable | 200000 | 4 | part |  |  |  |  |  | p_partkey, p_brand, p_container, p_size |
+| 4 | EqJoin | 214377 | 7 | lineitem⋈part | 214.4K⋈200K | 0.955445 | 0.955445 | hash_gfur | hash_gfur | partkey |
+| 5 | Reorder | 214377 | 8 |  |  | 0.0125885 | 0.0125885 |  |  |  |
+| 6 | Filter | 121 | 2 | < | 0.0564% | 0.898578 | 0.591924 | fuse | nofuse |  |
+| 7 | Project | 121 | 1 |  |  | 0.021863 | 0.021863 | nofuse | nofuse | disc_price |
+| 8 | Reorder | 121 | 1 |  |  | 0.00242115 | 0.00242115 |  |  |  |
+| 9 | ScalarAgg | 1 | 1 |  |  | 0.0311224 | 0.0311224 |  |  | sum(disc_price) |
+|  | Total |  |  |  |  | 4.33883 | 4.03217 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>lineitem<br/>6,001,215 rows × 6 cols"]
-    step_1["1 · Filter · 3.57%<br/>214,377 rows × 4 cols"]
+    step_0["0 · SourceTable<br/>lineitem<br/>l_partkey, l_quantity, l_extendedprice, l_discount, l_shipmode, l_shipinstruct<br/>6,001,215 × 6"]
+    step_1["1 · Filter · 3.57%<br/>214,377 × 4"]
     step_0 --> step_1
-    step_2["2 · Project<br/>214,377 rows × 4 cols"]
+    step_2["2 · Project<br/>214,377 × 4"]
     step_1 --> step_2
-    step_3["3 · SourceTable<br/>part<br/>200,000 rows × 4 cols"]
-    step_4["4 · EqJoin · 100%<br/>214,377 rows × 7 cols"]
+    step_3["3 · SourceTable<br/>part<br/>p_partkey, p_brand, p_container, p_size<br/>200,000 × 4"]
+    step_4["4 · EqJoin · 214.4K⋈200K<br/>partkey<br/>214,377 × 7"]
     step_2 --> step_4
     step_3 --> step_4
-    step_5["5 · Reorder<br/>214,377 rows × 8 cols"]
+    step_5["5 · Reorder<br/>214,377 × 8"]
     step_4 --> step_5
-    step_6["6 · Filter · 0.0564%<br/>121 rows × 2 cols"]
+    step_6["6 · Filter · 0.0564%<br/>121 × 2"]
     step_5 --> step_6
-    step_7["7 · Project<br/>121 rows × 1 cols"]
+    step_7["7 · Project<br/>121 × 1"]
     step_6 --> step_7
-    step_8["8 · Reorder<br/>121 rows × 1 cols"]
+    step_8["8 · Reorder<br/>121 × 1"]
     step_7 --> step_8
-    step_9["9 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_9["9 · ScalarAgg<br/>sum(disc_price)<br/>1 × 1"]
     step_8 --> step_9
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -3376,9 +3388,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q19 SF1 | T4 Q19 SF10 | GH200 Q19 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q19.jpg" alt="T4 Q19 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q19.jpg" alt="T4 Q19 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q19_comparison.jpg" alt="GH200 Q19 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q19.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q19.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q19.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q19.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q19.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q19_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q20 Potential Part Promotion Query
 
@@ -3428,9 +3440,9 @@ flowchart LR
 
 ```sql
 Sort[s_name ASC]
-  Project(s_name = s_name, s_address = s_address)
+  Project(s_name, s_address)
     LeftSemiJoin(on=(s_suppkey == ps_suppkey))
-      Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+      Project(s_suppkey, s_name, s_address)
         InnerJoin(on=(s_nationkey == n_nationkey))
           Filter(str_eq(n_name, "CANADA"))
             Scan(nation [n_nationkey, n_name])
@@ -3438,14 +3450,14 @@ Sort[s_name ASC]
       Filter((ps_availqty > qty_threshold))
         Filter((ps_suppkey == l_suppkey))
           InnerJoin(on=(ps_partkey == l_partkey))
-            Project(l_partkey = l_partkey, l_suppkey = l_suppkey, qty_threshold = (sum_quantity * 0.5))
-              Aggregate(keys=[l_partkey, l_suppkey]; aggs=[sum(l_quantity) AS sum_quantity])
+            Project(l_partkey, l_suppkey, qty_threshold = (sum_quantity * 0.5))
+              Aggregate(l_partkey, l_suppkey; sum(l_quantity))
                 Filter((ps_suppkey == l_suppkey))
                   InnerJoin(on=(ps_partkey == l_partkey))
                     LeftSemiJoin(on=(ps_partkey == p_partkey))
                       LeftSemiJoin(on=(ps_suppkey == s_suppkey))
                         Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
-                        Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                        Project(s_suppkey, s_name, s_address)
                           InnerJoin(on=(s_nationkey == n_nationkey))
                             Filter(str_eq(n_name, "CANADA"))
                               Scan(nation [n_nationkey, n_name])
@@ -3457,7 +3469,7 @@ Sort[s_name ASC]
             LeftSemiJoin(on=(ps_partkey == p_partkey))
               LeftSemiJoin(on=(ps_suppkey == s_suppkey))
                 Scan(partsupp [ps_partkey, ps_suppkey, ps_availqty])
-                Project(s_suppkey = s_suppkey, s_name = s_name, s_address = s_address)
+                Project(s_suppkey, s_name, s_address)
                   InnerJoin(on=(s_nationkey == n_nationkey))
                     Filter(str_eq(n_name, "CANADA"))
                       Scan(nation [n_nationkey, n_name])
@@ -3469,11 +3481,11 @@ Sort[s_name ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>s_name ASC"]
-    ir_1["Project<br/>s_name = s_name, s_address = s_address"]
+    ir_1["Project<br/>s_name, s_address"]
     ir_0 --> ir_1
     ir_2["LeftSemiJoin<br/>on=(s_suppkey == ps_suppkey)"]
     ir_1 --> ir_2
-    ir_3["Project<br/>s_suppkey = s_suppkey, s_name = s_name, s_address = s_address"]
+    ir_3["Project<br/>s_suppkey, s_name, s_address"]
     ir_2 --> ir_3
     ir_4["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_3 --> ir_4
@@ -3489,9 +3501,9 @@ flowchart TD
     ir_8 --> ir_9
     ir_10["InnerJoin<br/>on=(ps_partkey == l_partkey)"]
     ir_9 --> ir_10
-    ir_11["Project<br/>l_partkey = l_partkey, l_suppkey = l_suppkey, qty_threshold = (sum_quantity * 0.5)"]
+    ir_11["Project<br/>l_partkey, l_suppkey, qty_threshold = (sum_quantity * 0.5)"]
     ir_10 --> ir_11
-    ir_12["Aggregate<br/>keys=[l_partkey, l_suppkey]; aggs=[sum(l_quantity) AS sum_quantity]"]
+    ir_12["Aggregate<br/>l_partkey, l_suppkey; sum(l_quantity)"]
     ir_11 --> ir_12
     ir_13["Filter<br/>(ps_suppkey == l_suppkey)"]
     ir_12 --> ir_13
@@ -3503,7 +3515,7 @@ flowchart TD
     ir_15 --> ir_16
     ir_17["Scan<br/>partsupp · ps_partkey, ps_suppkey, ps_availqty"]
     ir_16 --> ir_17
-    ir_18["Project<br/>s_suppkey = s_suppkey, s_name = s_name, s_address = s_address"]
+    ir_18["Project<br/>s_suppkey, s_name, s_address"]
     ir_16 --> ir_18
     ir_19["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_18 --> ir_19
@@ -3527,7 +3539,7 @@ flowchart TD
     ir_27 --> ir_28
     ir_29["Scan<br/>partsupp · ps_partkey, ps_suppkey, ps_availqty"]
     ir_28 --> ir_29
-    ir_30["Project<br/>s_suppkey = s_suppkey, s_name = s_name, s_address = s_address"]
+    ir_30["Project<br/>s_suppkey, s_name, s_address"]
     ir_28 --> ir_30
     ir_31["InnerJoin<br/>on=(s_nationkey == n_nationkey)"]
     ir_30 --> ir_31
@@ -3556,99 +3568,99 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 1 | Filter | 1 | 1 | < | 4% | 0.0468702 | 0.0468702 | fuse | fuse |
-| 2 | SourceTable | 10000 | 4 | supplier |  |  |  |  |  |
-| 3 | EqJoin | 412 | 4 | nation⋈supplier | 4.12e+04% | 0.204142 | 0.204142 | hash_gfur | hash_gfur |
-| 4 | Reorder | 412 | 5 |  |  | 0.0082203 | 0.0082203 |  |  |
-| 5 | Project | 412 | 3 |  |  | 0.11573 | 0.11573 | nofuse | nofuse |
-| 6 | SourceTable | 800000 | 3 | partsupp |  |  |  |  |  |
-| 7 | SemiJoin | 32960 | 3 | partsupp⋈(nation⋈supplier) | 4.12% | 0.308204 | 0.308204 |  |  |
-| 8 | Reorder | 32960 | 3 |  |  | 0.00175709 | 0.00175709 |  |  |
-| 9 | SourceTable | 200000 | 2 | part |  |  |  |  |  |
-| 10 | Filter | 2127 | 1 | < | 1.06% | 0.0932163 | 0.0932163 | fuse | fuse |
-| 11 | SemiJoin | 366 | 3 | (partsupp⋈(nation⋈supplier))⋈part | 1.11% | 0.0861242 | 0.0861242 |  |  |
-| 12 | Reorder | 366 | 3 |  |  | 0.00169045 | 0.00169045 |  |  |
-| 13 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 14 | Filter | 909455 | 3 | < | 15.2% | 1.59417 | 1.28489 | fuse | nofuse |
-| 15 | EqJoin | 1660 | 5 | ((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem | 454% | 0.519861 | 0.519861 | hash_gfur | hash_gfur |
-| 16 | Reorder | 1660 | 6 |  |  | 0.00200383 | 0.00200383 |  |  |
-| 17 | Filter | 433 | 3 | < | 26.1% | 0.0990104 | 0.0819162 | fuse | nofuse |
-| 18 | Reorder | 433 | 3 |  |  | 0.00168145 | 0.00168145 |  |  |
-| 19 | GroupBy | 263 | 3 | < | 60.7% | 0.125299 | 0.125299 | hash | hash |
-| 20 | Project | 263 | 3 |  |  | 0.0154272 | 0.0154272 | nofuse | nofuse |
-| 21 | EqJoin | 306 | 5 | (((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem) ⋈ ((partsupp⋈(nation⋈supplier))⋈part) | 116% | 0.100922 | 0.100922 | hash_gfur | hash_gfur |
-| 22 | Reorder | 306 | 6 |  |  | 0.00183537 | 0.00183537 |  |  |
-| 23 | Filter | 263 | 3 | < | 85.9% | 0.0959043 | 0.0804437 | fuse | nofuse |
-| 24 | Filter | 263 | 1 | < | 100% | 0.0484393 | 0.0352437 | fuse | nofuse |
-| 25 | SemiJoin | 186 | 3 | (nation⋈supplier)⋈((((partsupp⋈(nation⋈supplier)) ⋈ part)⋈lineitem)⋈((partsupp⋈(nation⋈supplier)) ⋈ part)) | 45.1% | 0.179293 | 0.179293 |  |  |
-| 26 | Reorder | 186 | 3 |  |  | 0.00784582 | 0.00784582 |  |  |
-| 27 | Project | 186 | 2 |  |  | 0.108009 | 0.108009 | nofuse | nofuse |
-| 28 | Sort | 186 | 2 |  |  | 0.311019 | 0.311019 | no_skf | no_skf |
-|  | Total |  |  |  |  | 4.07668 | 3.72164 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  | n_nationkey, n_name |
+| 1 | Filter | 1 | 1 | < | 4% | 0.0468702 | 0.0468702 | fuse | fuse |  |
+| 2 | SourceTable | 10000 | 4 | supplier |  |  |  |  |  | s_suppkey, s_name, s_address, s_nationkey |
+| 3 | EqJoin | 412 | 4 | nation⋈supplier | 1⋈10K | 0.204142 | 0.204142 | hash_gfur | hash_gfur | nationkey |
+| 4 | Reorder | 412 | 5 |  |  | 0.0082203 | 0.0082203 |  |  |  |
+| 5 | Project | 412 | 3 |  |  | 0.11573 | 0.11573 | nofuse | nofuse | s_suppkey, s_name, s_address |
+| 6 | SourceTable | 800000 | 3 | partsupp |  |  |  |  |  | ps_partkey, ps_suppkey, ps_availqty |
+| 7 | SemiJoin | 32960 | 3 | partsupp⋈(nation⋈supplier) | 800K⋈412 | 0.308204 | 0.308204 |  |  | ps_suppkey; s_suppkey |
+| 8 | Reorder | 32960 | 3 |  |  | 0.00175709 | 0.00175709 |  |  |  |
+| 9 | SourceTable | 200000 | 2 | part |  |  |  |  |  | p_partkey, p_name |
+| 10 | Filter | 2127 | 1 | < | 1.06% | 0.0932163 | 0.0932163 | fuse | fuse |  |
+| 11 | SemiJoin | 366 | 3 | (partsupp⋈(nation⋈supplier))⋈part | 33K⋈2.1K | 0.0861242 | 0.0861242 |  |  | ps_suppkey; p_partkey |
+| 12 | Reorder | 366 | 3 |  |  | 0.00169045 | 0.00169045 |  |  |  |
+| 13 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_partkey, l_suppkey, l_quantity, l_shipdate |
+| 14 | Filter | 909455 | 3 | < | 15.2% | 1.59417 | 1.28489 | fuse | nofuse |  |
+| 15 | EqJoin | 1660 | 5 | ((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem | 366⋈909.5K | 0.519861 | 0.519861 | hash_gfur | hash_gfur | ps_suppkey; l_partkey |
+| 16 | Reorder | 1660 | 6 |  |  | 0.00200383 | 0.00200383 |  |  |  |
+| 17 | Filter | 433 | 3 | < | 26.1% | 0.0990104 | 0.0819162 | fuse | nofuse |  |
+| 18 | Reorder | 433 | 3 |  |  | 0.00168145 | 0.00168145 |  |  |  |
+| 19 | GroupBy | 263 | 3 | < | 60.7% | 0.125299 | 0.125299 | hash | hash | ps_suppkey, l_suppkey; sum(l_quantity) |
+| 20 | Project | 263 | 3 |  |  | 0.0154272 | 0.0154272 | nofuse | nofuse | l_partkey, l_suppkey, qty_threshold |
+| 21 | EqJoin | 306 | 5 | (((partsupp⋈(nation⋈supplier))⋈part)⋈lineitem) ⋈ ((partsupp⋈(nation⋈supplier))⋈part) | 263⋈366 | 0.100922 | 0.100922 | hash_gfur | hash_gfur | l_partkey; ps_suppkey |
+| 22 | Reorder | 306 | 6 |  |  | 0.00183537 | 0.00183537 |  |  |  |
+| 23 | Filter | 263 | 3 | < | 85.9% | 0.0959043 | 0.0804437 | fuse | nofuse |  |
+| 24 | Filter | 263 | 1 | < | 100% | 0.0484393 | 0.0352437 | fuse | nofuse |  |
+| 25 | SemiJoin | 186 | 3 | (nation⋈supplier)⋈((((partsupp⋈(nation⋈supplier)) ⋈ part)⋈lineitem)⋈((partsupp⋈(nation⋈supplier)) ⋈ part)) | 412⋈263 | 0.179293 | 0.179293 |  |  | s_suppkey; ps_partkey |
+| 26 | Reorder | 186 | 3 |  |  | 0.00784582 | 0.00784582 |  |  |  |
+| 27 | Project | 186 | 2 |  |  | 0.108009 | 0.108009 | nofuse | nofuse | s_name, s_address |
+| 28 | Sort | 186 | 2 |  |  | 0.311019 | 0.311019 | no_skf | no_skf | s_name ASC |
+|  | Total |  |  |  |  | 4.07668 | 3.72164 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_1["1 · Filter · 4%<br/>1 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_1["1 · Filter · 4%<br/>1 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>supplier<br/>10,000 rows × 4 cols"]
-    step_3["3 · EqJoin · 4.12e+04%<br/>412 rows × 4 cols"]
+    step_2["2 · SourceTable<br/>supplier<br/>s_suppkey, s_name, s_address, s_nationkey<br/>10,000 × 4"]
+    step_3["3 · EqJoin · 1⋈10K<br/>nationkey<br/>412 × 4"]
     step_1 --> step_3
     step_2 --> step_3
-    step_4["4 · Reorder<br/>412 rows × 5 cols"]
+    step_4["4 · Reorder<br/>412 × 5"]
     step_3 --> step_4
-    step_5["5 · Project<br/>412 rows × 3 cols"]
+    step_5["5 · Project<br/>412 × 3"]
     step_4 --> step_5
-    step_6["6 · SourceTable<br/>partsupp<br/>800,000 rows × 3 cols"]
-    step_7["7 · SemiJoin · 4.12%<br/>32,960 rows × 3 cols"]
+    step_6["6 · SourceTable<br/>partsupp<br/>ps_partkey, ps_suppkey, ps_availqty<br/>800,000 × 3"]
+    step_7["7 · SemiJoin · 800K⋈412<br/>ps_suppkey; s_suppkey<br/>32,960 × 3"]
     step_6 --> step_7
     step_5 --> step_7
-    step_8["8 · Reorder<br/>32,960 rows × 3 cols"]
+    step_8["8 · Reorder<br/>32,960 × 3"]
     step_7 --> step_8
-    step_9["9 · SourceTable<br/>part<br/>200,000 rows × 2 cols"]
-    step_10["10 · Filter · 1.06%<br/>2,127 rows × 1 cols"]
+    step_9["9 · SourceTable<br/>part<br/>p_partkey, p_name<br/>200,000 × 2"]
+    step_10["10 · Filter · 1.06%<br/>2,127 × 1"]
     step_9 --> step_10
-    step_11["11 · SemiJoin · 1.11%<br/>366 rows × 3 cols"]
+    step_11["11 · SemiJoin · 33K⋈2.1K<br/>ps_suppkey; p_partkey<br/>366 × 3"]
     step_8 --> step_11
     step_10 --> step_11
-    step_12["12 · Reorder<br/>366 rows × 3 cols"]
+    step_12["12 · Reorder<br/>366 × 3"]
     step_11 --> step_12
-    step_13["13 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_14["14 · Filter · 15.2%<br/>909,455 rows × 3 cols"]
+    step_13["13 · SourceTable<br/>lineitem<br/>l_partkey, l_suppkey, l_quantity, l_shipdate<br/>6,001,215 × 4"]
+    step_14["14 · Filter · 15.2%<br/>909,455 × 3"]
     step_13 --> step_14
-    step_15["15 · EqJoin · 454%<br/>1,660 rows × 5 cols"]
+    step_15["15 · EqJoin · 366⋈909.5K<br/>ps_suppkey; l_partkey<br/>1,660 × 5"]
     step_12 --> step_15
     step_14 --> step_15
-    step_16["16 · Reorder<br/>1,660 rows × 6 cols"]
+    step_16["16 · Reorder<br/>1,660 × 6"]
     step_15 --> step_16
-    step_17["17 · Filter · 26.1%<br/>433 rows × 3 cols"]
+    step_17["17 · Filter · 26.1%<br/>433 × 3"]
     step_16 --> step_17
-    step_18["18 · Reorder<br/>433 rows × 3 cols"]
+    step_18["18 · Reorder<br/>433 × 3"]
     step_17 --> step_18
-    step_19["19 · GroupBy · 60.7%<br/>263 rows × 3 cols"]
+    step_19["19 · GroupBy · 60.7%<br/>ps_suppkey, l_suppkey; sum(l_quantity)<br/>263 × 3"]
     step_18 --> step_19
-    step_20["20 · Project<br/>263 rows × 3 cols"]
+    step_20["20 · Project<br/>263 × 3"]
     step_19 --> step_20
-    step_21["21 · EqJoin · 116%<br/>306 rows × 5 cols"]
+    step_21["21 · EqJoin · 263⋈366<br/>l_partkey; ps_suppkey<br/>306 × 5"]
     step_20 --> step_21
     step_12 --> step_21
-    step_22["22 · Reorder<br/>306 rows × 6 cols"]
+    step_22["22 · Reorder<br/>306 × 6"]
     step_21 --> step_22
-    step_23["23 · Filter · 85.9%<br/>263 rows × 3 cols"]
+    step_23["23 · Filter · 85.9%<br/>263 × 3"]
     step_22 --> step_23
-    step_24["24 · Filter · 100%<br/>263 rows × 1 cols"]
+    step_24["24 · Filter · 100%<br/>263 × 1"]
     step_23 --> step_24
-    step_25["25 · SemiJoin · 45.1%<br/>186 rows × 3 cols"]
+    step_25["25 · SemiJoin · 412⋈263<br/>s_suppkey; ps_partkey<br/>186 × 3"]
     step_5 --> step_25
     step_24 --> step_25
-    step_26["26 · Reorder<br/>186 rows × 3 cols"]
+    step_26["26 · Reorder<br/>186 × 3"]
     step_25 --> step_26
-    step_27["27 · Project<br/>186 rows × 2 cols"]
+    step_27["27 · Project<br/>186 × 2"]
     step_26 --> step_27
-    step_28["28 · Sort<br/>186 rows × 2 cols"]
+    step_28["28 · Sort<br/>s_name ASC<br/>186 × 2"]
     step_27 --> step_28
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -3667,13 +3679,15 @@ flowchart TD
 
 ## Notes
 
+- This query joins 5 tables.
+
 - Duplicated subplans and joins
 
 ## Runtime breakdown comparison
 
-| T4 Q20 SF1 | T4 Q20 SF10 | GH200 Q20 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q20.jpg" alt="T4 Q20 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q20.jpg" alt="T4 Q20 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q20_comparison.jpg" alt="GH200 Q20 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q20.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q20.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q20.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q20.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q20.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q20_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q21 Suppliers Who Kept Orders Waiting Query
 
@@ -3728,7 +3742,7 @@ flowchart LR
 ```sql
 Limit(n=100)
   Sort[numwait DESC, s_name ASC]
-    Aggregate(keys=[s_name]; aggs=[count_all(*) AS numwait])
+    Aggregate(s_name; count_all(*))
       InnerJoin(on=(n_nationkey == s_nationkey))
         Filter(str_eq(n_name, "SAUDI ARABIA"))
           Scan(nation [n_nationkey, n_name])
@@ -3739,11 +3753,11 @@ Limit(n=100)
                 Filter((l_receiptdate > l_commitdate))
                   Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
                 Filter((n_supp > 1))
-                  Aggregate(keys=[l_orderkey#0]; aggs=[count_all(*) AS n_supp])
+                  Aggregate(l_orderkey#0; count_all(*))
                     Distinct(keys=[l_orderkey#0, l_suppkey#1])
                       Scan(lineitem [l_orderkey, l_suppkey])
               Filter((n_failed_supp == 1))
-                Aggregate(keys=[l_orderkey#2]; aggs=[count_all(*) AS n_failed_supp])
+                Aggregate(l_orderkey#2; count_all(*))
                   Distinct(keys=[l_orderkey#2, l_suppkey#3])
                     Filter((l_receiptdate > l_commitdate))
                       Scan(lineitem [l_orderkey, l_suppkey, l_commitdate, l_receiptdate])
@@ -3757,7 +3771,7 @@ flowchart TD
     ir_0["Limit<br/>n=100"]
     ir_1["Sort<br/>numwait DESC, s_name ASC"]
     ir_0 --> ir_1
-    ir_2["Aggregate<br/>keys=[s_name]; aggs=[count_all(*) AS numwait]"]
+    ir_2["Aggregate<br/>s_name; count_all(*)"]
     ir_1 --> ir_2
     ir_3["InnerJoin<br/>on=(n_nationkey == s_nationkey)"]
     ir_2 --> ir_3
@@ -3779,7 +3793,7 @@ flowchart TD
     ir_10 --> ir_11
     ir_12["Filter<br/>(n_supp &gt; 1)"]
     ir_9 --> ir_12
-    ir_13["Aggregate<br/>keys=[l_orderkey#0]; aggs=[count_all(*) AS n_supp]"]
+    ir_13["Aggregate<br/>l_orderkey#0; count_all(*)"]
     ir_12 --> ir_13
     ir_14["Distinct<br/>keys=[l_orderkey#0, l_suppkey#1]"]
     ir_13 --> ir_14
@@ -3787,7 +3801,7 @@ flowchart TD
     ir_14 --> ir_15
     ir_16["Filter<br/>(n_failed_supp == 1)"]
     ir_8 --> ir_16
-    ir_17["Aggregate<br/>keys=[l_orderkey#2]; aggs=[count_all(*) AS n_failed_supp]"]
+    ir_17["Aggregate<br/>l_orderkey#2; count_all(*)"]
     ir_16 --> ir_17
     ir_18["Distinct<br/>keys=[l_orderkey#2, l_suppkey#3]"]
     ir_17 --> ir_18
@@ -3815,98 +3829,98 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  |
-| 1 | Filter | 1 | 1 | < | 4% | 0.0485867 | 0.0485867 | fuse | fuse |
-| 2 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  |
-| 3 | Filter | 3793296 | 2 | < | 63.2% | 1.12583 | 1.0411 | fuse | nofuse |
-| 4 | SourceTable | 6001215 | 2 | lineitem |  |  |  |  |  |
-| 5 | Distinct | 5999989 | 2 |  |  | 13.8304 | 13.8304 | hash | hash |
-| 6 | Reorder | 5999989 | 1 |  |  | 0.00163467 | 0.00163467 |  |  |
-| 7 | GroupBy | 1500000 | 2 | < | 25% | 5.80955 | 5.80955 | hash | hash |
-| 8 | Filter | 1285803 | 1 | < | 85.7% | 0.216533 | 0.19936 | fuse | nofuse |
-| 9 | SemiJoin | 3657708 | 2 | lineitem⋈lineitem | 96.4% | 3.50279 | 3.50279 |  |  |
-| 10 | Reorder | 3657708 | 2 |  |  | 0.00152533 | 0.00152533 |  |  |
-| 11 | Distinct | 3792811 | 2 |  |  | 8.70334 | 8.70334 | hash | hash |
-| 12 | Reorder | 3792811 | 1 |  |  | 0.001544 | 0.001544 |  |  |
-| 13 | GroupBy | 1375365 | 2 | < | 36.3% | 4.52481 | 4.52481 | hash | hash |
-| 14 | Filter | 337654 | 1 | < | 24.6% | 0.172355 | 0.159675 | fuse | nofuse |
-| 15 | SemiJoin | 202092 | 2 | (lineitem⋈lineitem)⋈lineitem | 5.53% | 1.60502 | 1.60502 |  |  |
-| 16 | Reorder | 202092 | 2 |  |  | 0.00161333 | 0.00161333 |  |  |
-| 17 | SourceTable | 10000 | 3 | supplier |  |  |  |  |  |
-| 18 | EqJoin | 202092 | 4 | ((lineitem⋈lineitem)⋈lineitem)⋈supplier | 100% | 0.522445 | 0.522445 | hash_gfur | hash_gfur |
-| 19 | Reorder | 202092 | 5 |  |  | 0.00683467 | 0.00683467 |  |  |
-| 20 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  |
-| 21 | Filter | 729413 | 1 | < | 48.6% | 0.201677 | 0.201677 | fuse | fuse |
-| 22 | EqJoin | 98833 | 5 | (((lineitem⋈lineitem)⋈lineitem)⋈supplier)⋈orders | 48.9% | 1.32601 | 1.32601 | hash_gfur | hash_gfur |
-| 23 | Reorder | 98833 | 6 |  |  | 0.00659733 | 0.00659733 |  |  |
-| 24 | EqJoin | 4141 | 6 | nation⋈((((lineitem⋈lineitem)⋈lineitem)⋈supplier) ⋈ orders) | 4.14e+05% | 0.206317 | 0.206317 | hash_gfur | hash_gfur |
-| 25 | Reorder | 4141 | 7 |  |  | 0.00622133 | 0.00622133 |  |  |
-| 26 | Reorder | 4141 | 1 |  |  | 0.00165867 | 0.00165867 |  |  |
-| 27 | GroupBy | 411 | 2 | < | 9.93% | 0.163189 | 0.163189 | hash | hash |
-| 28 | TopK | 100 | 2 | < | 24.3% | 1.00875 | 1.00875 |  |  |
-|  | Total |  |  |  |  | 42.9952 | 42.8806 |  |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Best (ms) | Baseline implementation | Best implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 25 | 2 | nation |  |  |  |  |  | n_nationkey, n_name |
+| 1 | Filter | 1 | 1 | < | 4% | 0.0485867 | 0.0485867 | fuse | fuse |  |
+| 2 | SourceTable | 6001215 | 4 | lineitem |  |  |  |  |  | l_orderkey, l_suppkey, l_commitdate, l_receiptdate |
+| 3 | Filter | 3793296 | 2 | < | 63.2% | 1.12583 | 1.0411 | fuse | nofuse |  |
+| 4 | SourceTable | 6001215 | 2 | lineitem |  |  |  |  |  | l_orderkey, l_suppkey |
+| 5 | Distinct | 5999989 | 2 |  |  | 13.8304 | 13.8304 | hash | hash | 0, 1 |
+| 6 | Reorder | 5999989 | 1 |  |  | 0.00163467 | 0.00163467 |  |  |  |
+| 7 | GroupBy | 1500000 | 2 | < | 25% | 5.80955 | 5.80955 | hash | hash | l_orderkey; count_all(*) |
+| 8 | Filter | 1285803 | 1 | < | 85.7% | 0.216533 | 0.19936 | fuse | nofuse |  |
+| 9 | SemiJoin | 3657708 | 2 | lineitem⋈lineitem | 3.8M⋈1.3M | 3.50279 | 3.50279 |  |  | l_orderkey; l_orderkey |
+| 10 | Reorder | 3657708 | 2 |  |  | 0.00152533 | 0.00152533 |  |  |  |
+| 11 | Distinct | 3792811 | 2 |  |  | 8.70334 | 8.70334 | hash | hash | 0, 1 |
+| 12 | Reorder | 3792811 | 1 |  |  | 0.001544 | 0.001544 |  |  |  |
+| 13 | GroupBy | 1375365 | 2 | < | 36.3% | 4.52481 | 4.52481 | hash | hash | l_orderkey; count_all(*) |
+| 14 | Filter | 337654 | 1 | < | 24.6% | 0.172355 | 0.159675 | fuse | nofuse |  |
+| 15 | SemiJoin | 202092 | 2 | (lineitem⋈lineitem)⋈lineitem | 3.7M⋈337.7K | 1.60502 | 1.60502 |  |  | l_orderkey; l_orderkey |
+| 16 | Reorder | 202092 | 2 |  |  | 0.00161333 | 0.00161333 |  |  |  |
+| 17 | SourceTable | 10000 | 3 | supplier |  |  |  |  |  | s_suppkey, s_name, s_nationkey |
+| 18 | EqJoin | 202092 | 4 | ((lineitem⋈lineitem)⋈lineitem)⋈supplier | 202.1K⋈10K | 0.522445 | 0.522445 | hash_gfur | hash_gfur | suppkey |
+| 19 | Reorder | 202092 | 5 |  |  | 0.00683467 | 0.00683467 |  |  |  |
+| 20 | SourceTable | 1500000 | 2 | orders |  |  |  |  |  | o_orderkey, o_orderstatus |
+| 21 | Filter | 729413 | 1 | < | 48.6% | 0.201677 | 0.201677 | fuse | fuse |  |
+| 22 | EqJoin | 98833 | 5 | (((lineitem⋈lineitem)⋈lineitem)⋈supplier)⋈orders | 202.1K⋈729.4K | 1.32601 | 1.32601 | hash_gfur | hash_gfur | orderkey |
+| 23 | Reorder | 98833 | 6 |  |  | 0.00659733 | 0.00659733 |  |  |  |
+| 24 | EqJoin | 4141 | 6 | nation⋈((((lineitem⋈lineitem)⋈lineitem)⋈supplier) ⋈ orders) | 1⋈98.8K | 0.206317 | 0.206317 | hash_gfur | hash_gfur | nationkey |
+| 25 | Reorder | 4141 | 7 |  |  | 0.00622133 | 0.00622133 |  |  |  |
+| 26 | Reorder | 4141 | 1 |  |  | 0.00165867 | 0.00165867 |  |  |  |
+| 27 | GroupBy | 411 | 2 | < | 9.93% | 0.163189 | 0.163189 | hash | hash | s_name; count_all(*) |
+| 28 | TopK | 100 | 2 | < | 24.3% | 1.00875 | 1.00875 |  |  |  |
+|  | Total |  |  |  |  | 42.9952 | 42.8806 |  |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>nation<br/>25 rows × 2 cols"]
-    step_1["1 · Filter · 4%<br/>1 rows × 1 cols"]
+    step_0["0 · SourceTable<br/>nation<br/>n_nationkey, n_name<br/>25 × 2"]
+    step_1["1 · Filter · 4%<br/>1 × 1"]
     step_0 --> step_1
-    step_2["2 · SourceTable<br/>lineitem<br/>6,001,215 rows × 4 cols"]
-    step_3["3 · Filter · 63.2%<br/>3,793,296 rows × 2 cols"]
+    step_2["2 · SourceTable<br/>lineitem<br/>l_orderkey, l_suppkey, l_commitdate, l_receiptdate<br/>6,001,215 × 4"]
+    step_3["3 · Filter · 63.2%<br/>3,793,296 × 2"]
     step_2 --> step_3
-    step_4["4 · SourceTable<br/>lineitem<br/>6,001,215 rows × 2 cols"]
-    step_5["5 · Distinct<br/>5,999,989 rows × 2 cols"]
+    step_4["4 · SourceTable<br/>lineitem<br/>l_orderkey, l_suppkey<br/>6,001,215 × 2"]
+    step_5["5 · Distinct<br/>0, 1<br/>5,999,989 × 2"]
     step_4 --> step_5
-    step_6["6 · Reorder<br/>5,999,989 rows × 1 cols"]
+    step_6["6 · Reorder<br/>5,999,989 × 1"]
     step_5 --> step_6
-    step_7["7 · GroupBy · 25%<br/>1,500,000 rows × 2 cols"]
+    step_7["7 · GroupBy · 25%<br/>l_orderkey; count_all(*)<br/>1,500,000 × 2"]
     step_6 --> step_7
-    step_8["8 · Filter · 85.7%<br/>1,285,803 rows × 1 cols"]
+    step_8["8 · Filter · 85.7%<br/>1,285,803 × 1"]
     step_7 --> step_8
-    step_9["9 · SemiJoin · 96.4%<br/>3,657,708 rows × 2 cols"]
+    step_9["9 · SemiJoin · 3.8M⋈1.3M<br/>l_orderkey; l_orderkey<br/>3,657,708 × 2"]
     step_3 --> step_9
     step_8 --> step_9
-    step_10["10 · Reorder<br/>3,657,708 rows × 2 cols"]
+    step_10["10 · Reorder<br/>3,657,708 × 2"]
     step_9 --> step_10
-    step_11["11 · Distinct<br/>3,792,811 rows × 2 cols"]
+    step_11["11 · Distinct<br/>0, 1<br/>3,792,811 × 2"]
     step_3 --> step_11
-    step_12["12 · Reorder<br/>3,792,811 rows × 1 cols"]
+    step_12["12 · Reorder<br/>3,792,811 × 1"]
     step_11 --> step_12
-    step_13["13 · GroupBy · 36.3%<br/>1,375,365 rows × 2 cols"]
+    step_13["13 · GroupBy · 36.3%<br/>l_orderkey; count_all(*)<br/>1,375,365 × 2"]
     step_12 --> step_13
-    step_14["14 · Filter · 24.6%<br/>337,654 rows × 1 cols"]
+    step_14["14 · Filter · 24.6%<br/>337,654 × 1"]
     step_13 --> step_14
-    step_15["15 · SemiJoin · 5.53%<br/>202,092 rows × 2 cols"]
+    step_15["15 · SemiJoin · 3.7M⋈337.7K<br/>l_orderkey; l_orderkey<br/>202,092 × 2"]
     step_10 --> step_15
     step_14 --> step_15
-    step_16["16 · Reorder<br/>202,092 rows × 2 cols"]
+    step_16["16 · Reorder<br/>202,092 × 2"]
     step_15 --> step_16
-    step_17["17 · SourceTable<br/>supplier<br/>10,000 rows × 3 cols"]
-    step_18["18 · EqJoin · 100%<br/>202,092 rows × 4 cols"]
+    step_17["17 · SourceTable<br/>supplier<br/>s_suppkey, s_name, s_nationkey<br/>10,000 × 3"]
+    step_18["18 · EqJoin · 202.1K⋈10K<br/>suppkey<br/>202,092 × 4"]
     step_16 --> step_18
     step_17 --> step_18
-    step_19["19 · Reorder<br/>202,092 rows × 5 cols"]
+    step_19["19 · Reorder<br/>202,092 × 5"]
     step_18 --> step_19
-    step_20["20 · SourceTable<br/>orders<br/>1,500,000 rows × 2 cols"]
-    step_21["21 · Filter · 48.6%<br/>729,413 rows × 1 cols"]
+    step_20["20 · SourceTable<br/>orders<br/>o_orderkey, o_orderstatus<br/>1,500,000 × 2"]
+    step_21["21 · Filter · 48.6%<br/>729,413 × 1"]
     step_20 --> step_21
-    step_22["22 · EqJoin · 48.9%<br/>98,833 rows × 5 cols"]
+    step_22["22 · EqJoin · 202.1K⋈729.4K<br/>orderkey<br/>98,833 × 5"]
     step_19 --> step_22
     step_21 --> step_22
-    step_23["23 · Reorder<br/>98,833 rows × 6 cols"]
+    step_23["23 · Reorder<br/>98,833 × 6"]
     step_22 --> step_23
-    step_24["24 · EqJoin · 4.14e+05%<br/>4,141 rows × 6 cols"]
+    step_24["24 · EqJoin · 1⋈98.8K<br/>nationkey<br/>4,141 × 6"]
     step_1 --> step_24
     step_23 --> step_24
-    step_25["25 · Reorder<br/>4,141 rows × 7 cols"]
+    step_25["25 · Reorder<br/>4,141 × 7"]
     step_24 --> step_25
-    step_26["26 · Reorder<br/>4,141 rows × 1 cols"]
+    step_26["26 · Reorder<br/>4,141 × 1"]
     step_25 --> step_26
-    step_27["27 · GroupBy · 9.93%<br/>411 rows × 2 cols"]
+    step_27["27 · GroupBy · 9.93%<br/>s_name; count_all(*)<br/>411 × 2"]
     step_26 --> step_27
-    step_28["28 · TopK · 24.3%<br/>100 rows × 2 cols"]
+    step_28["28 · TopK · 24.3%<br/>100 × 2"]
     step_27 --> step_28
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -3925,16 +3939,16 @@ flowchart TD
 
 ## Notes
 
-- lineitem is read multiple times.
+- Lineitem is read multiple times.
 
 - Expensive aggregation
 - Two DISTINCT on lineitem
 
 ## Runtime breakdown comparison
 
-| T4 Q21 SF1 | T4 Q21 SF10 | GH200 Q21 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q21.jpg" alt="T4 Q21 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q21.jpg" alt="T4 Q21 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q21_comparison.jpg" alt="GH200 Q21 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q21.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q21.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q21.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q21.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q21.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q21_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 # Q22 Global Sales Opportunity Query
 
@@ -3984,17 +3998,17 @@ flowchart LR
 
 ```sql
 Sort[cntrycode ASC]
-  Aggregate(keys=[cntrycode]; aggs=[count_all(*) AS numcust, sum(c_acctbal) AS totacctbal])
+  Aggregate(cntrycode; count_all(*), sum(c_acctbal))
     LeftAntiJoin(on=(c_custkey == o_custkey))
       Filter((c_acctbal > avg_acctbal))
         CrossJoin
           Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
-            Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+            Project(c_custkey, c_acctbal, cntrycode = substring(c_phone, 1, 2))
               Scan(customer [c_custkey, c_phone, c_acctbal])
-          Aggregate(aggs=[avg(c_acctbal) AS avg_acctbal])
+          Aggregate(avg(c_acctbal))
             Filter((c_acctbal > 0))
               Filter(str_in(cntrycode, ["13", "31", "23", "29", "30", "18", "17"]))
-                Project(c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2))
+                Project(c_custkey, c_acctbal, cntrycode = substring(c_phone, 1, 2))
                   Scan(customer [c_custkey, c_phone, c_acctbal])
       Scan(orders [o_custkey])
 ```
@@ -4002,7 +4016,7 @@ Sort[cntrycode ASC]
 ```mermaid
 flowchart TD
     ir_0["Sort<br/>cntrycode ASC"]
-    ir_1["Aggregate<br/>keys=[cntrycode]; aggs=[count_all(*) AS numcust, sum(c_acctbal) AS totacctbal]"]
+    ir_1["Aggregate<br/>cntrycode; count_all(*), sum(c_acctbal)"]
     ir_0 --> ir_1
     ir_2["LeftAntiJoin<br/>on=(c_custkey == o_custkey)"]
     ir_1 --> ir_2
@@ -4012,17 +4026,17 @@ flowchart TD
     ir_3 --> ir_4
     ir_5["Filter<br/>str_in(cntrycode, [#quot;13#quot;, #quot;31#quot;, #quot;23#quot;, #quot;29#quot;, #quot;30#quot;, #quot;18#quot;, #quot;17#quot;])"]
     ir_4 --> ir_5
-    ir_6["Project<br/>c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
+    ir_6["Project<br/>c_custkey, c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
     ir_5 --> ir_6
     ir_7["Scan<br/>customer · c_custkey, c_phone, c_acctbal"]
     ir_6 --> ir_7
-    ir_8["Aggregate<br/>aggs=[avg(c_acctbal) AS avg_acctbal]"]
+    ir_8["Aggregate<br/>avg(c_acctbal)"]
     ir_4 --> ir_8
     ir_9["Filter<br/>(c_acctbal &gt; 0)"]
     ir_8 --> ir_9
     ir_10["Filter<br/>str_in(cntrycode, [#quot;13#quot;, #quot;31#quot;, #quot;23#quot;, #quot;29#quot;, #quot;30#quot;, #quot;18#quot;, #quot;17#quot;])"]
     ir_9 --> ir_10
-    ir_11["Project<br/>c_custkey = c_custkey, c_acctbal = c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
+    ir_11["Project<br/>c_custkey, c_acctbal, cntrycode = substring(c_phone, 1, 2)"]
     ir_10 --> ir_11
     ir_12["Scan<br/>customer · c_custkey, c_phone, c_acctbal"]
     ir_11 --> ir_12
@@ -4043,53 +4057,53 @@ flowchart TD
 ```
 
 
-| Step | Operation | Rows | Cols | Tables | Selectivity | Baseline (ms) | Baseline implementation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | SourceTable | 150000 | 3 | customer |  |  |  |
-| 1 | Project | 150000 | 3 |  |  | 0.122742 | nofuse |
-| 2 | Filter | 42015 | 3 | < | 28% | 0.22473 | nofuse |
-| 3 | Filter | 38120 | 1 | < | 90.7% | 0.0511879 | nofuse |
-| 4 | Reorder | 38120 | 1 |  |  | 0.00182757 |  |
-| 5 | ScalarAgg | 1 | 1 |  |  | 0.0334742 |  |
-| 6 | CrossJoin | 42015 | 4 | customer⋈customer | 100% | 0.108752 |  |
-| 7 | Filter | 19000 | 3 | < | 45.2% | 0.166847 | nofuse |
-| 8 | SourceTable | 1500000 | 1 | orders |  |  |  |
-| 9 | AntiJoin | 6384 | 3 | (customer⋈customer)⋈orders | 33.6% | 1.04028 |  |
-| 10 | Reorder | 6384 | 3 |  |  | 0.00708532 |  |
-| 11 | Reorder | 6384 | 2 |  |  | 0.00204621 |  |
-| 12 | GroupBy | 7 | 3 | < | 0.11% | 0.17992 | hash |
-| 13 | Sort | 7 | 3 |  |  | 0.167072 | skf |
-|  | Total |  |  |  |  | 2.10596 |  |
+| Step | Operation | Rows | Cols | Tables | Selectivity / Join inputs | Baseline (ms) | Baseline implementation | Physical plan keys / columns |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | SourceTable | 150000 | 3 | customer |  |  |  | c_custkey, c_phone, c_acctbal |
+| 1 | Project | 150000 | 3 |  |  | 0.122742 | nofuse | c_custkey, c_acctbal, cntrycode |
+| 2 | Filter | 42015 | 3 | < | 28% | 0.22473 | nofuse |  |
+| 3 | Filter | 38120 | 1 | < | 90.7% | 0.0511879 | nofuse |  |
+| 4 | Reorder | 38120 | 1 |  |  | 0.00182757 |  |  |
+| 5 | ScalarAgg | 1 | 1 |  |  | 0.0334742 |  | avg(c_acctbal) |
+| 6 | CrossJoin | 42015 | 4 | customer⋈customer | 42K⋈1 | 0.108752 |  |  |
+| 7 | Filter | 19000 | 3 | < | 45.2% | 0.166847 | nofuse |  |
+| 8 | SourceTable | 1500000 | 1 | orders |  |  |  | o_custkey |
+| 9 | AntiJoin | 6384 | 3 | (customer⋈customer)⋈orders | 19K⋈1.5M | 1.04028 |  | c_custkey; o_custkey |
+| 10 | Reorder | 6384 | 3 |  |  | 0.00708532 |  |  |
+| 11 | Reorder | 6384 | 2 |  |  | 0.00204621 |  |  |
+| 12 | GroupBy | 7 | 3 | < | 0.11% | 0.17992 | hash | cntrycode; count_all(*), sum(c_acctbal) |
+| 13 | Sort | 7 | 3 |  |  | 0.167072 | skf | cntrycode ASC |
+|  | Total |  |  |  |  | 2.10596 |  |  |
 
 ```mermaid
 flowchart TD
-    step_0["0 · SourceTable<br/>customer<br/>150,000 rows × 3 cols"]
-    step_1["1 · Project<br/>150,000 rows × 3 cols"]
+    step_0["0 · SourceTable<br/>customer<br/>c_custkey, c_phone, c_acctbal<br/>150,000 × 3"]
+    step_1["1 · Project<br/>150,000 × 3"]
     step_0 --> step_1
-    step_2["2 · Filter · 28%<br/>42,015 rows × 3 cols"]
+    step_2["2 · Filter · 28%<br/>42,015 × 3"]
     step_1 --> step_2
-    step_3["3 · Filter · 90.7%<br/>38,120 rows × 1 cols"]
+    step_3["3 · Filter · 90.7%<br/>38,120 × 1"]
     step_2 --> step_3
-    step_4["4 · Reorder<br/>38,120 rows × 1 cols"]
+    step_4["4 · Reorder<br/>38,120 × 1"]
     step_3 --> step_4
-    step_5["5 · ScalarAgg<br/>1 rows × 1 cols"]
+    step_5["5 · ScalarAgg<br/>avg(c_acctbal)<br/>1 × 1"]
     step_4 --> step_5
-    step_6["6 · CrossJoin · 100%<br/>42,015 rows × 4 cols"]
+    step_6["6 · CrossJoin · 42K⋈1<br/>42,015 × 4"]
     step_2 --> step_6
     step_5 --> step_6
-    step_7["7 · Filter · 45.2%<br/>19,000 rows × 3 cols"]
+    step_7["7 · Filter · 45.2%<br/>19,000 × 3"]
     step_6 --> step_7
-    step_8["8 · SourceTable<br/>orders<br/>1,500,000 rows × 1 cols"]
-    step_9["9 · AntiJoin · 33.6%<br/>6,384 rows × 3 cols"]
+    step_8["8 · SourceTable<br/>orders<br/>o_custkey<br/>1,500,000 × 1"]
+    step_9["9 · AntiJoin · 19K⋈1.5M<br/>c_custkey; o_custkey<br/>6,384 × 3"]
     step_7 --> step_9
     step_8 --> step_9
-    step_10["10 · Reorder<br/>6,384 rows × 3 cols"]
+    step_10["10 · Reorder<br/>6,384 × 3"]
     step_9 --> step_10
-    step_11["11 · Reorder<br/>6,384 rows × 2 cols"]
+    step_11["11 · Reorder<br/>6,384 × 2"]
     step_10 --> step_11
-    step_12["12 · GroupBy · 0.11%<br/>7 rows × 3 cols"]
+    step_12["12 · GroupBy · 0.11%<br/>cntrycode; count_all(*), sum(c_acctbal)<br/>7 × 3"]
     step_11 --> step_12
-    step_13["13 · Sort<br/>7 rows × 3 cols"]
+    step_13["13 · Sort<br/>cntrycode ASC<br/>7 × 3"]
     step_12 --> step_13
     classDef source fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef filter fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -4108,9 +4122,9 @@ flowchart TD
 
 ## Runtime breakdown comparison
 
-| T4 Q22 SF1 | T4 Q22 SF10 | GH200 Q22 SF100 |
-| --- | --- | --- |
-| <img src="assets/runtime-breakdowns/T4_SF1_Q22.jpg" alt="T4 Q22 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q22.jpg" alt="T4 Q22 SF10" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q22_comparison.jpg" alt="GH200 Q22 SF100" width="200"> |
+| T4 SF1 | T4 SF10 | H200 SF10 | H200 SF30 | H200 SF100 | GH200 SF100 |
+| --- | --- | --- | --- | --- | --- |
+| <img src="assets/runtime-breakdowns/T4_SF1_Q22.jpg" alt="T4 SF1" width="200"> | <img src="assets/runtime-breakdowns/T4_SF10_Q22.jpg" alt="T4 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF10_Q22.jpg" alt="H200 SF10" width="200"> | <img src="assets/runtime-breakdowns/H200_SF30_Q22.jpg" alt="H200 SF30" width="200"> | <img src="assets/runtime-breakdowns/H200_SF100_Q22.jpg" alt="H200 SF100" width="200"> | <img src="assets/runtime-breakdowns/GH200_SF100_Q22_comparison.jpg" alt="GH200 SF100" width="200"> |
 
 ## Runtime breakdown legend
 

@@ -1,0 +1,23 @@
+query,baseline-cfg,best-cfg,best-vs-baseline-speedup,filter,project,sort,group_by,distinct,eq_join
+1,40.212,38.865,1.035,Step 1: nofuse,,,,,
+2,8.445,7.487,1.128,Step 9: nofuse,,,Step 21: sort_gftr,,Step 3: sort_merge_gfur; Step 12: partition_hash_gfur
+3,22.692,12.392,1.831,Step 3: nofuse; Step 7: nofuse,Step 10: nofuse,,,,Step 4: partition_hash_gfur; Step 8: partition_hash_gfur
+4,11.994,10.5,1.142,Step 1: nofuse; Step 3: nofuse,,,,,
+5,39.353,18.725,2.102,Step 2: nofuse; Step 18: nofuse,,,,,Step 3: sort_merge_gftr; Step 6: partition_hash_gfur; Step 11: sort_merge_gfur; Step 16: sort_merge_gfur
+6,10.43,4.028,2.59,Step 1: nofuse,Step 2: nofuse,,,,
+7,25.402,15.334,1.657,Step 6: nofuse,Step 20: nofuse,,,,Step 7: partition_hash_gfur; Step 10: partition_hash_gfur; Step 15: sort_merge_gfur
+8,34.078,14.733,2.313,Step 9: nofuse,Step 25: nofuse; Step 27: nofuse; Step 30: nofuse,,,,Step 3: sort_merge_gftr; Step 6: sort_merge_gftr; Step 10: sort_merge_gfur; Step 13: partition_hash_gfur; Step 23: partition_hash_gfur
+9,55.554,32.377,1.716,Step 12: nofuse,,,,,Step 4: partition_hash_gfur; Step 7: sort_merge_gfur; Step 14: partition_hash_gftr
+10,18.406,15.615,1.179,Step 5: nofuse,Step 8: nofuse,,,,Step 6: partition_hash_gfur; Step 11: sort_merge_gfur
+11,6.632,3.482,1.905,Step 15: nofuse,Step 8: nofuse; Step 13: nofuse,,Step 10: sort_gftr,,Step 4: sort_merge_gftr; Step 6: partition_hash_gfur
+12,16.65,11.479,1.451,Step 2: nofuse,Step 6: nofuse,,,,Step 3: partition_hash_gfur
+13,25.618,16.718,1.532,,Step 9: nofuse,Step 13: skf,Step 6: partition_gftr,,Step 3: partition_hash_gfur
+14,7.334,4.6,1.594,Step 1: nofuse,Step 5: nofuse; Step 6: nofuse,,,,Step 3: sort_merge_gfur
+15,6.844,4.302,1.591,Step 2: nofuse; Step 9: nofuse,Step 3: nofuse,,,,
+16,10.304,9.429,1.093,Step 1: nofuse,,,,,Step 7: partition_hash_gfur
+17,21.289,8.473,2.513,Step 10: nofuse,Step 7: nofuse; Step 13: nofuse,,Step 6: sort_gfur,,Step 3: partition_hash_gfur
+18,21.128,18.406,1.148,Step 4: nofuse,,,Step 3: partition_gftr,,Step 5: partition_hash_gfur
+19,13.116,12.015,1.092,Step 6: nofuse,,,,,Step 4: sort_merge_gfur
+20,12.176,8.694,1.401,Step 14: nofuse; Step 17: nofuse; Step 23: nofuse; Step 24: nofuse,Step 20: nofuse,,,,Step 15: partition_hash_gfur
+21,125.605,90.646,1.386,Step 3: nofuse; Step 8: nofuse; Step 14: nofuse,,,Step 7: partition_gftr; Step 13: partition_gftr,Step 5: sort_skf; Step 11: sort_skf,Step 22: partition_hash_gfur; Step 24: sort_merge_gfur
+22,4.386,4.357,1.007,Step 3: nofuse; Step 7: nofuse,,,,,

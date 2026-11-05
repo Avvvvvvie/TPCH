@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import math
 import re
 from dataclasses import dataclass
@@ -41,6 +42,8 @@ STEP_RE = re.compile(
     r"^\[step (\d+): ([^\]]+)\] -> (\d+) rows x (\d+) cols$", re.MULTILINE
 )
 PLAN_RE = re.compile(r"^v(\d+) = (\w+)\((.*)\)$", re.MULTILINE)
+PLAN_LIST_ARGUMENT_RE = re.compile(r"\b([A-Za-z]+)=\[([^\]]*)\]")
+PLAN_COLUMN_REFERENCE_RE = re.compile(r"#(\d+)")
 BENCHMARK_CONFIG_COLUMNS = (
     "filter",
     "project",
@@ -249,9 +252,488 @@ def parse_plan(log_text: str) -> list[dict[str, object]]:
                 "operation": operation,
                 "inputs": inputs,
                 "source": source_match.group(1) if source_match else None,
+                "arguments": arguments,
             }
         )
     return plan
+
+
+def parse_plan_list_arguments(arguments: str) -> dict[str, list[str]]:
+    return {
+        name: [value.strip() for value in values.split(",") if value.strip()]
+        for name, values in PLAN_LIST_ARGUMENT_RE.findall(arguments)
+    }
+
+
+def resolve_column_index(index: str, columns: list[str]) -> str:
+    if index.isdigit() and int(index) < len(columns):
+        return columns[int(index)]
+    return f"input column {index}"
+
+
+def resolve_column_references(expression: str, columns: list[str]) -> str:
+    def replace_reference(match: re.Match[str]) -> str:
+        return resolve_column_index(match.group(1), columns)
+
+    return PLAN_COLUMN_REFERENCE_RE.sub(replace_reference, expression)
+
+
+def remove_column_prefix(column: str) -> str:
+    return re.sub(r"^[A-Za-z]{1,2}_", "", column)
+
+
+def split_top_level_arguments(value: str) -> list[str]:
+    arguments = []
+    start = 0
+    depth = 0
+    quote_character: str | None = None
+
+    for index, character in enumerate(value):
+        if quote_character is not None:
+            if character == quote_character:
+                quote_character = None
+        elif character in {"'", '"'}:
+            quote_character = character
+        elif character in "([":
+            depth += 1
+        elif character in ")]":
+            depth -= 1
+        elif character == "," and depth == 0:
+            arguments.append(value[start:index].strip())
+            start = index + 1
+
+    arguments.append(value[start:].strip())
+    return arguments
+
+
+def parse_ir_project_outputs(ir_text: str) -> list[list[tuple[str, str]]]:
+    projects = []
+    for line in ir_text.splitlines():
+        match = re.match(r"^\s*Project\((.*)\)\s*$", line)
+        if match is None:
+            continue
+        outputs = []
+        for expression in split_top_level_arguments(match.group(1)):
+            alias, separator, value = expression.partition("=")
+            if separator:
+                outputs.append((alias.strip(), value.strip()))
+            else:
+                outputs.append((expression, expression))
+        projects.append(outputs)
+    return projects
+
+
+def split_top_level_sections(value: str, delimiter: str) -> list[str]:
+    sections = []
+    start = 0
+    depth = 0
+    quote_character: str | None = None
+
+    for index, character in enumerate(value):
+        if quote_character is not None:
+            if character == quote_character:
+                quote_character = None
+        elif character in {"'", '"'}:
+            quote_character = character
+        elif character in "([{":
+            depth += 1
+        elif character in ")]}":
+            depth -= 1
+        elif character == delimiter and depth == 0:
+            sections.append(value[start:index].strip())
+            start = index + 1
+
+    sections.append(value[start:].strip())
+    return sections
+
+
+def simplify_ir_for_display(ir_text: str) -> str:
+    simplified_lines = []
+    project_pattern = re.compile(r"^(\s*Project\()(.*)(\)\s*)$")
+    aggregate_pattern = re.compile(r"^(\s*Aggregate\()(.*)(\)\s*)$")
+    for line in ir_text.splitlines():
+        aggregate_match = aggregate_pattern.match(line)
+        if aggregate_match is not None:
+            keys: list[str] = []
+            aggregates: list[str] = []
+            recognized = False
+            for section in split_top_level_sections(aggregate_match.group(2), ";"):
+                key_match = re.fullmatch(r"keys=\[(.*)\]", section)
+                aggregate_match_inner = re.fullmatch(r"aggs=\[(.*)\]", section)
+                if key_match is not None:
+                    recognized = True
+                    keys = split_top_level_arguments(key_match.group(1))
+                elif aggregate_match_inner is not None:
+                    recognized = True
+                    aggregates = [
+                        re.sub(r"\s+AS\s+[\w#]+$", "", expression)
+                        for expression in split_top_level_arguments(
+                            aggregate_match_inner.group(1)
+                        )
+                    ]
+            if not recognized:
+                simplified_lines.append(line)
+                continue
+            details = ", ".join(keys)
+            aggregate_details = ", ".join(aggregates)
+            if details and aggregate_details:
+                details += "; "
+            details += aggregate_details
+            simplified_lines.append(
+                f"{aggregate_match.group(1)}{details}{aggregate_match.group(3)}"
+            )
+            continue
+
+        match = project_pattern.match(line)
+        if match is None:
+            simplified_lines.append(line)
+            continue
+
+        expressions = []
+        for expression in split_top_level_arguments(match.group(2)):
+            alias, separator, value = expression.partition("=")
+            if separator and alias.strip() == value.strip():
+                expressions.append(alias.strip())
+            else:
+                expressions.append(expression)
+        simplified_lines.append(
+            f"{match.group(1)}{', '.join(expressions)}{match.group(3)}"
+        )
+    return "\n".join(simplified_lines)
+
+
+def match_project_outputs(
+    project_outputs: list[list[tuple[str, str]]],
+    input_columns: list[str],
+    input_origins: list[set[str]],
+    used_projects: set[int],
+    expected_count: int,
+) -> tuple[int, list[str], list[set[str]]] | None:
+    candidates = [
+        (index, outputs)
+        for index, outputs in enumerate(reversed(project_outputs))
+        if index not in used_projects and len(outputs) == expected_count
+    ]
+    if not candidates:
+        return None
+
+    available_names = set(input_columns)
+    for origins in input_origins:
+        available_names.update(origins)
+
+    def expression_origins(expression: str) -> set[str]:
+        identifiers = set(re.findall(r"\b[A-Za-z_]\w*\b", expression))
+        return identifiers & available_names
+
+    def score(outputs: list[tuple[str, str]]) -> int:
+        matches = 0
+        for _, expression in outputs:
+            matches += len(expression_origins(expression))
+        return matches
+
+    project_index, outputs = max(
+        candidates,
+        key=lambda candidate: score(candidate[1]),
+    )
+    if score(outputs) == 0 and input_columns and len(candidates) > 1:
+        return None
+    return (
+        project_index,
+        [alias for alias, _ in outputs],
+        [expression_origins(expression) for _, expression in outputs],
+    )
+
+
+def get_plan_column_details(
+    plan: list[dict[str, object]],
+    steps: list[dict[str, int | str]],
+    ir_text: str,
+    omit_unresolved_count_all: bool = False,
+) -> dict[int, str]:
+    step_by_id = {int(step["id"]): step for step in steps}
+    project_outputs = parse_ir_project_outputs(ir_text)
+    physical_count_all_count = sum(
+        1
+        for item in plan
+        if item["operation"] in {"GroupBy", "ScalarAgg"}
+        for expression in parse_plan_list_arguments(str(item["arguments"])).get(
+            "aggs", []
+        )
+        if re.fullmatch(r"\?\s*\(\s*#-1\s*\)", expression)
+    )
+    ir_count_all_count = len(
+        re.findall(r"\bcount_all\s*\(\s*\*\s*\)", ir_text)
+    )
+    count_all_is_confirmed = (
+        physical_count_all_count > 0
+        and physical_count_all_count == ir_count_all_count
+    )
+    used_projects: set[int] = set()
+    output_columns: dict[int, list[str]] = {}
+    output_origins: dict[int, list[set[str]]] = {}
+    details_by_id: dict[int, str] = {}
+
+    for item in plan:
+        step_id = int(item["id"])
+        operation = str(item["operation"])
+        arguments = str(item["arguments"])
+        inputs = [int(input_id) for input_id in item["inputs"]]
+        list_arguments = parse_plan_list_arguments(arguments)
+        input_columns = [output_columns[input_id] for input_id in inputs]
+        input_origins = [output_origins[input_id] for input_id in inputs]
+        details: list[str] = []
+
+        if operation == "SourceTable":
+            columns = list_arguments.get("cols", [])
+            output_columns[step_id] = columns
+            output_origins[step_id] = [{column} for column in columns]
+            if columns:
+                details.append(", ".join(columns))
+        elif operation == "Filter":
+            source_columns = input_columns[0] if input_columns else []
+            source_origins = input_origins[0] if input_origins else []
+            selected = list_arguments.get("out")
+            output_columns[step_id] = (
+                [resolve_column_index(index, source_columns) for index in selected]
+                if selected is not None
+                else source_columns.copy()
+            )
+            output_origins[step_id] = (
+                [
+                    source_origins[int(index)]
+                    if index.isdigit() and int(index) < len(source_origins)
+                    else set()
+                    for index in selected
+                ]
+                if selected is not None
+                else [origins.copy() for origins in source_origins]
+            )
+        elif operation == "Reorder":
+            source_columns = input_columns[0] if input_columns else []
+            source_origins = input_origins[0] if input_origins else []
+            ordinals = list_arguments.get("ordinals", [])
+            output_columns[step_id] = [
+                resolve_column_index(index, source_columns) for index in ordinals
+            ]
+            output_origins[step_id] = [
+                source_origins[int(index)].copy()
+                if index.isdigit() and int(index) < len(source_origins)
+                else set()
+                for index in ordinals
+            ]
+        elif operation in {"EqJoin", "SemiJoin", "AntiJoin", "CrossJoin"}:
+            left_columns = input_columns[0] if input_columns else []
+            right_columns = input_columns[1] if len(input_columns) > 1 else []
+            left_origins = input_origins[0] if input_origins else []
+            right_origins = input_origins[1] if len(input_origins) > 1 else []
+            left_keys = list_arguments.get("lkeys", [])
+            right_keys = list_arguments.get("rkeys", [])
+            resolved_left_keys = [
+                resolve_column_index(index, left_columns) for index in left_keys
+            ]
+            resolved_right_keys = [
+                resolve_column_index(index, right_columns) for index in right_keys
+            ]
+            if resolved_left_keys or resolved_right_keys:
+                normalized_left_keys = [
+                    remove_column_prefix(key)
+                    for key in resolved_left_keys
+                ]
+                normalized_right_keys = [
+                    remove_column_prefix(key)
+                    for key in resolved_right_keys
+                ]
+                if operation == "EqJoin" and (
+                    normalized_left_keys == normalized_right_keys
+                ):
+                    details.append(", ".join(normalized_left_keys))
+                else:
+                    details.append(
+                        "; ".join(
+                            part
+                            for part in (
+                                ", ".join(resolved_left_keys),
+                                ", ".join(resolved_right_keys),
+                            )
+                            if part
+                        )
+                    )
+            if operation in {"SemiJoin", "AntiJoin"}:
+                output_columns[step_id] = left_columns.copy()
+                output_origins[step_id] = [
+                    origins.copy() for origins in left_origins
+                ]
+            elif operation == "CrossJoin":
+                output_columns[step_id] = left_columns + right_columns
+                output_origins[step_id] = [
+                    origins.copy() for origins in left_origins + right_origins
+                ]
+            else:
+                left_key_indices = {
+                    int(index) for index in left_keys if index.isdigit()
+                }
+                removed_right_keys = {
+                    int(index) for index in right_keys if index.isdigit()
+                }
+                output_columns[step_id] = (
+                    [
+                        resolve_column_index(index, left_columns)
+                        for index in left_keys
+                    ]
+                    + [
+                        column
+                        for index, column in enumerate(left_columns)
+                        if index not in left_key_indices
+                    ]
+                    + [
+                        column
+                        for index, column in enumerate(right_columns)
+                        if index not in removed_right_keys
+                    ]
+                )
+                output_origins[step_id] = (
+                    [
+                        left_origins[int(left_index)].union(
+                            right_origins[int(right_index)]
+                        )
+                        for left_index, right_index in zip(left_keys, right_keys)
+                        if left_index.isdigit()
+                        and int(left_index) < len(left_origins)
+                        and right_index.isdigit()
+                        and int(right_index) < len(right_origins)
+                    ]
+                    + [
+                        origins.copy()
+                        for index, origins in enumerate(left_origins)
+                        if index not in left_key_indices
+                    ]
+                    + [
+                        origins.copy()
+                        for index, origins in enumerate(right_origins)
+                        if index not in removed_right_keys
+                    ]
+                )
+        elif operation == "Concat":
+            output_columns[step_id] = [
+                column for columns in input_columns for column in columns
+            ]
+            output_origins[step_id] = [
+                origins.copy()
+                for columns in input_origins
+                for origins in columns
+            ]
+        elif operation == "Project":
+            item_count = re.search(r"#items=(\d+)", arguments)
+            count = int(item_count.group(1)) if item_count else int(step_by_id[step_id]["cols"])
+            matched_project = match_project_outputs(
+                project_outputs,
+                input_columns[0] if input_columns else [],
+                input_origins[0] if input_origins else [],
+                used_projects,
+                count,
+            )
+            if matched_project is not None:
+                project_index, columns, origins = matched_project
+                used_projects.add(project_index)
+                output_columns[step_id] = columns
+                output_origins[step_id] = origins
+                details.append(", ".join(columns))
+            else:
+                output_columns[step_id] = [
+                    f"project output {index}" for index in range(count)
+                ]
+                output_origins[step_id] = [set() for _ in range(count)]
+            if item_count and matched_project is None:
+                details.append("names unavailable")
+        elif operation in {"GroupBy", "ScalarAgg"}:
+            source_columns = input_columns[0] if input_columns else []
+            source_origins = input_origins[0] if input_origins else []
+            n_keys_match = re.search(r"\bn_keys=(\d+)", arguments)
+            key_count = int(n_keys_match.group(1)) if n_keys_match else 0
+            key_columns = source_columns[:key_count]
+            aggregate_expressions = list_arguments.get("aggs", [])
+            aggregate_columns = source_columns[key_count:]
+            resolved_aggregates = []
+            aggregate_origins = []
+            for expression in aggregate_expressions:
+                is_unresolved_count_all = bool(
+                    re.fullmatch(r"\?\s*\(\s*#-1\s*\)", expression)
+                )
+                references = {
+                    int(index)
+                    for index in PLAN_COLUMN_REFERENCE_RE.findall(expression)
+                    if int(index) < len(aggregate_columns)
+                }
+                resolved_aggregates.append(
+                    "count_all(*)"
+                    if is_unresolved_count_all and count_all_is_confirmed
+                    else PLAN_COLUMN_REFERENCE_RE.sub(
+                        lambda match: (
+                            aggregate_columns[int(match.group(1))]
+                            if int(match.group(1)) < len(aggregate_columns)
+                            else match.group(0)
+                        ),
+                        expression,
+                    )
+                )
+                aggregate_origins.append(
+                    set().union(
+                        *(
+                            source_origins[key_count + index]
+                            for index in references
+                        )
+                    )
+                    if references
+                    else set()
+                )
+            output_columns[step_id] = key_columns + [
+                expression for expression in resolved_aggregates
+            ]
+            output_origins[step_id] = [
+                origins.copy() for origins in source_origins[:key_count]
+            ] + aggregate_origins
+            if key_count:
+                details.append(", ".join(key_columns))
+            display_aggregates = [
+                aggregate
+                for aggregate in resolved_aggregates
+                if not (
+                    omit_unresolved_count_all
+                    and not count_all_is_confirmed
+                    and re.fullmatch(r"\?\s*\(\s*#-1\s*\)", aggregate)
+                )
+            ]
+            if display_aggregates:
+                details.append(", ".join(display_aggregates))
+        else:
+            output_columns[step_id] = (
+                input_columns[0].copy() if input_columns else []
+            )
+            output_origins[step_id] = (
+                [origins.copy() for origins in input_origins[0]]
+                if input_origins
+                else []
+            )
+            for name, values in list_arguments.items():
+                if name == "keys":
+                    columns = input_columns[0] if input_columns else []
+                    resolved = [
+                        resolve_column_references(value, columns) for value in values
+                    ]
+                else:
+                    resolved = values
+                if operation != "TopK":
+                    details.append(", ".join(resolved))
+
+        expected_columns = int(step_by_id[step_id]["cols"])
+        if len(output_columns[step_id]) != expected_columns:
+            output_columns[step_id] = [
+                f"output column {index}" for index in range(expected_columns)
+            ]
+            output_origins[step_id] = [set() for _ in range(expected_columns)]
+        details_by_id[step_id] = "; ".join(details)
+
+    return details_by_id
 
 
 def format_selectivity(ratio: float) -> str:
@@ -293,7 +775,20 @@ def get_execution_data(
     return steps, plan
 
 
-def get_step_selectivity(
+def format_row_count(row_count: int) -> str:
+    units = ((1_000, "K"), (1_000_000, "M"), (1_000_000_000, "B"))
+    for index in range(len(units) - 1, -1, -1):
+        threshold, suffix = units[index]
+        if row_count >= threshold:
+            scaled = row_count / threshold
+            if scaled >= 999.95 and index < len(units) - 1:
+                threshold, suffix = units[index + 1]
+                scaled = row_count / threshold
+            return f"{scaled:.1f}".rstrip("0").rstrip(".") + suffix
+    return str(row_count)
+
+
+def get_step_annotation(
     step: dict[str, int | str],
     plan_item: dict[str, object],
     step_by_id: dict[int, dict[str, int | str]],
@@ -302,14 +797,15 @@ def get_step_selectivity(
     inputs = plan_item["inputs"]
     step_rows = int(step["rows"])
 
-    if operation in {"Filter", "GroupBy", "TopK"} and inputs:
+    if "Join" in operation or operation == "CrossJoin":
+        if len(inputs) >= 2:
+            left_rows = int(step_by_id[int(inputs[0])]["rows"])
+            right_rows = int(step_by_id[int(inputs[1])]["rows"])
+            return f"{format_row_count(left_rows)}⋈{format_row_count(right_rows)}"
+    elif operation in {"Filter", "GroupBy", "TopK"} and inputs:
         previous_rows = int(step_by_id[int(inputs[0])]["rows"])
         if previous_rows:
             return format_selectivity(step_rows / previous_rows)
-    elif ("Join" in operation or operation == "CrossJoin") and len(inputs) >= 2:
-        left_rows = int(step_by_id[int(inputs[0])]["rows"])
-        if left_rows:
-            return format_selectivity(step_rows / left_rows)
     return ""
 
 
@@ -364,13 +860,11 @@ def read_benchmark_sources(
     return benchmark_rows, summary_rows
 
 
-def get_step_benchmark_data(
+def get_baseline_benchmark_rows(
     query_number: int,
-    steps: list[dict[str, int | str]],
     summary: dict[str, str],
     benchmark_rows: list[dict[str, str]],
-) -> dict[int, tuple[str, str, str, str]]:
-    """Match baseline by total runtime and apply summary overrides per best step."""
+) -> tuple[tuple[str, ...], dict[int, dict[str, str]]]:
     rows_by_config: dict[tuple[str, ...], list[dict[str, str]]] = {}
     for row in benchmark_rows:
         if int(row["query"]) != query_number:
@@ -406,6 +900,19 @@ def get_step_benchmark_data(
                 f"Q{query_number} baseline benchmark has duplicate step {step_index}"
             )
         baseline_rows[step_index] = row
+    return baseline_configuration, baseline_rows
+
+
+def get_step_benchmark_data(
+    query_number: int,
+    steps: list[dict[str, int | str]],
+    summary: dict[str, str],
+    benchmark_rows: list[dict[str, str]],
+) -> dict[int, tuple[str, str, str, str]]:
+    """Match baseline by total runtime and apply summary overrides per best step."""
+    baseline_configuration, baseline_rows = get_baseline_benchmark_rows(
+        query_number, summary, benchmark_rows
+    )
 
     step_by_id = {int(step["id"]): step for step in steps}
     best_overrides: dict[tuple[str, int], str] = {}
@@ -522,6 +1029,79 @@ def format_runtime(value: str) -> str:
     return f"{float(value):.6g}"
 
 
+def make_csv_step_table(
+    query_number: int,
+    summary: dict[str, str],
+    benchmark_rows: list[dict[str, str]],
+) -> str:
+    baseline_rows = get_baseline_benchmark_rows(
+        query_number, summary, benchmark_rows
+    )[1]
+    steps = [
+        {"id": step_id, "operation": row["step_kind"]}
+        for step_id, row in sorted(baseline_rows.items())
+    ]
+    benchmark_data = get_step_benchmark_data(
+        query_number, steps, summary, benchmark_rows
+    )
+    has_best_time = any(
+        values[0] != values[1] for values in benchmark_data.values()
+    )
+    has_best_implementation = any(
+        values[2] != values[3] for values in benchmark_data.values()
+    )
+
+    columns = ["Step", "Step kind", "Baseline (ms)"]
+    if has_best_time:
+        columns.append("Best (ms)")
+    columns.append("Baseline implementation")
+    if has_best_implementation:
+        columns.append("Best implementation")
+    lines = [
+        "| " + " | ".join(columns) + " |",
+        "| " + " | ".join("---" for _ in columns) + " |",
+    ]
+    steps_by_id = {int(step["id"]): step for step in steps}
+    for step_id in range(max(steps_by_id) + 1):
+        step = steps_by_id.get(step_id)
+        if step is None:
+            values = [str(step_id), "SourceTable"]
+            values.extend("" for _ in columns[2:])
+            lines.append("| " + " | ".join(values) + " |")
+            continue
+
+        operation = str(step["operation"])
+        baseline_time, best_time, baseline_implementation, best_implementation = (
+            benchmark_data[step_id]
+        )
+        values = [
+            str(step_id),
+            operation,
+            format_runtime(baseline_time) if baseline_time else "",
+        ]
+        if has_best_time:
+            values.append(format_runtime(best_time) if best_time else "")
+        values.append(baseline_implementation)
+        if has_best_implementation:
+            values.append(best_implementation)
+        lines.append("| " + " | ".join(values) + " |")
+
+    baseline_total = sum(
+        float(values[0]) for values in benchmark_data.values() if values[0]
+    )
+    best_total = sum(
+        float(values[1]) for values in benchmark_data.values() if values[1]
+    )
+    total_values = ["", "Total", format_runtime(str(baseline_total))]
+    if has_best_time:
+        total_values.append(format_runtime(str(best_total)))
+    total_values.append("")
+    if has_best_implementation:
+        total_values.append("")
+    lines.append("| " + " | ".join(total_values) + " |")
+    return "\n".join(lines)
+
+
 def make_step_table(
     log_text: str,
     query_number: int,
@@ -531,6 +1111,10 @@ def make_step_table(
     steps, plan = get_execution_data(log_text)
     plan_by_id = {int(item["id"]): item for item in plan}
     step_by_id = {int(step["id"]): step for step in steps}
+    post_rules_ir = read_section(
+        log_text, "-- IR (post-rules) --", "-- ExecPlan --"
+    )
+    column_details_by_id = get_plan_column_details(plan, steps, post_rules_ir)
     benchmark_data = get_step_benchmark_data(
         query_number, steps, summary, benchmark_rows
     )
@@ -569,7 +1153,8 @@ def make_step_table(
             lineage[step_id] = lineage[int(inputs[0])] if inputs else ""
             tables = "<" if operation in {"Filter", "GroupBy", "TopK"} else ""
 
-        selectivity = get_step_selectivity(step, plan_item, step_by_id)
+        annotation = get_step_annotation(step, plan_item, step_by_id)
+        key_details = column_details_by_id[step_id]
         baseline_time, best_time, baseline_implementation, best_implementation = (
             benchmark_data[step_id]
         )
@@ -581,7 +1166,8 @@ def make_step_table(
                 int(step["rows"]),
                 int(step["cols"]),
                 tables,
-                selectivity,
+                annotation,
+                key_details,
                 format_runtime(baseline_time) if baseline_time else "",
                 format_runtime(best_time) if best_time else "",
                 baseline_implementation,
@@ -601,7 +1187,7 @@ def make_step_table(
         "Rows",
         "Cols",
         "Tables",
-        "Selectivity",
+        "Selectivity / Join inputs",
         "Baseline (ms)",
     ]
     if has_best_time:
@@ -609,6 +1195,7 @@ def make_step_table(
     columns.append("Baseline implementation")
     if has_best_implementation:
         columns.append("Best implementation")
+    columns.append("Physical plan keys / columns")
 
     lines = [
         "| " + " | ".join(columns) + " |",
@@ -622,12 +1209,13 @@ def make_step_table(
                 str(rows),
                 str(cols),
                 tables,
-                selectivity,
+                annotation,
                 baseline_time,
             ]
             + ([best_time] if has_best_time else [])
             + [baseline_implementation]
             + ([best_implementation] if has_best_implementation else [])
+            + [key_details]
         ) + " |"
         for (
             step_id,
@@ -635,7 +1223,8 @@ def make_step_table(
             rows,
             cols,
             tables,
-            selectivity,
+            annotation,
+            key_details,
             baseline_time,
             best_time,
             baseline_implementation,
@@ -662,11 +1251,13 @@ def make_step_table(
     total_values.append("")
     if has_best_implementation:
         total_values.append("")
+    total_values.append("")
     lines.append("| " + " | ".join(total_values) + " |")
     return "\n".join(lines)
 
 
 def make_ir_graph(ir_text: str) -> str:
+    ir_text = simplify_ir_for_display(ir_text)
     nodes: list[tuple[int, str, str, int | None]] = []
     parent_stack: list[tuple[int, int]] = []
     operation_pattern = re.compile(r"^(\s*)([A-Za-z]+)(.*)$")
@@ -755,6 +1346,12 @@ def make_execution_graph(log_text: str) -> str:
     steps, plan = get_execution_data(log_text)
     step_by_id = {int(step["id"]): step for step in steps}
     plan_by_id = {int(item["id"]): item for item in plan}
+    post_rules_ir = read_section(
+        log_text, "-- IR (post-rules) --", "-- ExecPlan --"
+    )
+    column_details_by_id = get_plan_column_details(
+        plan, steps, post_rules_ir, omit_unresolved_count_all=True
+    )
     lines = ["```mermaid", "flowchart TD"]
 
     for step in steps:
@@ -763,12 +1360,15 @@ def make_execution_graph(log_text: str) -> str:
         plan_item = plan_by_id[step_id]
         source = plan_item["source"]
         label = f"{step_id} · {operation}"
-        selectivity = get_step_selectivity(step, plan_item, step_by_id)
-        if selectivity:
-            label += f" · {selectivity}"
+        annotation = get_step_annotation(step, plan_item, step_by_id)
+        key_details = column_details_by_id[step_id]
+        if annotation:
+            label += f" · {annotation}"
         if isinstance(source, str):
             label += f"<br/>{source}"
-        label += f"<br/>{int(step['rows']):,} rows × {int(step['cols'])} cols"
+        if key_details and operation != "Project":
+            label += f"<br/>{key_details}"
+        label += f"<br/>{int(step['rows']):,} × {int(step['cols'])}"
         label = label.replace('"', "#quot;")
         lines.append(f'    step_{step_id}["{label}"]')
 
@@ -828,12 +1428,87 @@ def make_runtime_breakdown_table(images: list[tuple[str, str]]) -> str:
     headers = "| " + " | ".join(labels) + " |"
     separator = "| " + " | ".join("---" for _ in images) + " |"
     image_cells = []
-    for (_, image_path), safe_label in zip(images, labels):
-        image_reference = quote(image_path, safe="/._-")
-        image_cells.append(
-            f'<img src="{image_reference}" alt="{safe_label}" width="200">'
-        )
+    for (label, image_path) in images:
+        image_cells.append(make_runtime_breakdown_image(label, image_path))
     return "\n".join((headers, separator, "| " + " | ".join(image_cells) + " |"))
+
+
+def make_runtime_breakdown_image(label: str, image_path: str) -> str:
+    safe_label = label.replace("|", r"\|")
+    image_reference = quote(image_path, safe="/._-")
+    return f'<img src="{image_reference}" alt="{safe_label}" width="200">'
+
+
+def make_runtime_breakdown_comparison_table(
+    root: Path,
+    output_path: Path,
+    chart_sources: list[ChartSource],
+    order: list[str],
+) -> str:
+    source_paths = {str(source.path): source for source in chart_sources}
+    ordered_sources = order_runtime_breakdowns(
+        [
+            (f"{source.device} SF{source.scale_factor}", str(source.path))
+            for source in chart_sources
+        ],
+        order,
+    )
+    columns = []
+    for label, source_path in ordered_sources:
+        source = source_paths[source_path]
+        if any(
+            source.query_image_path(root, query_number).is_file()
+            for query_number in range(1, 23)
+        ):
+            columns.append((source, label))
+    if not columns:
+        return ""
+
+    labels = [label.replace("|", r"\|") for _, label in columns]
+    lines = [
+        "| Query | " + " | ".join(labels) + " |",
+        "| --- | " + " | ".join("---" for _ in columns) + " |",
+    ]
+    for query_number in range(1, 23):
+        image_cells = []
+        for source, label in columns:
+            image_path = source.query_image_path(root, query_number)
+            if image_path.is_file():
+                image_reference = image_path.relative_to(output_path.parent).as_posix()
+                image_cells.append(make_runtime_breakdown_image(label, image_reference))
+            else:
+                image_cells.append("")
+        lines.append(
+            f"| Q{query_number} | " + " | ".join(image_cells) + " |"
+        )
+    return "\n".join(lines)
+
+
+def read_runtime_breakdown_order(root: Path) -> list[str]:
+    order_path = root / "order.json"
+    if not order_path.is_file():
+        return []
+
+    order = json.loads(order_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(order, list) or any(not isinstance(item, str) for item in order):
+        raise ValueError(f"{order_path.name} must contain a JSON array of labels")
+    if len(order) != len(set(order)):
+        raise ValueError(f"{order_path.name} contains duplicate labels")
+    return order
+
+
+def order_runtime_breakdowns(
+    images: list[tuple[str, str]], order: list[str]
+) -> list[tuple[str, str]]:
+    order_index = {label: index for index, label in enumerate(order)}
+    ordered_images = sorted(
+        enumerate(images),
+        key=lambda item: (
+            order_index.get(item[1][0], len(order)),
+            item[0],
+        ),
+    )
+    return [image for _, image in ordered_images]
 
 
 def read_notes(
@@ -886,10 +1561,13 @@ def make_notes(plan: list[dict[str, object]], notes: list[str]) -> str:
             table_reads[source] = table_reads.get(source, 0) + 1
 
     lines = [
-        f"- {table} is read multiple times."
+        f"- This query joins {len(table_reads)} tables."
+    ] if len(table_reads) >= 5 else []
+    lines.extend(
+        f"- {table.capitalize()} is read multiple times."
         for table, count in table_reads.items()
         if count > 1
-    ]
+    )
     lines.extend(notes)
     return "\n\n".join(lines)
 
@@ -908,9 +1586,6 @@ def render_query(
     query_title, query_description, sql_body = parse_query_header(
         query_number, query_sql
     )
-    post_rules_ir = read_section(
-        log_text, "-- IR (post-rules) --", "-- ExecPlan --"
-    )
     active_tables = ",".join(get_active_tables(sql_body))
     diagram = SCHEMA_DIAGRAM.format(active_tables=active_tables)
     report_sections = [
@@ -918,26 +1593,39 @@ def render_query(
     ]
     if query_description:
         report_sections.extend(("", query_description))
-    report_sections.extend(
-        (
-            "",
-        "```sql",
-        sql_body,
-        "```",
-        diagram,
-        "",
-        "```sql",
-        post_rules_ir,
-        "```",
-        "",
-        make_ir_graph(post_rules_ir),
-        "",
-        make_step_table(log_text, query_number, benchmark_summary, benchmark_rows),
-        "",
-        make_execution_graph(log_text),
+    report_sections.extend(("", "```sql", sql_body, "```", diagram))
+    if log_text.strip():
+        post_rules_ir = read_section(
+            log_text, "-- IR (post-rules) --", "-- ExecPlan --"
         )
-    )
-    note_text = make_notes(parse_plan(log_text), notes or [])
+        post_rules_ir = simplify_ir_for_display(post_rules_ir)
+        report_sections.extend(
+            (
+                "",
+                "```sql",
+                post_rules_ir,
+                "```",
+                "",
+                make_ir_graph(post_rules_ir),
+                "",
+                make_step_table(
+                    log_text, query_number, benchmark_summary, benchmark_rows
+                ),
+                "",
+                make_execution_graph(log_text),
+            )
+        )
+        note_text = make_notes(parse_plan(log_text), notes or [])
+    else:
+        report_sections.extend(
+            (
+                "",
+                make_csv_step_table(
+                    query_number, benchmark_summary, benchmark_rows
+                ),
+            )
+        )
+        note_text = "\n\n".join(notes or [])
     if note_text:
         report_sections.extend(("", "## Notes", "", note_text))
     if runtime_breakdowns:
@@ -964,12 +1652,17 @@ def generate_report(
     benchmark_rows_by_query, summaries_by_query = read_benchmark_sources(
         root, device, scale_factor
     )
+    runtime_breakdown_order = read_runtime_breakdown_order(root)
     query_reports = []
-    for query_number in range(1, 23):
-        log_path = root / "logs" / f"{device} Q{query_number} SF{scale_factor}.txt"
-        log_text = log_path.read_text(encoding="utf-8-sig")
-        if not log_text.strip():
+    for query_number in sorted(benchmark_rows_by_query):
+        if not 1 <= query_number <= 22:
             continue
+        log_path = root / "logs" / f"{device} Q{query_number} SF{scale_factor}.txt"
+        log_text = (
+            log_path.read_text(encoding="utf-8-sig")
+            if log_path.is_file()
+            else ""
+        )
 
         query_path = root / "queries" / f"Q{query_number}.sql"
         query_sql = query_path.read_text(encoding="utf-8-sig")
@@ -981,12 +1674,12 @@ def generate_report(
             chart_path = chart_source.query_image_path(root, query_number)
             if not chart_path.is_file():
                 continue
-            chart_label = (
-                f"{chart_source.device} Q{query_number} "
-                f"SF{chart_source.scale_factor}"
-            )
+            chart_label = f"{chart_source.device} SF{chart_source.scale_factor}"
             image_reference = chart_path.relative_to(output_path.parent).as_posix()
             runtime_breakdowns.append((chart_label, image_reference))
+        runtime_breakdowns = order_runtime_breakdowns(
+            runtime_breakdowns, runtime_breakdown_order
+        )
         query_reports.append(
             render_query(
                 query_number,
@@ -1019,11 +1712,52 @@ def generate_report(
     return output_path
 
 
+def generate_runtime_breakdown_comparison(
+    root: Path, chart_sources: list[ChartSource]
+) -> Path:
+    output_path = root / "Runtime breakdown comparison.md"
+    table = make_runtime_breakdown_comparison_table(
+        root,
+        output_path,
+        chart_sources,
+        read_runtime_breakdown_order(root),
+    )
+    if not table:
+        raise ValueError("No runtime breakdown query images are available")
+    legend_source = next(
+        (source for source in chart_sources if not source.comparison),
+        None,
+    )
+    if legend_source is not None:
+        legend_path = (
+            root
+            / "assets"
+            / "runtime-breakdowns"
+            / f"{legend_source.device}_SF{legend_source.scale_factor}_legend.jpg"
+        )
+        if legend_path.is_file():
+            legend_reference = legend_path.relative_to(output_path.parent).as_posix()
+            table += (
+                "\n\n## Runtime breakdown legend\n\n"
+                f"![Runtime breakdown legend|200x0]({legend_reference})"
+            )
+    output_path.write_text(
+        "# Runtime breakdown comparison\n\n" + table + "\n",
+        encoding="utf-8",
+    )
+    return output_path
+
+
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parent
     chart_sources = discover_chart_sources(project_root)
     for chart_source in chart_sources:
         generate_runtime_breakdown_assets(project_root, chart_source)
+
+    comparison_path = generate_runtime_breakdown_comparison(
+        project_root, chart_sources
+    )
+    print(f"Generated {comparison_path}")
 
     for chart_source in chart_sources:
         if chart_source.comparison:
